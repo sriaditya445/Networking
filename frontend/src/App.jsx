@@ -1,4 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
+import {
+  FaUpload,
+  FaFolder,
+  FaTrash,
+  FaDownload,
+  FaSearch,
+  FaServer,
+  FaEye,
+  FaInbox
+} from "react-icons/fa";
+
+
+import {
+  MdRouter,
+  MdSwitchAccount
+} from "react-icons/md";
+
+import {
+  HiOutlineStatusOnline
+} from "react-icons/hi";
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -92,13 +112,13 @@ function App() {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
       setSelectedFiles(filesArray);
-      
+
       // Auto-suggest folder name if directory path exists, or default to first file name
       if (uploadMode === 'folder' && filesArray.length > 0 && filesArray[0].webkitRelativePath) {
         const rootFolder = filesArray[0].webkitRelativePath.split('/')[0];
         setFolderName(rootFolder);
       } else if (filesArray.length > 0 && folderName === 'configs') {
-        setFolderName('batch_' + new Date().toISOString().slice(0,10).replace(/-/g, ''));
+        setFolderName('batch_' + new Date().toISOString().slice(0, 10).replace(/-/g, ''));
       }
     }
   };
@@ -113,7 +133,7 @@ function App() {
 
     const formData = new FormData();
     formData.append('folder_name', folderName || 'configs');
-    
+
     selectedFiles.forEach((file) => {
       // Use webkitRelativePath for folder structure if available, or just filename
       formData.append('files', file, file.webkitRelativePath || file.name);
@@ -200,8 +220,8 @@ function App() {
 
   // Filter devices list based on search query and type filter
   const filteredDevices = devices.filter((device) => {
-    const matchesSearch = device.device_name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          device.configuration.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = device.device_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      device.configuration.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = typeFilter === 'All' || device.device_type === typeFilter;
     return matchesSearch && matchesType;
   });
@@ -259,12 +279,12 @@ function App() {
         <div className="layout-col">
           <div className="glass-card">
             <h2 className="card-title">
-              <span>📤</span> Upload Configurations
+              <FaUpload /> Upload Configurations
             </h2>
-            
+
             {/* Upload Mode Toggles */}
             <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-              <button 
+              <button
                 type="button"
                 className={`btn ${uploadMode === 'file' ? 'btn-primary' : ''}`}
                 style={{ flex: 1, padding: '8px 16px', background: uploadMode === 'file' ? '' : 'rgba(255,255,255,0.05)', color: uploadMode === 'file' ? '' : '#fff' }}
@@ -272,7 +292,7 @@ function App() {
               >
                 Files Mode
               </button>
-              <button 
+              <button
                 type="button"
                 className={`btn ${uploadMode === 'folder' ? 'btn-primary' : ''}`}
                 style={{ flex: 1, padding: '8px 16px', background: uploadMode === 'folder' ? '' : 'rgba(255,255,255,0.05)', color: uploadMode === 'folder' ? '' : '#fff' }}
@@ -285,12 +305,12 @@ function App() {
             <form onSubmit={handleUploadSubmit} className="upload-form">
               <div className="form-group">
                 <label className="form-label" htmlFor="folderNameInput">Batch / Folder Label</label>
-                <input 
+                <input
                   id="folderNameInput"
-                  type="text" 
-                  className="text-input" 
-                  value={folderName} 
-                  onChange={(e) => setFolderName(e.target.value)} 
+                  type="text"
+                  className="text-input"
+                  value={folderName}
+                  onChange={(e) => setFolderName(e.target.value)}
                   placeholder="e.g. branch_office_configs"
                   required
                 />
@@ -298,36 +318,36 @@ function App() {
 
               {/* Conditional inputs depending on upload mode */}
               {uploadMode === 'file' ? (
-                <div 
+                <div
                   className="dropzone"
                   onClick={() => fileInputRef.current && fileInputRef.current.click()}
                 >
                   <div className="upload-icon">📄</div>
                   <span className="dropzone-text">Click to choose config files</span>
                   <span className="dropzone-subtext">Supports .cfg, .txt, .conf, etc. (Multiple files allowed)</span>
-                  <input 
+                  <input
                     aria-label="Upload configuration files"
-                    type="file" 
+                    type="file"
                     ref={fileInputRef}
-                    style={{ display: 'none' }} 
+                    style={{ display: 'none' }}
                     onChange={handleFileChange}
-                    multiple 
+                    multiple
                     required
                   />
                 </div>
               ) : (
-                <div 
+                <div
                   className="dropzone"
                   onClick={() => folderInputRef.current && folderInputRef.current.click()}
                 >
-                  <div className="upload-icon">📁</div>
+                  <div className="upload-icon"><FaFolder /></div>
                   <span className="dropzone-text">Click to select folder</span>
                   <span className="dropzone-subtext">This uploads all files within the selected directory</span>
-                  <input 
+                  <input
                     aria-label="Upload folder of configuration files"
-                    type="file" 
+                    type="file"
                     ref={folderInputRef}
-                    style={{ display: 'none' }} 
+                    style={{ display: 'none' }}
                     onChange={handleFileChange}
                     webkitdirectory="true"
                     directory="true"
@@ -354,8 +374,8 @@ function App() {
                 </div>
               )}
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 className="btn btn-primary"
                 disabled={selectedFiles.length === 0 || uploading || !backendOnline}
               >
@@ -385,7 +405,9 @@ function App() {
             <div className="jobs-list">
               {jobs.length === 0 ? (
                 <div className="empty-state">
-                  <div className="empty-icon">📭</div>
+                  <div className="empty-icon">
+                    <FaInbox />
+                  </div>
                   <div>No upload jobs yet. Upload files above to trigger parser.</div>
                 </div>
               ) : (
@@ -407,14 +429,28 @@ function App() {
 
                     <div className="job-actions">
                       {renderStatusBadge(job.status)}
-                      <button 
+                      {job.status === 'success' && (
+                        <button
+                          type="button"
+                          className="btn-download-icon"
+                          onClick={() => {
+                            const downloadUrl = `${API_BASE_URL}/api/jobs/${job._id || job.id}/download`;
+                            window.open(downloadUrl, '_blank');
+                          }}
+                          title="Download ZIP"
+                          aria-label={`Download folder ${job.folder_name} ZIP`}
+                        >
+                          📥
+                        </button>
+                      )}
+                      <button
                         type="button"
                         className="btn-danger-icon"
                         onClick={() => handleDeleteJob(job._id || job.id)}
                         title="Delete Job"
                         aria-label={`Delete job ${job.folder_name}`}
                       >
-                        🗑️
+                        <FaTrash />
                       </button>
                     </div>
                   </div>
@@ -433,17 +469,17 @@ function App() {
 
             {/* Controls for filtering and searching */}
             <div className="devices-controls">
-              <input 
-                type="text" 
-                className="text-input search-input" 
-                placeholder="Search device name..." 
+              <input
+                type="text"
+                className="text-input search-input"
+                placeholder="Search device name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{ padding: '8px 16px' }}
                 aria-label="Search parsed devices"
               />
 
-              <select 
+              <select
                 className="filter-select"
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
@@ -489,13 +525,14 @@ function App() {
                           {formatDate(device.parsed_at)}
                         </td>
                         <td>
-                          <button 
+                          <button
                             type="button"
-                            className="btn" 
+                            className="btn"
                             style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'rgba(255, 255, 255, 0.08)', color: '#fff' }}
                             onClick={() => setSelectedDevice(device)}
                           >
-                            View Config
+                            <FaEye />
+                            View
                           </button>
                         </td>
                       </tr>
@@ -514,13 +551,28 @@ function App() {
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Configuration Viewer: {selectedDevice.device_name}</h3>
-              <button 
-                type="button"
-                className="modal-close" 
-                onClick={() => setSelectedDevice(null)}
-              >
-                &times;
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  onClick={() => {
+                    const downloadUrl = `${API_BASE_URL}/api/devices/${selectedDevice._id || selectedDevice.id}/download`;
+                    window.open(downloadUrl, '_blank');
+                  }}
+                  title="Download configuration file"
+                >
+                  <FaDownload />
+                  Download  Config
+                </button>
+                <button
+                  type="button"
+                  className="modal-close"
+                  onClick={() => setSelectedDevice(null)}
+                >
+                  &times;
+                </button>
+              </div>
             </div>
             <div className="modal-body">
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
