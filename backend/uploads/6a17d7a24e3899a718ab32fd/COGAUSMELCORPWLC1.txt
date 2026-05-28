@@ -1,0 +1,3143 @@
+
+COGAUSMELCORPWLC1.cts.com> sh ru
+Building configuration...
+
+Current configuration : 105036 bytes
+!
+! Last configuration change at 18:52:37 AEST Tue Apr 28 2026 by 453104-admin
+! NVRAM config last updated at 13:41:58 AEST Sat Apr 11 2026 by 2259576-admin
+!
+version 17.12
+service tcp-keepalives-in
+service tcp-keepalives-out
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service call-home
+platform qfp utilization monitor load 80
+platform punt-keepalive disable-kernel-core
+!
+hostname COGAUSMELCORPWLC1
+!
+boot-start-marker
+boot system bootflash:packages.conf
+boot system bootflash:/packages.conf
+boot-end-marker
+!
+!
+vrf definition Mgmt-intf
+ !
+ address-family ipv4
+ exit-address-family
+ !
+ address-family ipv6
+ exit-address-family
+!
+no logging console
+aaa new-model
+!
+!
+aaa group server tacacs+ CTS-ISE
+ server name CHN
+ server name PUN
+!
+aaa group server radius ISE_Radius
+ server name CHNPSN1
+ server name CHNPSN
+ server name PUNPSN1
+ server name PUNPSN
+!
+aaa authentication login default group CTS-ISE local
+aaa authentication login CON-AUTH local
+aaa authentication login TAC-AUTH group CTS-ISE local
+aaa authentication dot1x DOT1X_AUTH group ISE_Radius
+aaa authorization exec default group CTS-ISE local
+aaa authorization exec TAC-AUTHOR group CTS-ISE local if-authenticated
+aaa authorization exec CON-AUTHOR local
+aaa authorization network default local
+aaa authorization network DOT1X_AUTHZ group ISE_Radius
+aaa accounting identity DOT1X_ACC start-stop group ISE_Radius
+!
+!
+aaa server radius dynamic-author
+ client 10.242.250.210 server-key 6 xxxxxxxx
+ client 10.155.20.49 server-key 6 xxxxxxxx
+ client 10.242.250.165 server-key 6 xxxxxxxx
+ client 10.155.20.48 server-key 6 xxxxxxxx
+!
+aaa session-id common
+clock timezone AEST 10 0
+!
+!
+!
+!
+!
+!
+!
+ip name-server 10.242.237.11 10.251.96.25
+ip domain name cts.com
+!
+!
+!
+no ip igmp snooping vlan 24
+ login xxxxxx
+!
+!
+!
+!
+!
+!
+!
+subscriber templating
+vtp mode off
+!
+!
+!
+!
+!
+!
+flow exporter wireless-local-exporter
+ destination local wlc
+!
+!
+flow exporter 10.142.221.34
+ destination 10.142.221.34
+ transport udp 6007
+!
+!
+flow monitor wireless-avc-basic
+ exporter wireless-local-exporter
+ cache timeout active 60
+ record wireless avc basic
+!
+!
+flow monitor wireless-avc-basic-ipv6
+ exporter wireless-local-exporter
+ cache timeout active 60
+ record wireless avc ipv6 basic
+!
+!
+parameter-map type webauth global
+ type webauth
+ captive-bypass-portal
+!
+access-session mac-move deny
+multilink bundle-name authenticated
+!
+password encryption xxxxxxxx
+pae
+!
+crypto pki xxxxxxx
+ enrollment selfsigned
+ subject-name xxxxxxxx
+ revocation-check none
+ rsakeypair TP-self-signed- xxxxxxxx
+ hash sha512
+!
+crypto pki xxxxxxx
+ enrollment pkcs12
+ revocation-check crl
+ hash sha512
+!
+crypto pki xxxxxxx
+ enrollment terminal pem
+ subject-name C=AU, ST=Victoria, L=Melbourne, O=CTS, OU=IT, CN=COGAUSMELCORPWLC1.cts.com
+ subject-alt-name COGAUSMELCORPWLC1.cts.com
+ chain-validation continue root
+ revocation-check none
+ rsakeypair xxxxxxxx
+ hash sha512
+!
+crypto pki xxxxxxx
+ enrollment terminal
+ revocation-check none
+ hash sha512
+!
+crypto pki xxxxxxx
+ enrollment url http://10.142.221.34:80/ejbca/publicweb/apply/scep/sdnscep
+ fqdn COGAUSMELCORPWLC1.cts.com
+ subject-name xxxxxxxx
+ subject-alt-name COGAUSMELCORPWLC1.cts.com
+ revocation-check crl
+ source interface Vlan15
+ rsakeypair xxxxxxxx
+ auto-enroll 80 regenerate
+ hash sha512
+!
+crypto pki xxxxxxx
+ enrollment mode ra
+ enrollment terminal
+ usage ssl-client
+ revocation-check crl none
+ source interface Vlan15
+ hash sha512
+!
+!
+crypto pki certificate chain xxxxxxx
+ certificate self-signed xxxxxxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+quit
+crypto pki certificate chain xxxxxxx
+ certificate ca xxxxxxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+quit
+crypto pki certificate chain xxxxxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+quit
+ certificate ca xxxxxxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+quit
+crypto pki certificate chain xxxxxxx
+ certificate ca xxxxxxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+quit
+crypto pki certificate chain xxxxxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+quit
+ certificate ca xxxxxxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+quit
+crypto pki certificate chain xxxxxxx
+ certificate ca xxxxxxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+  xxxx  xxxxx  xxxx  xxxx  xxxx
+quit
+!
+crypto pki certificate xxxxxxxx
+ cabundle nvram:ios_core.p7b
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+service-template DEFAULT_LINKSEC_POLICY_MUST_SECURE
+ linksec policy must-secure
+service-template DEFAULT_LINKSEC_POLICY_SHOULD_SECURE
+ linksec policy should-secure
+service-template DEFAULT_CRITICAL_VOICE_TEMPLATE
+ voice vlan
+service-template DEFAULT_CRITICAL_DATA_TEMPLATE
+service-template webauth-global-inactive
+ inactivity-timer 3600
+memory free low-watermark processor 170247
+device classifier
+license udi pid C9800-L-F-K9 sn FCL261100HA
+license smart transport off
+diagnostic bootup level minimal
+!
+!
+enable secret 9 xxxxxxxx
+!
+username gnsadmin privilege 15 secret xxxxxx
+username netlocker privilege 15 secret xxxxxx
+!
+redundancy
+ mode sso
+ main-cpu
+  standby console enable
+!
+crypto engine compliance shield disable
+!
+!
+!
+!
+!
+vlan internal allocation policy ascending
+!
+vlan 15
+ name WLC_Mgmt(424546)
+!
+vlan 16
+ name Associate_Wifi(424546)
+!
+vlan 17
+ name GUEST
+!
+vlan 18
+ name Client_Wifi(424546)
+!
+vlan 19
+ name Digi_Wifi(424546)
+!
+vlan 24
+ name Onboarding_SSID
+!
+!
+class-map match-any AVC-Reanchor-Class
+ match protocol cisco-jabber-audio
+ match protocol cisco-jabber-video
+ match protocol webex-media
+ match protocol webex-app-sharing
+ match protocol webex-control
+ match protocol webex-meeting
+ match protocol wifi-calling
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+!
+interface Port-channel1
+ switchport mode trunk
+!
+interface TwoGigabitEthernet0/0/0
+ shutdown
+ negotiation auto
+!
+interface TwoGigabitEthernet0/0/1
+ shutdown
+ negotiation auto
+!
+interface TwoGigabitEthernet0/0/2
+ shutdown
+ negotiation auto
+!
+interface TwoGigabitEthernet0/0/3
+ shutdown
+ negotiation auto
+!
+interface TenGigabitEthernet0/1/0
+ switchport mode trunk
+ no negotiation auto
+ channel-group 1 mode on
+!
+interface TenGigabitEthernet0/1/1
+ switchport mode trunk
+ no negotiation auto
+ channel-group 1 mode on
+!
+interface GigabitEthernet0
+ vrf forwarding Mgmt-intf
+ no ip address
+ shutdown
+ negotiation auto
+!
+interface Vlan1
+ no ip address
+ no ip proxy-arp
+!
+interface Vlan15
+ ip address 10.58.7.164 255.255.255.224 secondary
+ ip address 10.58.7.162 255.255.255.224
+ no ip proxy-arp
+!
+ip forward-protocol nd
+ip tftp source-interface GigabitEthernet0
+ip http server
+ip http access-class ipv4 WEB_Access_restrict
+ip http authentication aaa login-authentication TAC-AUTH
+ip http authentication aaa exec-authorization TAC-AUTHOR
+ip http secure-server
+ip http secure-trustpoint COGAUSMELCORPWLC1
+ip http client source-interface Vlan15
+ip ssh bulk-mode 131072
+ip ssh time-out 60
+ip ssh authentication-retries 4
+ip ssh source-interface Vlan15
+ip tacacs source-interface Vlan15
+ip route 0.0.0.0 0.0.0.0 10.58.7.161
+!
+!
+ip access-list standard SNMP
+ 10 permit 10.232.209.208
+ 20 permit 10.155.140.114
+ 30 permit 10.232.209.217
+ 40 permit 10.155.140.123
+ 50 permit 10.223.202.22
+ 60 permit 10.127.82.65
+ 70 permit 10.237.102.42
+ 80 permit 10.127.82.187
+ 90 permit 10.223.202.63
+ 100 permit 10.155.140.116
+ 110 permit 10.232.209.209
+ 120 permit 10.142.221.34
+ 130 permit 10.142.221.35
+ 140 permit 10.142.221.36
+ 150 permit 10.142.198.75
+ 160 permit 10.142.221.37
+ 170 permit 10.127.82.189
+ 190 permit 10.223.202.64
+ 200 permit 10.155.31.10
+ 210 permit 10.127.113.192 0.0.0.31
+ 220 permit 10.223.232.128 0.0.0.31
+ip access-list standard WEB_Access_restrict
+ 10 permit 10.241.108.245
+ 20 permit 10.142.143.34
+ 21 permit 10.223.202.31
+ 30 permit 10.142.184.67
+ 40 permit 10.142.184.70
+ 50 permit 10.142.184.68
+ 60 permit 10.142.184.71
+ 70 permit 10.223.120.68
+ 80 permit 10.223.120.69
+ 90 permit 10.223.120.70
+ 100 permit 10.223.120.71
+ 110 permit 10.140.77.137
+ 120 permit 10.140.77.138
+ 130 permit 10.140.77.133
+ 140 permit 10.140.77.136
+ 150 permit 10.123.27.135
+ 160 permit 10.123.27.136
+ 170 permit 10.123.27.137
+ 180 permit 10.123.27.138
+ 190 permit 10.78.114.10
+ 200 permit 10.242.250.210
+ 210 permit 10.155.20.49
+ 220 permit 10.242.250.165
+ 230 permit 10.155.20.48
+ 240 permit 10.142.221.34
+ 250 permit 10.142.221.35
+ 260 permit 10.142.221.36
+ 270 permit 10.142.221.37
+ 280 permit 10.237.69.152
+ 330 permit 10.78.114.28
+ 340 permit 10.78.114.15
+ 350 permit 10.237.69.135
+ 360 permit 10.127.83.166
+ip access-list standard vty_access
+ 10 permit 10.227.145.123
+ 20 permit 10.224.64.136
+ 30 permit 10.241.47.240
+ 40 permit 10.225.161.230
+ 50 permit 10.238.60.30
+ 60 permit 10.237.209.70
+ 70 permit 10.242.196.30
+ 80 permit 10.236.133.27
+ 90 permit 10.237.102.42
+ 100 permit 10.242.251.32
+ 110 permit 10.242.168.38
+ 120 permit 10.242.168.39
+ 130 permit 10.155.140.233
+ 140 permit 10.155.140.234
+ 150 permit 10.241.108.195
+ 160 permit 10.142.129.147
+ 170 permit 10.118.129.76
+ 180 permit 10.238.51.15
+ 190 permit 10.238.60.29
+ 200 permit 10.252.5.103
+ 210 permit 10.118.193.148
+ 220 permit 10.242.196.103
+ 230 permit 10.242.196.195
+ 240 permit 10.241.47.162
+ 250 permit 10.142.129.158
+ 260 permit 10.236.145.55
+ 270 permit 10.155.20.123
+ 280 permit 10.155.20.122
+ 290 permit 10.236.200.226
+ 300 permit 10.236.200.227
+ 310 permit 10.155.141.22
+ 320 permit 10.155.142.39
+ 330 permit 10.232.209.53
+ 340 permit 10.127.82.187
+ 350 permit 10.223.202.63
+ 360 permit 10.142.221.34
+ 370 permit 10.142.221.35
+ 380 permit 10.142.221.36
+ 390 permit 10.142.221.37
+ 400 permit 10.232.209.208
+ 410 permit 10.155.140.114
+ 420 permit 10.236.200.88
+ 430 permit 10.255.96.70
+ 440 permit 10.232.205.9
+ 450 permit 10.140.77.137
+ 460 permit 10.142.184.67
+ 470 permit 10.142.184.70
+ 480 permit 10.142.184.68
+ 490 permit 10.142.184.71
+ 500 permit 10.155.31.10
+ 510 permit 10.127.82.189
+ 520 permit 10.223.202.64
+!
+ip access-list extended Block_Internal_ACL
+ 31 permit ip any host 10.57.128.51
+ 32 permit ip any host 10.224.133.216
+ 33 permit ip any host 10.155.20.158
+ 34 permit ip any 10.57.222.128 0.0.0.127
+ 35 permit ip 10.57.222.128 0.0.0.127 any
+ 60 deny ip any 10.0.0.0 0.255.255.255
+ 70 deny ip any 172.16.0.0 0.15.255.255
+ 80 deny ip any 192.168.0.0 0.0.255.255
+ 81 deny icmp any any
+ 84 deny tcp any 10.0.0.0 0.255.255.255 range 0 65535
+ 85 deny udp any 10.0.0.0 0.255.255.255 range 0 65535
+ 90 permit ip any any
+ip access-list extended Block_Internal_CLIENT
+ 10 permit udp any any eq domain
+ 11 permit ip any host 10.155.20.158
+ 12 permit ip any host 10.224.133.216
+ 13 permit ip any host 10.203.0.132
+ 14 permit ip any host 10.242.237.11
+ 100 permit ip any 10.58.21.0 0.0.0.255
+ 101 permit ip any 10.58.5.0 0.0.0.255
+ 102 permit ip any 10.57.104.64 0.0.0.63
+ 103 permit ip any 10.57.218.0 0.0.1.255
+ 104 permit ip any 10.120.18.160 0.0.0.31
+ 120 deny ip any 10.0.0.0 0.255.255.255
+ 130 deny ip any 172.16.0.0 0.15.255.255
+ 140 deny ip any 192.168.0.0 0.0.255.255
+ 150 deny icmp any any
+ 160 deny tcp any 10.0.0.0 0.255.255.255 range 0 65535
+ 170 deny udp any 10.0.0.0 0.255.255.255 range 0 65535
+ 180 permit ip any any
+ip access-list extended Block_Internal_DIGI
+ 31 permit udp any any eq domain
+ 33 permit ip any 10.58.6.0 0.0.0.255
+ 34 permit ip any 10.57.223.0 0.0.0.255
+ 35 permit ip any 10.120.18.80 0.0.0.15
+ 60 deny ip any 10.0.0.0 0.255.255.255
+ 70 deny ip any 172.16.0.0 0.15.255.255
+ 80 deny ip any 192.168.0.0 0.0.255.255
+ 81 deny icmp any any
+ 84 deny tcp any 10.0.0.0 0.255.255.255 range 0 65535
+ 85 deny udp any 10.0.0.0 0.255.255.255 range 0 65535
+ 90 permit ip any any
+ip access-list extended Blueprint_Internet_ACL
+ 10 permit udp any eq bootpc any eq bootps
+ 20 permit udp any eq bootps any eq bootpc
+ 30 permit udp any eq domain any eq domain
+ 31 permit ip any host 10.57.128.231
+ 32 permit ip any 10.120.18.16 0.0.0.7
+ 33 permit ahp any 10.120.19.0 0.0.0.255
+ 40 permit ip any host 10.139.181.12
+ 50 permit ip any host 10.104.244.101
+ 60 permit ip any host 10.157.16.77
+ 70 permit ip any host 10.157.16.66
+ 80 permit ip any host 10.127.94.128
+ 90 permit ip any host 10.57.128.27
+ 100 permit ip any host 10.57.128.26
+ 110 permit ip any 10.153.1.0 0.0.0.255
+ 120 deny ip any 10.0.0.0 0.255.255.255
+ 130 deny ip any 192.0.0.0 0.255.255.255
+ 140 deny ip any 172.16.0.0 0.15.255.255
+ 150 permit ip any any
+ip access-list extended OnboardingWIFI_ACL
+ 10 permit udp any eq bootpc any eq bootps
+ 20 permit udp any eq bootps any eq bootpc
+ 30 permit udp any eq domain any eq domain
+ 31 permit ip any host 10.57.128.51
+ 32 permit ip any host 10.224.133.216
+ 33 permit ip any host 10.155.20.158
+ 60 deny ip any 10.0.0.0 0.255.255.255
+ 70 deny ip any 172.16.0.0 0.15.255.255
+ 80 deny ip any 192.168.0.0 0.0.255.255
+ 81 deny icmp any any
+ 84 deny tcp any 10.0.0.0 0.255.255.255 range 0 65535
+ 85 deny udp any 10.0.0.0 0.255.255.255 range 0 65535
+ 90 permit ip any any
+ip access-list extended Posture-Audit
+ 10 deny udp any eq domain any
+ 20 deny udp any any eq domain
+ 30 deny udp any eq bootpc any eq bootps
+ 40 deny udp any eq bootps any eq bootpc
+ 50 deny ip any host 10.242.250.210
+ 60 deny ip host 10.242.250.210 any
+ 70 deny ip any host 10.155.20.49
+ 80 deny ip host 10.155.20.49 any
+ 90 deny ip any host 10.242.250.165
+ 100 deny ip host 10.242.250.165 any
+ 110 deny ip any host 10.155.20.48
+ 120 deny ip host 10.155.20.48 any
+ 130 deny ip any host 10.226.20.3
+ 140 deny ip host 10.226.20.3 any
+ 150 deny ip any host 10.238.50.37
+ 160 deny ip host 10.238.50.37 any
+ 170 deny tcp any any eq 443
+ 180 deny tcp any eq 443 any
+ 190 deny tcp any any eq 6050
+ 200 deny tcp any eq 6050 any
+ 210 deny ip any host 10.222.11.14
+ 220 deny ip host 10.222.11.14 any
+ 230 deny ip any host 10.243.231.93
+ 240 deny ip host 10.243.231.93 any
+ 250 permit ip any host 72.163.1.80
+ 260 permit tcp any any eq www
+ 270 deny ip any any
+ip access-list extended Posture-Redirect
+ 10 deny udp any eq domain any
+ 20 deny udp any any eq domain
+ 30 deny udp any eq bootpc any eq bootps
+ 40 deny udp any eq bootps any eq bootpc
+ 50 deny ip any host 10.242.250.210
+ 60 deny ip host 10.242.250.210 any
+ 70 deny ip any host 10.155.20.49
+ 80 deny ip host 10.155.20.49 any
+ 90 deny ip any host 10.242.250.165
+ 100 deny ip host 10.242.250.165 any
+ 110 deny ip any host 10.155.20.48
+ 120 deny ip host 10.155.20.48 any
+ 130 deny ip any host 10.226.20.3
+ 140 deny ip host 10.226.20.3 any
+ 150 deny ip any host 10.238.50.37
+ 160 deny ip host 10.238.50.37 any
+ 170 deny tcp any any eq 443
+ 180 deny tcp any eq 443 any
+ 190 deny tcp any any eq 6050
+ 200 deny tcp any eq 6050 any
+ 210 deny ip any host 10.222.11.14
+ 220 deny ip host 10.222.11.14 any
+ 230 deny ip any host 10.243.231.93
+ 240 deny ip host 10.243.231.93 any
+ 250 permit ip any host 72.163.1.80
+ 260 permit tcp any any eq www
+ip access-list extended Quarantine
+ 10 permit udp any any eq bootpc
+ 20 permit udp any any eq bootps
+ 30 permit udp any any eq domain
+ 40 permit udp any eq domain any
+ 50 permit tcp any any eq domain
+ 60 permit tcp any eq domain any
+ 70 permit tcp any any eq 6050
+ 80 permit tcp any eq 6050 any
+ 90 permit ip any host 10.242.250.210
+ 100 permit ip host 10.242.250.210 any
+ 110 permit ip any host 10.242.250.165
+ 120 permit ip host 10.242.250.165 any
+ 130 permit ip any host 10.155.20.48
+ 140 permit ip host 10.155.20.48 any
+ 150 permit ip any host 10.155.20.49
+ 160 permit ip host 10.155.20.49 any
+ 170 permit ip any host 10.153.66.186
+ 180 permit ip host 10.153.66.186 any
+ 190 permit ip any host 10.153.66.187
+ 200 permit ip host 10.153.66.187 any
+ 210 permit ip any host 10.127.82.92
+ 220 permit ip host 10.127.82.92 any
+ 230 permit ip any host 10.127.82.70
+ 240 permit ip host 10.127.82.70 any
+ 250 permit ip any host 10.127.82.7
+ 260 permit ip host 10.127.82.71 any
+ 270 permit ip any host 10.127.82.91
+ 280 permit ip host 10.127.82.91 any
+ 290 permit ip any host 10.153.53.35
+ 300 permit ip host 10.153.53.35 any
+ 310 permit ip any host 10.127.83.2
+ 320 permit ip host 10.127.83.2 any
+ 330 permit ip any host 10.127.83.1
+ 340 permit ip host 10.127.83.1 any
+ 350 permit ip any host 10.153.66.216
+ 360 permit ip host 10.153.66.216 any
+ 370 permit ip any host 10.153.66.217
+ 380 permit ip host 10.153.66.217 any
+ 390 permit ip any host 10.229.1.84
+ 400 permit ip host 10.229.1.84 any
+ 410 permit ip any 10.153.1.0 0.0.0.255
+ 420 permit ip 10.153.1.0 0.0.0.255 any
+ 430 deny ip any 10.0.0.0 0.255.255.255
+ 440 deny ip any 192.168.0.0 0.0.255.255
+ 450 deny ip any 172.16.0.0 0.15.255.255
+ 460 permit ip any any
+ip access-list extended cwa_redirect
+ 10 deny ip any host 10.242.250.210
+ 20 deny ip host 10.242.250.210 any
+ 30 deny ip any host 10.155.20.49
+ 40 deny ip host 10.155.20.49 any
+ 50 deny ip any host 10.242.250.165
+ 60 deny ip host 10.242.250.165 any
+ 70 deny ip any host 10.155.20.48
+ 80 deny ip host 10.155.20.48 any
+ 90 deny udp any any eq domain
+ 100 deny udp any eq domain any
+ 110 permit tcp any any eq www
+ip access-list extended ntp-acl-list
+ 10 permit udp host 10.224.64.100 any
+ 20 permit udp host 10.237.185.245 any
+ 30 deny ip any any
+ip radius source-interface Vlan15
+!
+logging origin-id string COGAUSMELCORPWLC1
+logging facility local4
+logging source-interface Vlan15
+logging host 10.237.102.42
+logging host 10.142.221.34
+logging host 10.223.222.100
+logging host 10.232.205.8
+ip access-list standard 99
+ 10 permit 10.223.202.63
+ 20 permit 10.223.202.64
+ 30 permit 10.155.140.123
+ 40 permit 10.155.140.117
+ 50 permit 10.155.140.116
+ 60 permit 10.153.66.164
+ 70 permit 10.127.82.189
+ 80 permit 10.127.82.187
+ 90 permit 10.237.102.42
+ 100 permit 10.231.186.133
+ 110 permit 10.232.209.210
+ 120 permit 10.232.209.209
+ 130 permit 10.232.209.217
+!
+snmp-server group CTS_SNMPv3 v3 priv
+snmp-server trap-source Vlan15
+snmp-server packetsize 5000
+snmp-server location AUSMEL
+snmp-server contact xxxxxxxx
+snmp-server enable traps snmp authentication linkdown linkup coldstart warmstart
+snmp-server enable traps vrrp
+snmp-server enable traps flowmon
+snmp-server enable traps pfr
+snmp-server enable traps ds1
+snmp-server enable traps entity-perf throughput-notif
+snmp-server enable traps wiredguest wired_guest
+snmp-server enable traps wireless bsnMobileStation bsnAutoRF bsnGeneral rogue MESH wireless_mobility RRM SI tunnel
+snmp-server enable traps call-home message-send-fail server-fail
+snmp-server enable traps tty
+snmp-server enable traps casa
+snmp-server enable traps ospf state-change
+snmp-server enable traps ospf errors
+snmp-server enable traps ospf retransmit
+snmp-server enable traps ospf lsa
+snmp-server enable traps ospf cisco-specific state-change nssa-trans-change
+snmp-server enable traps ospf cisco-specific state-change shamlink interface
+snmp-server enable traps ospf cisco-specific state-change shamlink neighbor
+snmp-server enable traps ospf cisco-specific errors
+snmp-server enable traps ospf cisco-specific retransmit
+snmp-server enable traps ospf cisco-specific lsa
+snmp-server enable traps eigrp
+snmp-server enable traps pki
+snmp-server enable traps entity-sensor
+snmp-server enable traps entity
+snmp-server enable traps smart-license
+snmp-server enable traps cef resource-failure peer-state-change peer-fib-state-change inconsistency
+snmp-server enable traps aaa_server
+snmp-server enable traps atm subif
+snmp-server enable traps entity-qfp mem-res-thresh throughput-notif
+snmp-server enable traps entity-state
+snmp-server enable traps ethernet cfm cc mep-up mep-down cross-connect loop config
+snmp-server enable traps ethernet cfm crosscheck mep-missing mep-unknown service-up
+snmp-server enable traps ethernet evc status create delete
+snmp-server enable traps ether-oam
+snmp-server enable traps auth-framework sec-violation
+snmp-server enable traps flash insertion removal lowspace
+snmp-server enable traps adslline
+snmp-server enable traps vdsl2line
+snmp-server enable traps netsync
+snmp-server enable traps ptp
+snmp-server enable traps lost-ptp-slave
+snmp-server enable traps breach-ptp-offset-threshold
+snmp-server enable traps srp
+snmp-server enable traps entity-diag boot-up-fail hm-test-recover hm-thresh-reached scheduled-test-fail
+snmp-server enable traps cnpd
+snmp-server enable traps isdn call-information
+snmp-server enable traps isdn layer2
+snmp-server enable traps isdn chan-not-avail
+snmp-server enable traps isdn ietf
+snmp-server enable traps sonet
+snmp-server enable traps dlsw
+snmp-server enable traps resource-policy
+snmp-server enable traps bgp cbgp2
+snmp-server enable traps nhrp nhs
+snmp-server enable traps nhrp nhc
+snmp-server enable traps nhrp nhp
+snmp-server enable traps nhrp quota-exceeded
+snmp-server enable traps ipsla
+snmp-server enable traps config-copy
+snmp-server enable traps config
+snmp-server enable traps config-ctid
+snmp-server enable traps dhcp
+snmp-server enable traps memory bufferpeak
+snmp-server enable traps fru-ctrl
+snmp-server enable traps event-manager
+snmp-server enable traps frame-relay
+snmp-server enable traps frame-relay subif
+snmp-server enable traps pim neighbor-change rp-mapping-change invalid-pim-message
+snmp-server enable traps ipmulticast
+snmp-server enable traps msdp
+snmp-server enable traps mvpn
+snmp-server enable traps rsvp
+snmp-server enable traps ip local pool
+snmp-server enable traps syslog
+snmp-server enable traps ospfv3 state-change
+snmp-server enable traps ospfv3 errors
+snmp-server enable traps pppoe
+snmp-server enable traps cpu threshold
+snmp-server enable traps l2tun session
+snmp-server enable traps l2tun pseudowire status
+snmp-server enable traps l2tun tunnel
+snmp-server enable traps pimstdmib neighbor-loss invalid-register invalid-join-prune rp-mapping-change interface-election
+snmp-server enable traps vtp
+snmp-server enable traps vlancreate
+snmp-server enable traps vlandelete
+snmp-server enable traps envmon
+snmp-server enable traps ike policy add
+snmp-server enable traps ike policy delete
+snmp-server enable traps ike tunnel start
+snmp-server enable traps ike tunnel stop
+snmp-server enable traps ipsec cryptomap add
+snmp-server enable traps ipsec cryptomap delete
+snmp-server enable traps ipsec cryptomap attach
+snmp-server enable traps ipsec cryptomap detach
+snmp-server enable traps ipsec tunnel start
+snmp-server enable traps ipsec tunnel stop
+snmp-server enable traps ipsec too-many-sas
+snmp-server enable traps gdoi gm-start-registration
+snmp-server enable traps gdoi gm-registration-complete
+snmp-server enable traps gdoi gm-re-register
+snmp-server enable traps gdoi gm-rekey-rcvd
+snmp-server enable traps gdoi gm-rekey-fail
+snmp-server enable traps gdoi ks-rekey-pushed
+snmp-server enable traps gdoi gm-incomplete-cfg
+snmp-server enable traps gdoi ks-no-rsa-keys
+snmp-server enable traps gdoi ks-new-registration
+snmp-server enable traps gdoi ks-reg-complete
+snmp-server enable traps gdoi ks-role-change
+snmp-server enable traps gdoi ks-gm-deleted
+snmp-server enable traps gdoi ks-peer-reachable
+snmp-server enable traps gdoi ks-peer-unreachable
+snmp-server enable traps lisp
+snmp-server enable traps sbc adj-status
+snmp-server enable traps sbc blacklist
+snmp-server enable traps sbc congestion-alarm
+snmp-server enable traps sbc h248-ctrlr-status
+snmp-server enable traps sbc media-source
+snmp-server enable traps sbc radius-conn-status
+snmp-server enable traps sbc sla-violation
+snmp-server enable traps sbc sla-violation-rev1
+snmp-server enable traps sbc svc-state
+snmp-server enable traps sbc qos-statistics
+snmp-server enable traps bfd
+snmp-server enable traps mpls rfc ldp
+snmp-server enable traps mpls ldp
+snmp-server enable traps mpls rfc traffic-eng
+snmp-server enable traps mpls traffic-eng
+snmp-server enable traps mpls fast-reroute protected
+snmp-server enable traps otn
+snmp-server enable traps pw vc
+snmp-server enable traps dial
+snmp-server enable traps diameter
+snmp-server enable traps dsp card-status
+snmp-server enable traps dsp oper-state
+snmp-server enable traps dsp video-usage
+snmp-server enable traps dsp video-out-of-resource
+snmp-server enable traps frame-relay multilink bundle-mismatch
+snmp-server enable traps alarms informational
+snmp-server enable traps vrfmib vrf-up vrf-down vnet-trunk-up vnet-trunk-down
+snmp-server enable traps ethernet cfm alarm
+snmp-server enable traps transceiver all
+snmp-server enable traps rf
+snmp-server enable traps bulkstat collection transfer
+snmp-server enable traps vlan-membership
+snmp-server enable traps mpls vpn
+snmp-server enable traps mpls rfc vpn
+snmp-server enable traps voice
+snmp-server host 10.119.0.17 version 3 priv xxxxxxxx
+snmp-server host 10.127.113.226 version 3 priv xxxxxxxx
+snmp-server host 10.127.82.187 version 3 priv xxxxxxxx
+snmp-server host 10.127.82.65 version 3 priv xxxxxxxx
+snmp-server host 10.142.221.34 version 3 priv xxxxxxxx
+snmp-server host 10.142.221.35 version 3 priv xxxxxxxx
+snmp-server host 10.142.221.36 version 3 priv xxxxxxxx
+snmp-server host 10.142.221.37 version 3 priv xxxxxxxx
+snmp-server host 10.155.140.115 version 3 priv xxxxxxxx
+snmp-server host 10.155.140.116 version 3 priv xxxxxxxx
+snmp-server host 10.155.140.118 version 3 priv xxxxxxxx
+snmp-server host 10.155.140.123 version 3 priv xxxxxxxx
+snmp-server host 10.223.232.162 version 3 priv xxxxxxxx
+snmp-server host 10.232.202.22 version 3 priv xxxxxxxx
+snmp-server host 10.232.209.199 version 3 priv xxxxxxxx
+snmp-server host 10.232.209.207 version 3 priv xxxxxxxx
+snmp-server host 10.232.209.209 version 3 priv xxxxxxxx
+snmp-server host 10.232.209.217 version 3 priv xxxxxxxx
+snmp-server host 10.233.202.63 version 3 priv xxxxxxxx
+snmp-server host 10.237.102.42 version 3 priv xxxxxxxx
+snmp ifmib ifindex persist
+tacacs-server directed-request
+tacacs server CHN
+ address ipv4 10.242.141.227
+ key xxxxxxxx
+tacacs server PUN
+ address ipv4 10.223.105.94
+ key xxxxxxxx
+!
+!
+!
+!
+radius server CHNPSN
+ address ipv4 10.242.250.210 auth-port 1812 acct-port 1813
+ timeout 5
+ retransmit 5
+ key xxxxxxxx
+!
+radius server PUNPSN
+ address ipv4 10.155.20.49 auth-port 1812 acct-port 1813
+ timeout 5
+ retransmit 5
+ key xxxxxxxx
+!
+radius server CHNPSN1
+ address ipv4 10.242.250.165 auth-port 1812 acct-port 1813
+ timeout 5
+ retransmit 5
+ key xxxxxxxx
+!
+radius server PUNPSN1
+ address ipv4 10.155.20.48 auth-port 1812 acct-port 1813
+ timeout 5
+ retransmit 5
+ key xxxxxxxx
+!
+!
+control-plane
+!
+!
+!
+!
+!
+banner exec ^CCCCCCCCC
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!                                                                                                         !
+!                                     NOTICE  PROPRIETARY SYSTEM                                          !
+!                                                                                                         !
+! Cognizants communications systems, networks and company-issued communication devices may be used only   !
+! by authorized users for legitimate purposes.Use is monitored for system administration,to identify or   !
+! investigate inappropriate access and use,and for other business purposes, as permitted by law.By        !
+! accessing these systems, networks or devices you are consenting to this monitoring, which includes your !
+! use of the internet and corporate and personal web-based email.Additionally,users agree that they       !
+! understand and will comply with all Cognizant Information Security and Privacy policies, including      !
+! policy statements,instructions,standards and guidelines.                                                !
+!                                                                                                         !
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+^C
+banner login ^CCCCC
+***********************************************************************************************************************
+*WARNING!  This system is the property of Cognizant Technology Solutions and may be accessed only by authorized users.*
+*Unauthorized use of this system is strictly prohibited and may be subject to criminal prosecution.                   *
+***********************************************************************************************************************
+^C
+banner motd ^Canner exec ^CCCCC
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!                                                                                                         !
+!                                     NOTICE  PROPRIETARY SYSTEM                                          !
+!                                                                                                         !
+! Cognizants communications systems, networks and company-issued communication devices may ^C
+!
+line con 0
+ session-timeout 5
+ exec-timeout 5 15
+ timeout login response 300
+ privilege level 15
+ authorization exec CON-AUTHOR
+ logging synchronous
+ login xxxxxx
+ stopbits 1
+line aux 0
+line vty 0
+ session-timeout 5
+ exec-timeout 5 15
+ timeout login response 300
+ authorization exec TAC-AUTHOR
+ logging synchronous
+ login xxxxxx
+ length 0
+ transport preferred none
+ transport input ssh
+ transport output none
+line vty 1 4
+ session-timeout 5
+ exec-timeout 5 15
+ timeout login response 300
+ authorization commands 15 CTS
+ authorization exec TAC-AUTHOR
+ logging synchronous
+ login xxxxxx
+ length 0
+ transport preferred none
+ transport input ssh
+ transport output none
+line vty 5 15
+ session-timeout 5
+ exec-timeout 5 15
+ timeout login response 300
+ authorization commands 15 CTS
+ authorization exec TAC-AUTHOR
+ logging synchronous
+ login xxxxxx
+ length 0
+ transport preferred none
+ transport input ssh
+ transport output none
+line vty 16 50
+ session-timeout 5
+ exec-timeout 5 15
+ timeout login response 300
+ authorization exec TAC-AUTHOR
+ logging synchronous
+ login xxxxxx
+ transport preferred none
+ transport input ssh
+ transport output none
+!
+ntp authentication-key xxxxxxxx
+ntp authentication-key xxxxxxxx
+ntp authenticate
+ntp trusted-key xxxxxxx
+ntp trusted-key xxxxxxx
+ntp source Vlan15
+ntp access-group peer ntp-acl-list
+ntp server 10.224.64.10 prefer
+ntp server 10.224.64.100 key 1122 prefer
+ntp server 10.237.185.245 key 1234
+ntp server 10.236.216.86
+call-home
+ ! If contact email address in call-home is configured as sch-smart-licensing@cisco.com
+ ! the email address configured in Cisco Smart License Portal will be used as contact email address to send SCH notifications.
+ contact-email-addr sch-smart-licensing@cisco.com
+ profile "CiscoTAC-1"
+  active
+  destination transport-method http
+!
+!
+!
+!
+!
+!
+redun-management interface Vlan15 chassis 1 address 10.58.7.164 chassis 2 address 10.58.7.165
+telemetry ietf subscription 750
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_emul_oper/environment_sensor
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1011
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/wlan_config
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1012
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/wlanpolicies
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1013
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/wlanpolicies;policy_profile_name=temp_policy_profile/atfpolicymap
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1014
+ encoding encode-tdl
+ filter nested-uri /services;serviceName=ewlc/policylist
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1016
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/site_tag_config
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1017
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=iosevent/q_flash_fault
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1018
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=iosevent/q_sdcard_fault
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1019
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=iosevent/platform_sensor_state_update
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1020
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=iosevent/install_status
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1051
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/wlan_config
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1052
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/wlanpolicies
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1053
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/wlanpolicies;policy_profile_name=temp_policy_profile/atfpolicymap
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1054
+ encoding encode-tdl
+ filter nested-uri /services;serviceName=ewlc/policylist
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 1056
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/site_tag_config
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2011
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlcevent/wsaapevent
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2112
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/oper_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2113
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/capwap_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2114
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/radio_oper_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2115
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/capwap_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2116
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/spectrum_aq_table
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2120
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/ethernet_if_stats
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2121
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/rrmAPautoRfdot11Data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2122
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/rrm_measurement
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2125
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper_emul/emltdApRf
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 17000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2126
+ encoding encode-tdl
+ filter tdl-transform dfsRadarCounters
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2154
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/radio_oper_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 361000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2155
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/ewlcRadioOperBand
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2156
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/ewlcRadioOperBand
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2157
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/apdot11SpectrumData
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2158
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/apdot11SpectrumData
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2159
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/cdp_cache_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2160
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/cdp_cache_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2161
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper_emul/emltdLradIfLoadParameters
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 300000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2162
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/spectrum_device_table
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2163
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/mesh_tree_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2164
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/mesh_neigh
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 2165
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/mesh_oper_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3011
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/common_oper_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 359000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3012
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/dot11_oper_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3013
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/smMainData
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3014
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/lisp_agent_client_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3016
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/mobility_oper_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 390000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3017
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/sisf_db_mac
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 380000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3111
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/traffic_stats
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 9000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3113
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/client_wsa_info
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3114
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/location_rssi_measurements
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3115
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlcevent/wsaclientscanreportevent
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3211
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlcevent/wsaclientevent
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3212
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/dc_info
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3213
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/dc_info
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 370000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3214
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/policy_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3215
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/policy_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 360000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 3216
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/traffic_distribution_airtime_latency receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 4321
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper_emul/emltdAaaServersStat
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 4322
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper_emul/emltd_sisf_dhcpv4_relay_stats
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5011
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_emul_oper/device_hardware;singleton_id=0?device_system_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5012
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_oper/ha_infra
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5013
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_emul_oper/device_hardware;singleton_id=0/device_inventory
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5015
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_emul_oper/smart_license_state;singleton_id=0/smart_license_usage
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5016
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_oper/ha_infra
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 180000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5017
+ encoding encode-tdl
+ filter nested-uri /services;serviceName=sman_oper/control_process;fru=BINOS_FRU_RP;slotnum=0;baynum=0;chassisnum=1?plat_core_stats
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5018
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_emul_oper/entity_information
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5019
+ encoding encode-tdl
+ filter nested-uri /services;serviceName=ios_oper/platform_component;cname=\"Slot\"?platform_properties
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5020
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_oper/platform_component
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5112
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ios_emul_oper/interface
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5115
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=sman_oper/control_process
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5117
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper_emul/client_global_stats_data;singleton_id=0
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5118
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper_emul/emltd_join_count_stat;singleton_id=0
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5119
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/lisp_agent_ms_msg_stats_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 5120
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc/dot11
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 6001
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/radioWsaInfo
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 900000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 6002
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/radio_reset_stats
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 1800000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 6004
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/rrmRadSlot
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 1800000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 6005
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/radio_oper_stats
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 6007
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/rrmCoverage
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 6008
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/feature_usage
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 3000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 7000
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/icapApSrvcStats
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 7001
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/device_analytics_wsa_info
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 7002
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/mobility_global_stats
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 7003
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/client_rejection_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 30000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 8882
+ encoding encode-tdl
+ filter tdl-transform trustSecCounterDelta
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy periodic 90000
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 9991
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=rogue_oper/rogue_client_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 9992
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=rogue_oper/rogue_data
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 9993
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/awips_alarm
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry ietf subscription 9994
+ encoding encode-tdl
+ filter tdl-uri /services;serviceName=ewlc_oper/awips_dwld_status
+ receiver-type protocol
+ source-address 10.58.7.162
+ stream native
+ update-policy on-change
+ receiver name DNAC_ASSURANCE_RECEIVER
+telemetry receiver protocol DNAC_ASSURANCE_RECEIVER
+ host ip-address 10.142.221.34 25103
+ protocol tls-native profile sdn-network-infra-iwan
+telemetry transform dfsRadarCounters
+ input table apdot11RadarData
+  field wtp_mac
+  field radio_slot_id
+  field dfs_cisco_ip_cnt
+  field dfs_triggered_cnt
+  field dfs_serving_rad_cnt
+  field dfs_stats_last_updated
+  join-key radio_slot_key_t
+  logical-op and
+  type mandatory
+  uri /services;serviceName=ewlc_oper/apdot11RadarData
+ operation 1
+  filter 1
+   event on-change
+   field apdot11RadarData.dfs_stats_last_updated
+  output-field 1
+   field apdot11RadarData.dfs_cisco_ip_cnt
+  output-field 2
+   field apdot11RadarData.dfs_triggered_cnt
+  output-field 3
+   field apdot11RadarData.dfs_serving_rad_cnt
+  output-field 4
+   field apdot11RadarData.wtp_mac
+  output-field 5
+   field apdot11RadarData.radio_slot_id
+  output-field 6
+   field apdot11RadarData.dfs_stats_last_updated
+ specified
+telemetry transform trustSecCounterDelta
+ input table cts_rolebased_policy
+  field dst_sgt
+  field src_sgt
+  field sgacl_name
+  field monitor_mode
+  field num_of_sgacl
+  field policy_life_time
+  field total_deny_count
+  field last_updated_time
+  field total_permit_count
+  join-key cts_role_based_policy_key
+  logical-op and
+  type mandatory
+  uri /services;serviceName=ios_emul_oper/cts_rolebased_policy
+ operation 1
+  output-field 1
+   field cts_rolebased_policy.src_sgt
+  output-field 2
+   field cts_rolebased_policy.dst_sgt
+  output-field 3
+   field cts_rolebased_policy.total_permit_count
+   output-op type delta
+  output-field 4
+   field cts_rolebased_policy.total_deny_count
+   output-op type delta
+  output-field 5
+   field cts_rolebased_policy.sgacl_name
+  output-field 6
+   field cts_rolebased_policy.monitor_mode
+  output-field 7
+   field cts_rolebased_policy.num_of_sgacl
+  output-field 8
+   field cts_rolebased_policy.policy_life_time
+  output-field 9
+   field cts_rolebased_policy.last_updated_time
+ specified
+wireless aaa policy Posture-AAA-Policy
+ nas-id option1 ap-site-tag
+wireless aaa policy default-aaa-policy
+wireless cts-sxp profile default-sxp-profile
+wireless management interface Vlan15
+wireless profile power Global_PWR_PROFILE
+ 0 radio 5ghz spatial-stream 1
+ 1 radio 24ghz state shutdown
+wireless profile airtime-fairness default-atf-policy 0
+wireless profile flex NZ_SER_FP
+ acl-policy cwa_redirect
+  central-webauth
+ acl-policy Block_Internal_ACL
+ acl-policy OnboardingWIFI_ACL
+ acl-policy Block_Internal_DIGI
+ acl-policy Block_Internal_CLIENT
+ acl-policy Blueprint_Internet_ACL
+ description "New Zealand Servian"
+ native-vlan-id 51
+ vlan-name GUEST
+  vlan-id 121
+ vlan-name Onboarding_SSID
+  vlan-id 115
+ vlan-name Digi_Wifi(424546)
+  vlan-id 112
+ vlan-name Client_Wifi(424546)
+  vlan-id 114
+ vlan-name Associate_Wifi(424546)
+  vlan-id 111
+wireless profile flex AUS_BNE_FP
+ acl-policy Quarantine
+ acl-policy cwa_redirect
+  central-webauth
+ acl-policy Posture-Audit
+  central-webauth
+ acl-policy Posture-Redirect
+  central-webauth
+ acl-policy Block_Internal_ACL
+ acl-policy OnboardingWIFI_ACL
+ acl-policy Block_Internal_DIGI
+ acl-policy Block_Internal_CLIENT
+ description AUS_Brisbane
+ native-vlan-id 11
+ vlan-name Guest_WIFi
+  vlan-id 8
+ vlan-name Client_WIFi
+  vlan-id 5
+ vlan-name Associate-WIFi
+  vlan-id 4
+wireless profile flex COGAUSMEL_FP
+ acl-policy Quarantine
+ acl-policy cwa_redirect
+  central-webauth
+ acl-policy Posture-Audit
+  central-webauth
+ acl-policy Posture-Redirect
+  central-webauth
+ acl-policy Block_Internal_ACL
+ acl-policy OnboardingWIFI_ACL
+ acl-policy Block_Internal_DIGI
+ acl-policy Block_Internal_CLIENT
+ description "For AUS_MEL"
+ native-vlan-id 14
+ vlan-name Corp_Wireless
+  vlan-id 16
+ vlan-name Digi_Wireless
+  vlan-id 19
+ vlan-name Guest_Wireless
+  vlan-id 17
+ vlan-name Client_Wireless
+  vlan-id 18
+ vlan-name Onboarding_SSID
+  vlan-id 24
+wireless profile flex COGAUSSYD_FP
+ acl-policy Quarantine
+ acl-policy cwa_redirect
+  central-webauth
+ acl-policy Posture-Audit
+  central-webauth
+ acl-policy Posture-Redirect
+  central-webauth
+ acl-policy Block_Internal_ACL
+ acl-policy Block_Internal_DIGI
+ acl-policy Block_Internal_CLIENT
+ description "For Sydney"
+ native-vlan-id 13
+ vlan-name GUEST
+  vlan-id 16
+ vlan-name Client_Wifi
+  vlan-id 17
+ vlan-name Digital-Wi-Fi
+  vlan-id 18
+ vlan-name Wireless-VLAN
+  vlan-id 7
+ vlan-name Associate-Wi-Fi
+  vlan-id 15
+ vlan-name Onboarding_SSID
+  vlan-id 19
+wireless profile flex COGAUSADLD_FP
+ acl-policy Quarantine
+ acl-policy cwa_redirect
+  central-webauth
+ acl-policy Posture-Audit
+  central-webauth
+ acl-policy Posture-Redirect
+  central-webauth
+ acl-policy Block_Internal_ACL
+ acl-policy OnboardingWIFI_ACL
+ acl-policy Block_Internal_DIGI
+ acl-policy Block_Internal_CLIENT
+ description "For Adelaide"
+ native-vlan-id 4
+ vlan-name GUEST
+  vlan-id 8
+ vlan-name Client-Wi-Fi
+  vlan-id 6
+ vlan-name Digital-Wi-Fi
+  vlan-id 7
+ vlan-name Associate-Wi-Fi
+  vlan-id 5
+wireless profile flex SYD_AISTUDIO_FP
+ acl-policy cwa_redirect
+  central-webauth
+ description SYD_CTS
+ native-vlan-id 3
+ vlan-name "WIFI DATA"
+  vlan-id 5
+wireless profile flex default-flex-profile
+ description "default flex profile"
+wireless profile mesh default-mesh-profile
+ description "default mesh profile"
+wireless profile multi-bssid AI_RF_PROFILE
+ description AI_RF_PROFILE
+wireless profile multi-bssid default-multi-bssid-profile
+ description "Default multi bssid profile"
+wireless profile radio default-radio-profile
+ description "Preconfigured default radio profile"
+wireless profile calender-profile name WEEKEND
+ day saturday
+ day sunday
+ recurrance weekly
+ start 00:00:00 end 23:59:59
+wireless profile calender-profile name WEEKDAYS-EV-MID
+ recurrance daily
+ start 19:00:00 end 23:59:59
+wireless profile calender-profile name WEEKDAYS-MID-MRN
+ recurrance daily
+ start 00:00:00 end 08:00:00
+wireless profile policy Guest_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ description "For AUS-MEL"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 86400
+ vlan GUEST
+ no shutdown
+wireless profile policy Client_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ description "For AUS_MEL"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 86400
+ vlan Client_Wifi(424546)
+ no shutdown
+wireless profile policy DigiWifi_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ description "For AUS_MEL"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 86400
+ vlan Digi_Wifi(424546)
+ no shutdown
+wireless profile policy VIPVISIT_PP
+ description VIPVISIT_PP
+ dhcp-tlv-caching
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ radius-profiling
+ vlan Client_Wifi(424546)
+ no shutdown
+wireless profile policy AI-Studio_PP
+ no central dhcp
+ no central switching
+ description "For Sydney AI Studio"
+ dhcp-tlv-caching
+ http-tlv-caching
+ idle-timeout 3600
+ radius-profiling
+ vlan 5
+ no shutdown
+wireless profile policy Corporate_PP
+ aaa-override
+ aaa-policy Posture-AAA-Policy
+ accounting-list DOT1X_ACC
+ description "For AUS_MEL"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 86400
+ vlan Associate_Wifi(424546)
+ no shutdown
+wireless profile policy SYD_Guest_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description AUS_Sydney
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 16
+ no shutdown
+wireless profile policy ADLD_Guest_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description "For Adelaide"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ vlan 8
+ no shutdown
+wireless profile policy Onboarding_PP
+ no central dhcp
+ no central switching
+ description Onboarding
+ exclusionlist timeout 180
+ idle-timeout 3600
+ ipv4 dhcp required
+ session-timeout 86400
+ vlan 19
+ no shutdown
+wireless profile policy SYD_Client_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description AUS_Sydney
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 17
+ no shutdown
+wireless profile policy ADLD_Client_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description "For Adelaide"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 86400
+ vlan 6
+ no shutdown
+wireless profile policy "Central Digi_PP"
+ aaa-override
+ accounting-list DOT1X_ACC
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 18
+ no shutdown
+wireless profile policy NZ_SER_Guest_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description "New Zealand Servian"
+ dhcp-tlv-caching
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 121
+ no shutdown
+wireless profile policy SYD_DigiWIFI_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description AUS_Sydney
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 18
+ no shutdown
+wireless profile policy ADLD_DigiWiFi_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description "For Adelaide"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 86400
+ vlan 7
+ no shutdown
+wireless profile policy AUS_BNE_Guest_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central association
+ no central dhcp
+ no central switching
+ description AUS_Brisbane
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 8
+ no shutdown
+wireless profile policy NZ_SER_Client_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description "New Zealand servian"
+ dhcp-tlv-caching
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 114
+ no shutdown
+wireless profile policy SYD_Corporate_PP
+ aaa-override
+ aaa-policy Posture-AAA-Policy
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description AUS_Sydney
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 7
+ no shutdown
+wireless profile policy ADLD_Corporate_PP
+ aaa-override
+ aaa-policy Posture-AAA-Policy
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description "For Adelaide"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ nac
+ radius-profiling
+ session-timeout 84000
+ vlan 5
+ no shutdown
+wireless profile policy AUS_BNE_Client_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central association
+ no central dhcp
+ no central switching
+ description AUS_Brisbane
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 5
+ no shutdown
+wireless profile policy NZ_SER_DigiWIFI_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central association
+ no central dhcp
+ no central switching
+ description "New Zeland Servian"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 112
+ no shutdown
+wireless profile policy AUS_BNE_DigiWIFI_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central association
+ no central dhcp
+ no central switching
+ description AUS_Brisbane
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 28000
+ no shutdown
+wireless profile policy NZ_SER_Corporate_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description "New Zealand Servian"
+ dhcp-tlv-caching
+ http-tlv-caching
+ nac
+ radius-profiling
+ vlan 111
+ no shutdown
+wireless profile policy NZ_SER_Onboarding_PP
+ aaa-override
+ accounting-list DOT1X_ACC
+ no central dhcp
+ no central switching
+ description "New Zealand Servian"
+ idle-timeout 3600
+ nac
+ session-timeout 86400
+ vlan 115
+wireless profile policy AUS_BNEA_Corporate_PP
+ aaa-override
+ aaa-policy Posture-AAA-Policy
+ accounting-list DOT1X_ACC
+ no central association
+ no central dhcp
+ no central switching
+ description AUS_Brisbane
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+ nac
+ radius-profiling
+ session-timeout 28000
+ vlan 4
+ no shutdown
+wireless profile policy AUS_MEL_Onboarding_PP
+ description "Melbourne Onboarding"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 acl OnboardingWIFI_ACL
+ ipv4 dhcp required
+ radius-profiling
+ session-timeout 86400
+ vlan 24
+ no shutdown
+wireless profile policy AUS_ADLD_Onboarding_PP
+ description "Adelaide Onboarding"
+ dhcp-tlv-caching
+ exclusionlist timeout 180
+ http-tlv-caching
+ idle-timeout 3600
+ ipv4 dhcp required
+ radius-profiling
+ session-timeout 86400
+ vlan 24
+ no shutdown
+wireless profile policy default-policy-profile
+ description "default policy profile"
+ ipv4 flow monitor wireless-avc-basic input
+ ipv4 flow monitor wireless-avc-basic output
+ ipv6 flow monitor wireless-avc-basic-ipv6 input
+ ipv6 flow monitor wireless-avc-basic-ipv6 output
+wireless tag site NZ_SER_ST
+ ap-profile AP_JoinProfile
+ description "New Zealand Servian"
+ flex-profile NZ_SER_FP
+ no local-site
+wireless tag site AUS_BNE_ST
+ ap-profile AP_JoinProfile
+ description AUS_Brisbane
+ flex-profile AUS_BNE_FP
+ no local-site
+wireless tag site COGAUSMEL_ST
+ ap-profile AP_JoinProfile
+ description "For AUS_MEL"
+ flex-profile COGAUSMEL_FP
+wireless tag site COGAUSSYD_ST
+ ap-profile AP_JoinProfile
+ description COGAUSSYD_PT
+ flex-profile COGAUSSYD_FP
+ no local-site
+wireless tag site COGAUSADLD_ST
+ ap-profile AP_JoinProfile
+ description COGAUSADLD_ST
+ flex-profile COGAUSADLD_FP
+ no local-site
+wireless tag site SYD_AISTUDIO_ST
+ ap-profile AP_JoinProfile
+ description "AI STUDIO"
+ flex-profile SYD_AISTUDIO_FP
+ no local-site
+wireless tag site default-site-tag
+ description "default site tag"
+wireless tag site MEL_Posture_Audit
+ ap-profile AP_JoinProfile
+ flex-profile COGAUSMEL_FP
+ no local-site
+wireless tag site SYD_Posture_Audit
+ ap-profile AP_JoinProfile
+ flex-profile COGAUSSYD_FP
+ no local-site
+wireless tag site AUSADLD_Posture_Audit
+ ap-profile AP_JoinProfile
+ flex-profile COGAUSADLD_FP
+ no local-site
+wireless tag policy NZ_SER_PT
+ description "New Zealand Servian"
+ wlan Guest_WP policy NZ_SER_Guest_PP
+ wlan Client_WP policy NZ_SER_Client_PP
+ wlan Onboarding policy NZ_SER_Onboarding_PP
+ wlan DigiWifi_WP policy NZ_SER_DigiWIFI_PP
+ wlan Corporate_WP policy NZ_SER_Corporate_PP
+wireless tag policy AUS_BNE_PT
+ description Aus_Brisbane
+ wlan Guest_WP policy AUS_BNE_Guest_PP
+ wlan Client_WP policy AUS_BNE_Client_PP
+ wlan Corporate_WP policy AUS_BNEA_Corporate_PP
+wireless tag policy AI_Studio_PT
+ description Sydney
+ wlan "AI Studio" policy AI-Studio_PP
+wireless tag policy COGAUSMEL_PT
+ description "For AUS_MEL"
+ wlan Guest_WP policy Guest_PP
+ wlan VIPVISIT policy VIPVISIT_PP
+ wlan Client_WP policy Client_PP
+ wlan DigiWifi_WP policy DigiWifi_PP
+ wlan Corporate_WP policy Corporate_PP
+wireless tag policy COGAUSSYD_PT
+ description "For Sydney"
+ wlan Guest_WP policy SYD_Guest_PP
+ wlan Client_WP policy SYD_Client_PP
+ wlan Onboarding policy Onboarding_PP
+ wlan DigiWifi_WP policy SYD_DigiWIFI_PP
+ wlan Corporate_WP policy SYD_Corporate_PP
+wireless tag policy COGAUSADLD_PT
+ description COGAUSADLD_PT
+ wlan Guest_WP policy ADLD_Guest_PP
+ wlan Client_WP policy ADLD_Client_PP
+ wlan Onboarding policy AUS_ADLD_Onboarding_PP
+ wlan DigiWifi_WP policy ADLD_DigiWiFi_PP
+ wlan Corporate_WP policy ADLD_Corporate_PP
+wireless tag policy default-policy-tag
+ description "default policy-tag"
+wireless tag policy COGAUSMEL_Onboarding_PT
+ description COGAUSMEL_Onboarding_PT
+ wlan Guest_WP policy Guest_PP
+ wlan Client_WP policy Client_PP
+ wlan Onboarding policy AUS_MEL_Onboarding_PP
+ wlan DigiWifi_WP policy DigiWifi_PP
+ wlan Corporate_WP policy Corporate_PP
+wireless tag policy COGAUSADLD_Onboarding_PT
+ description "Adelaide Onboarding"
+ wlan Guest_WP policy ADLD_Guest_PP
+ wlan Client_WP policy ADLD_Client_PP
+ wlan Onboarding policy AUS_ADLD_Onboarding_PP
+ wlan DigiWifi_WP policy ADLD_DigiWiFi_PP
+ wlan Corporate_WP policy ADLD_Corporate_PP
+wireless tag rf GLOBAL_RF_TAG
+ 24ghz-rf-policy AI_RF_PROFILE_b
+ 5ghz-rf-policy AI_RF_PROFILE_a
+ 6ghz-rf-policy AI_RF_PROFILE_6
+wireless tag rf default-rf-tag
+ description "default RF tag"
+wireless wps rogue ap init-timer 60
+wireless wps rogue ap rldp alarm-only monitor-ap-only
+wireless wps rogue network-assurance enable
+wireless wps rogue security-level high
+wireless client max-user-login 7
+wireless wps mfp
+wireless wps mfp ap-impersonation
+wireless fabric control-plane default-control-plane
+ description "default control plane name"
+wireless feature-usage enable
+wireless country AU
+wlan Guest_WP 17 $guest$
+ channel-scan defer-priority 4
+ mac-filtering DOT1X_AUTHZ
+ peer-blocking drop
+ radio policy dot11 24ghz
+ radio policy dot11 5ghz
+ no security ft adaptive
+ no security wpa
+ no security wpa wpa2
+ no security wpa wpa2 ciphers aes
+ no security wpa akm dot1x
+security dot1x authentication-list DOT1X_AUTH xxxxxxxx
+ no shutdown
+wlan VIPVISIT 20 VIPVISIT
+ no broadcast-ssid
+ dot11ax target-waketime
+ dot11ax twt-broadcast-support
+security wpa psk set-key ascii 8 xxxxxxxx
+ no security wpa akm dot1x
+security wpa akm psk xxxxxxxx
+wlan "AI Studio" 1 "AI _Studio"
+ dot11ax target-waketime
+ dot11ax twt-broadcast-support
+security wpa psk set-key ascii 8 xxxxxxxx
+ no security wpa akm dot1x
+security wpa akm psk xxxxxxxx
+ no shutdown
+wlan Client_WP 18 $ClientWifi$
+ channel-scan defer-priority 4
+ peer-blocking drop
+ radio policy dot11 24ghz
+ radio policy dot11 5ghz
+security ft   xxxxxxxx
+security wpa akm dot1x-sha256 xxxxxxxx
+security wpa akm ft xxxxxxxx
+security wpa wpa3  xxxxxxxx
+security dot1x authentication-list DOT1X_AUTH xxxxxxxx
+security pmf optional  xxxxxxxx
+ no shutdown
+wlan Onboarding 15 $Onboarding$
+ channel-scan defer-priority 3
+ channel-scan defer-priority 4
+ dot11ax target-waketime
+ dot11ax twt-broadcast-support
+ peer-blocking drop
+ radio policy dot11 5ghz
+security ft   xxxxxxxx
+security wpa psk set-key ascii 8 xxxxxxxx
+ no security wpa akm dot1x
+security wpa akm ft xxxxxxxx
+security wpa akm psk xxxxxxxx
+ no shutdown
+wlan DigiWifi_WP 19 digitalwifi
+ ccx aironet-iesupport
+ channel-scan defer-priority 4
+ peer-blocking drop
+ radio policy dot11 24ghz
+ radio policy dot11 5ghz
+security ft   xxxxxxxx
+security wpa akm dot1x-sha256 xxxxxxxx
+security wpa akm ft xxxxxxxx
+security wpa wpa3  xxxxxxxx
+security dot1x authentication-list DOT1X_AUTH xxxxxxxx
+security pmf optional  xxxxxxxx
+ no shutdown
+wlan Corporate_WP 14 A$$oc1at#
+ no broadcast-ssid
+ channel-scan defer-priority 4
+ peer-blocking drop
+ radio policy dot11 5ghz
+security ft   xxxxxxxx
+security wpa akm dot1x-sha256 xxxxxxxx
+security wpa akm ft xxxxxxxx
+security wpa wpa3  xxxxxxxx
+security dot1x authentication-list DOT1X_AUTH xxxxxxxx
+security pmf optional  xxxxxxxx
+ no shutdown
+network-assurance enable
+network-assurance icap server port 32626
+network-assurance url https://10.142.221.34
+ap dot11 24ghz rf-profile AI_RF_PROFILE_b
+ description AI_RF_PROFILE_b_Desc
+ rate RATE_11M disable
+ rate RATE_12M mandatory
+ rate RATE_1M disable
+ rate RATE_24M supported
+ rate RATE_2M disable
+ rate RATE_5_5M disable
+ rate RATE_6M disable
+ rate RATE_9M disable
+ tx-power max 14
+ tx-power min 5
+ no shutdown
+ap dot11 24ghz rf-profile Low_Client_Density_rf_24gh
+ coverage data rssi threshold -90
+ coverage level 2
+ coverage voice rssi threshold -90
+ description "pre configured Low Client Density rfprofile for 2.4gh radio"
+ high-density rx-sop threshold low
+ rate RATE_12M supported
+ rate RATE_24M supported
+ rate RATE_6M supported
+ tx-power v1 threshold -65
+ no shutdown
+ap dot11 24ghz rf-profile High_Client_Density_rf_24gh
+ description "pre configured High Client Density rfprofile for 2.4gh radio"
+ high-density rx-sop threshold medium
+ rate RATE_11M disable
+ rate RATE_12M mandatory
+ rate RATE_1M disable
+ rate RATE_24M supported
+ rate RATE_2M disable
+ rate RATE_5_5M disable
+ rate RATE_6M disable
+ tx-power min 7
+ no shutdown
+ap dot11 24ghz rf-profile Typical_Client_Density_rf_24gh
+ description "pre configured Typical Client Density rfprofile for 2.4gh radio"
+ rate RATE_11M disable
+ rate RATE_12M mandatory
+ rate RATE_1M disable
+ rate RATE_24M supported
+ rate RATE_2M disable
+ rate RATE_5_5M disable
+ rate RATE_6M disable
+ no shutdown
+ap dot11 24ghz rrm channel cleanair-event
+ap dot11 24ghz rrm channel cleanair-event rogue-contribution
+ap dot11 24ghz shutdown
+ap dot11 24ghz rate RATE_11M disable
+ap dot11 24ghz rate RATE_12M mandatory
+ap dot11 24ghz rate RATE_1M disable
+ap dot11 24ghz rate RATE_24M supported
+ap dot11 24ghz rate RATE_2M disable
+ap dot11 24ghz rate RATE_5_5M disable
+ap dot11 24ghz rate RATE_6M disable
+ap dot11 24ghz rate RATE_9M disable
+ap dot11 6ghz rf-profile AI_RF_PROFILE_6
+ description AI_RF_PROFILE_6_Desc
+ dot11ax multi-bssid-profile AI_RF_PROFILE
+ rate RATE_12M supported
+ rate RATE_24M supported
+ rate RATE_6M mandatory
+ tx-power v1 threshold -67
+ap dot11 5ghz rf-profile AI_RF_PROFILE_a
+ channel chan-width 40
+ description AI_RF_PROFILE_a_Desc
+ rate RATE_12M mandatory
+ rate RATE_24M supported
+ rate RATE_6M disable
+ rate RATE_9M disable
+ tx-power max 17
+ tx-power min 8
+ no shutdown
+ap dot11 6ghz rf-profile default-rf-profile-6ghz
+ description "default rfprofile for 6GHz radio"
+ rate RATE_12M mandatory
+ rate RATE_24M mandatory
+ rate RATE_6M mandatory
+ no shutdown
+ap dot11 5ghz rf-profile Low_Client_Density_rf_5gh
+ coverage data rssi threshold -90
+ coverage level 2
+ coverage voice rssi threshold -90
+ description "pre configured Low Client Density rfprofile for 5gh radio"
+ high-density rx-sop threshold low
+ rate RATE_12M mandatory
+ rate RATE_24M mandatory
+ rate RATE_6M mandatory
+ tx-power v1 threshold -60
+ no shutdown
+ap dot11 5ghz rf-profile High_Client_Density_rf_5gh
+ description "pre configured High Client Density rfprofile for 5gh radio"
+ high-density rx-sop threshold medium
+ rate RATE_12M mandatory
+ rate RATE_24M mandatory
+ rate RATE_6M disable
+ rate RATE_9M disable
+ tx-power min 7
+ tx-power v1 threshold -65
+ no shutdown
+ap dot11 5ghz rf-profile Typical_Client_Density_rf_5gh
+ description "pre configured Typical Density rfprofile for 5gh radio"
+ rate RATE_12M mandatory
+ rate RATE_24M mandatory
+ rate RATE_6M mandatory
+ no shutdown
+ap dot11 5ghz rrm channel cleanair-event
+ap dot11 5ghz rrm channel cleanair-event rogue-contribution
+ap dot11 5ghz rate RATE_12M mandatory
+ap dot11 5ghz rate RATE_24M mandatory
+ap dot11 5ghz rate RATE_6M disable
+ap dot11 5ghz rate RATE_9M disable
+ap dot11 6ghz shutdown
+ap dot11 6ghz rrm monitor measurement 600
+ap tag persistency enable
+ap tag-source-priority 2 source filter
+ap tag-source-priority 3 source ap
+ap profile AP_JoinProfile
+ awips
+ capwap backup primary COGAUSMELCORPWLC1 10.58.7.162
+ capwap backup secondary COGAUSSYNWLC1 10.58.23.162
+ description "For AUS_All Location"
+ link-latency
+mgmtuser username xxxxxx password 8 xxxxxx secret 8 xxxxxx
+ ntp ip 10.224.64.100
+ oeap rogue-detection
+ rogue detection min-rssi -70
+ ssh
+ syslog host 10.232.205.8
+ syslog level debugging
+ap profile default-ap-profile
+ description "default ap profile"
+ ntp ip 0.0.0.0
+ rogue detection containment auto-rate
+ rogue detection min-rssi -80
+ rogue detection min-transient-time 300
+ rogue detection report-interval 30
+ syslog host 255.255.255.255
+ap 3891.b79a.4ae8
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79a.586c
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.042c
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0834
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0a3c
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0a58
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0b68
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0c60
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0c84
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0d00
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0d18
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0d78
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0d90
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0d94
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0dc4
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 3891.b79c.0dec
+ policy-tag COGAUSSYD_PT
+ site-tag COGAUSSYD_ST
+ap 4891.d5ee.da68
+ policy-tag AUS_BNE_PT
+ site-tag AUS_BNE_ST
+ap 4891.d5ef.4b10
+ policy-tag AUS_BNE_PT
+ site-tag AUS_BNE_ST
+ap 4891.d5ef.647c
+ policy-tag AUS_BNE_PT
+ site-tag AUS_BNE_ST
+ap 4891.d5ef.67bc
+ policy-tag AUS_BNE_PT
+ site-tag AUS_BNE_ST
+ap 4891.d5ef.7efc
+ policy-tag AUS_BNE_PT
+ site-tag AUS_BNE_ST
+ap 4891.d5ef.8004
+ policy-tag AUS_BNE_PT
+ site-tag AUS_BNE_ST
+ap 4891.d5ef.84f0
+ policy-tag AUS_BNE_PT
+ rf-tag COGBNERF-
+ site-tag AUS_BNE_ST
+ap 4891.d5ef.86a4
+ policy-tag AUS_BNE_PT
+ site-tag AUS_BNE_ST
+ap 4891.d5ef.89c0
+ policy-tag AUS_BNE_PT
+ site-tag AUS_BNE_ST
+ap 8c1e.805a.2228
+ policy-tag COGAUSADLD_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSADLD_ST
+ap 8c1e.805e.1c4c
+ policy-tag COGAUSADLD_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSADLD_ST
+ap 940d.4bfd.c03c
+ policy-tag AI_Studio_PT
+ site-tag SYD_AISTUDIO_ST
+ap e44e.2d02.1720
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.17bc
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.18b8
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.18d4
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.1c0c
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.1c7c
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.2098
+ policy-tag COGAUSADLD_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSADLD_ST
+ap e44e.2d02.2100
+ policy-tag COGAUSADLD_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSADLD_ST
+ap e44e.2d02.2250
+ policy-tag COGAUSADLD_PT
+ site-tag COGAUSADLD_ST
+ap e44e.2d02.22b8
+ policy-tag COGAUSADLD_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSADLD_ST
+ap e44e.2d02.22d0
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.22dc
+ policy-tag COGAUSADLD_PT
+ site-tag COGAUSADLD_ST
+ap e44e.2d02.22e8
+ policy-tag COGAUSADLD_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSADLD_ST
+ap e44e.2d02.22fc
+ policy-tag COGAUSADLD_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSADLD_ST
+ap e44e.2d02.233c
+ policy-tag COGAUSADLD_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSADLD_ST
+ap e44e.2d02.28ec
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.2940
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.2d80
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.2f4c
+ policy-tag COGAUSMEL_Onboarding_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.2f9c
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.2fec
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap e44e.2d02.2ff4
+ policy-tag COGAUSMEL_PT
+ rf-tag GLOBAL_RF_TAG
+ site-tag COGAUSMEL_ST
+ap upgrade staggered one-shot
+trapflags ap crash
+trapflags ap noradiocards
+trapflags ap register
+netconf-yang
+end

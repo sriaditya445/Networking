@@ -1,24 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  FaUpload,
-  FaFolder,
-  FaTrash,
-  FaDownload,
-  FaSearch,
-  FaServer,
-  FaEye,
-  FaInbox
-} from "react-icons/fa";
 
-
-import {
-  MdRouter,
-  MdSwitchAccount
-} from "react-icons/md";
-
-import {
-  HiOutlineStatusOnline
-} from "react-icons/hi";
+// Import newly created modular UI components
+import Sidebar from './components/Sidebar';
+import ConfigModal from './components/ConfigModal';
+import TypeDevicesModal from './components/TypeDevicesModal';
+import Dashboard from './components/Dashboard';
+import Inventory from './components/Inventory';
+import UploadCenter from './components/UploadCenter';
+import ParsedDevices from './components/ParsedDevices';
+import Analytics from './components/Analytics';
+import ProcessingQueue from './components/ProcessingQueue';
+import Configurations from './components/Configurations';
+import Downloads from './components/Downloads';
+import SettingsTab from './components/SettingsTab';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -39,6 +33,7 @@ function App() {
   });
 
   // UI state
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [folderName, setFolderName] = useState('configs');
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploadMode, setUploadMode] = useState('file'); // 'file' or 'folder'
@@ -51,10 +46,7 @@ function App() {
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [selectedTypeDevices, setSelectedTypeDevices] = useState([]);
   const [selectedType, setSelectedType] = useState("");
-
-  // Refs
-  const fileInputRef = useRef(null);
-  const folderInputRef = useRef(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Fetch all necessary data from FastAPI backend
   const fetchData = async () => {
@@ -110,22 +102,6 @@ function App() {
     return () => clearInterval(intervalId);
   }, [jobs.map(j => j.status).join(',')]); // Triggers effect if any job status changes
 
-  // Handle file selection
-  const handleFileChange = (e) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setSelectedFiles(filesArray);
-
-      // Auto-suggest folder name if directory path exists, or default to first file name
-      if (uploadMode === 'folder' && filesArray.length > 0 && filesArray[0].webkitRelativePath) {
-        const rootFolder = filesArray[0].webkitRelativePath.split('/')[0];
-        setFolderName(rootFolder);
-      } else if (filesArray.length > 0 && folderName === 'configs') {
-        setFolderName('batch_' + new Date().toISOString().slice(0, 10).replace(/-/g, ''));
-      }
-    }
-  };
-
   // Submit file uploads using fetch API
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
@@ -159,8 +135,9 @@ function App() {
 
       setUploadProgress(100);
       setSelectedFiles([]);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      if (folderInputRef.current) folderInputRef.current.value = '';
+
+      // Switch to Processing Queue tab to let user see parser working
+      setActiveTab('queue');
 
       // Immediately refresh dashboard
       await fetchData();
@@ -202,15 +179,37 @@ function App() {
   const renderStatusBadge = (status) => {
     switch (status) {
       case 'pending':
-        return <span className="badge badge-pending"><span className="status-dot"></span>Pending</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-amber-50 text-amber-600 border border-amber-100">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+            <span>Pending</span>
+          </span>
+        );
       case 'processing':
-        return <span className="badge badge-processing"><span className="status-dot"></span>Processing</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-cyan-50 text-cyan-600 border border-cyan-100">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-ping" />
+            <span>Processing</span>
+          </span>
+        );
       case 'success':
-        return <span className="badge badge-success">Success</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-emerald-50 text-emerald-600 border border-emerald-100">
+            <span>Success</span>
+          </span>
+        );
       case 'failed':
-        return <span className="badge badge-failed">Failed</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-rose-50 text-rose-600 border border-rose-100">
+            <span>Failed</span>
+          </span>
+        );
       default:
-        return <span className="badge">{status}</span>;
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-slate-50 text-slate-650 border border-slate-100">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -221,546 +220,188 @@ function App() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString();
   };
 
-
   const handleTypeClick = (type) => {
-
-    const filtered = devices.filter(
-      (device) => device.device_type === type
-    );
+    let filtered = [];
+    if (type === 'Unknown') {
+      filtered = devices.filter(
+        (device) => !['Switch', 'Router', 'Firewall', 'AccessPoint', 'WLC'].includes(device.device_type)
+      );
+    } else {
+      filtered = devices.filter(
+        (device) => device.device_type === type
+      );
+    }
 
     setSelectedType(type);
     setSelectedTypeDevices(filtered);
     setShowTypeModal(true);
   };
 
-
-
-  // Filter devices list based on search query and type filter
-  const filteredDevices = devices.filter((device) => {
-    const matchesSearch = device.device_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      device.configuration.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === 'All' || device.device_type === typeFilter;
-    return matchesSearch && matchesType;
-  });
-
+  // Render content of active tab
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return (
+          <Dashboard
+            stats={stats}
+            jobs={jobs}
+            devices={devices}
+            onViewDevice={setSelectedDevice}
+            setActiveTab={setActiveTab}
+          />
+        );
+      case 'inventory':
+        return (
+          <Inventory
+            devices={devices}
+            onTypeClick={handleTypeClick}
+          />
+        );
+      case 'upload':
+        return (
+          <UploadCenter
+            folderName={folderName}
+            setFolderName={setFolderName}
+            selectedFiles={selectedFiles}
+            setSelectedFiles={setSelectedFiles}
+            uploadMode={uploadMode}
+            setUploadMode={setUploadMode}
+            uploading={uploading}
+            uploadProgress={uploadProgress}
+            backendOnline={backendOnline}
+            handleUploadSubmit={handleUploadSubmit}
+            jobs={jobs}
+            formatDate={formatDate}
+            renderStatusBadge={renderStatusBadge}
+          />
+        );
+      case 'devices':
+        return (
+          <ParsedDevices
+            devices={devices}
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            typeFilter={typeFilter}
+            setTypeFilter={setTypeFilter}
+            onViewDevice={setSelectedDevice}
+            formatDate={formatDate}
+            apiBaseUrl={API_BASE_URL}
+          />
+        );
+      case 'analytics':
+        return (
+          <Analytics
+            stats={stats}
+            devices={devices}
+            jobs={jobs}
+          />
+        );
+      case 'queue':
+        return (
+          <ProcessingQueue
+            jobs={jobs}
+            handleDeleteJob={handleDeleteJob}
+            formatDate={formatDate}
+            renderStatusBadge={renderStatusBadge}
+            apiBaseUrl={API_BASE_URL}
+          />
+        );
+      case 'configurations':
+        return (
+          <Configurations
+            devices={devices}
+            apiBaseUrl={API_BASE_URL}
+          />
+        );
+      case 'downloads':
+        return (
+          <Downloads
+            jobs={jobs}
+            formatDate={formatDate}
+            apiBaseUrl={API_BASE_URL}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsTab
+            apiBaseUrl={API_BASE_URL}
+            backendOnline={backendOnline}
+          />
+        );
+      default:
+        return (
+          <div className="bg-white border border-slate-200 rounded-2xl p-10 text-center text-slate-500 font-medium">
+            Section coming soon.
+          </div>
+        );
+    }
+  };
 
   return (
-    <div className="app-container">
-      {/* Header */}
-      <header className="app-header">
-        <div className="logo-container">
-          <div className="logo-icon">N</div>
-          <div className="logo-text">
-            <h1>NetConfig Parser</h1>
-            <p>Automated Network Configuration Parsing System</p>
-          </div>
-        </div>
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
+      {/* Fixed Left Sidebar navigation */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        backendOnline={backendOnline}
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+      />
 
-        <div className={`connection-status ${backendOnline ? 'online' : 'offline'}`}>
-          <span className="status-dot"></span>
-          {backendOnline ? 'Backend Online' : 'Backend Disconnected'}
-        </div>
-      </header>
-
-      {/* Analytics Statistics Grid */}
-      <section className="stats-grid">
-        <div className="stat-card accent">
-          <span className="stat-label">Total Uploads</span>
-          <span className="stat-value">{stats.total_jobs}</span>
-          <span className="stat-subtext">{stats.pending_jobs} active parser running</span>
-        </div>
-        <div className="stat-card purple-accent">
-          <span className="stat-label">Parsed Devices</span>
-          <span className="stat-value">{stats.total_devices}</span>
-          <span className="stat-subtext">Across all completed uploads</span>
-        </div>
-        <div
-          className="stat-card"
-          onClick={() => handleTypeClick("Switch")}
-          style={{ cursor: "pointer" }}
-        >
-          <span className="stat-label">Switches</span>
-          <span className="stat-value">{stats.switches_count}</span>
-          <span className="stat-subtext">Identified via "switchport"</span>
-        </div>
-        <div
-          className="stat-card"
-          onClick={() => handleTypeClick("Router")}
-          style={{ cursor: "pointer" }}
-        >
-          <span className="stat-label">Routers</span>
-          <span className="stat-value">{stats.routers_count}</span>
-          <span className="stat-subtext">Identified via "router ospf"</span>
-        </div>
-        <div
-          className="stat-card"
-          onClick={() => handleTypeClick("Firewall")}
-          style={{ cursor: "pointer" }}
-        >
-          <span className="stat-label">Firewalls</span>
-          <span className="stat-value">{stats.firewalls_count}</span>
-          <span className="stat-subtext">Identified via "firewall"</span>
-        </div>
-        <div
-          className="stat-card"
-          onClick={() => handleTypeClick("AccessPoint")}
-          style={{ cursor: "pointer" }}
-        >
-          <span className="stat-label">Access Points</span>
-
-          <span className="stat-value">
-            {
-              devices.filter(
-                d => d.device_type === "AccessPoint"
-              ).length
-            }
-          </span>
-
-          <span className="stat-subtext">
-            Identified via "wlan"
-          </span>
-        </div>
-      </section>
-
-      {/* Main Grid Layout */}
-      <main className="dashboard-layout">
-        {/* Left Side: Upload & Jobs List */}
-        <div className="layout-col">
-          <div className="glass-card">
-            <h2 className="card-title">
-              <FaUpload /> Upload Configurations
-            </h2>
-
-            {/* Upload Mode Toggles */}
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-              <button
-                type="button"
-                className={`btn ${uploadMode === 'file' ? 'btn-primary' : ''}`}
-                style={{ flex: 1, padding: '8px 16px', background: uploadMode === 'file' ? '' : 'rgba(255,255,255,0.05)', color: uploadMode === 'file' ? '' : '#fff' }}
-                onClick={() => { setUploadMode('file'); setSelectedFiles([]); }}
-              >
-                Files Mode
-              </button>
-              <button
-                type="button"
-                className={`btn ${uploadMode === 'folder' ? 'btn-primary' : ''}`}
-                style={{ flex: 1, padding: '8px 16px', background: uploadMode === 'folder' ? '' : 'rgba(255,255,255,0.05)', color: uploadMode === 'folder' ? '' : '#fff' }}
-                onClick={() => { setUploadMode('folder'); setSelectedFiles([]); }}
-              >
-                Folder Mode
-              </button>
-            </div>
-
-            <form onSubmit={handleUploadSubmit} className="upload-form">
-              <div className="form-group">
-                <label className="form-label" htmlFor="folderNameInput">Batch / Folder Label</label>
-                <input
-                  id="folderNameInput"
-                  type="text"
-                  className="text-input"
-                  value={folderName}
-                  onChange={(e) => setFolderName(e.target.value)}
-                  placeholder="e.g. branch_office_configs"
-                  required
-                />
-              </div>
-
-              {/* Conditional inputs depending on upload mode */}
-              {uploadMode === 'file' ? (
-                <div
-                  className="dropzone"
-                  onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                >
-                  <div className="upload-icon">📄</div>
-                  <span className="dropzone-text">Click to choose config files</span>
-                  <span className="dropzone-subtext">Supports .cfg, .txt, .conf, etc. (Multiple files allowed)</span>
-                  <input
-                    aria-label="Upload configuration files"
-                    type="file"
-                    ref={fileInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                    multiple
-                    required
-                  />
-                </div>
-              ) : (
-                <div
-                  className="dropzone"
-                  onClick={() => folderInputRef.current && folderInputRef.current.click()}
-                >
-                  <div className="upload-icon"><FaFolder /></div>
-                  <span className="dropzone-text">Click to select folder</span>
-                  <span className="dropzone-subtext">This uploads all files within the selected directory</span>
-                  <input
-                    aria-label="Upload folder of configuration files"
-                    type="file"
-                    ref={folderInputRef}
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                    webkitdirectory="true"
-                    directory="true"
-                    multiple
-                    required
-                  />
-                </div>
-              )}
-
-              {/* Show selected files */}
-              {selectedFiles.length > 0 && (
-                <div className="selected-files-list">
-                  <div style={{ fontWeight: 600, marginBottom: '6px' }}>Selected Files ({selectedFiles.length}):</div>
-                  {selectedFiles.map((file, idx) => (
-                    <div key={idx} className="selected-file-item">
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '280px' }}>
-                        {file.webkitRelativePath || file.name}
-                      </span>
-                      <span style={{ color: 'var(--text-muted)' }}>
-                        {(file.size / 1024).toFixed(1)} KB
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={selectedFiles.length === 0 || uploading || !backendOnline}
-              >
-                {uploading ? 'Uploading...' : 'Process configurations'}
-              </button>
-
-              {uploading && (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    <span>Sending files...</span>
-                    <span>{uploadProgress}%</span>
-                  </div>
-                  <div className="progress-container">
-                    <div className="progress-bar" style={{ width: `${uploadProgress}%` }}></div>
-                  </div>
-                </div>
-              )}
-            </form>
+      {/* Main Content Area */}
+      <div
+        className={`
+    flex-1
+    ${isCollapsed ? 'pl-20' : 'pl-64'}
+    flex flex-col
+    min-h-screen
+    transition-all duration-300
+  `}
+      >
+        {/* Top Header Navbar */}
+        <header className="bg-white border-b border-slate-200/80 px-8 py-5 flex items-center justify-between shadow-sm sticky top-0 z-20">
+          <div>
+            <h1 className="font-extrabold text-slate-800 text-lg leading-tight tracking-tight">
+              Enterprise Network Dashboard
+            </h1>
+            <p className="text-[11px] text-slate-400">NetConfig Configuration Analysis Staging System</p>
           </div>
 
-          {/* Jobs List */}
-          <div className="glass-card" style={{ marginTop: '2rem' }}>
-            <h2 className="card-title">
-              <span>📋</span> Upload Jobs Queue
-            </h2>
-
-            <div className="jobs-list">
-              {jobs.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">
-                    <FaInbox />
-                  </div>
-                  <div>No upload jobs yet. Upload files above to trigger parser.</div>
-                </div>
-              ) : (
-                jobs.map((job) => (
-                  <div key={job._id || job.id} className="job-item">
-                    <div className="job-info">
-                      <div className="job-name">{job.folder_name}</div>
-                      <div className="job-meta">
-                        <span>{job.files_count} files</span>
-                        <span>•</span>
-                        <span>{formatDate(job.created_at)}</span>
-                      </div>
-                      {job.error_message && (
-                        <div style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '4px', maxWidth: '300px' }}>
-                          Error: {job.error_message}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="job-actions">
-                      {renderStatusBadge(job.status)}
-                      {job.status === 'success' && (
-                        <button
-                          type="button"
-                          className="btn-download-icon"
-                          onClick={() => {
-                            const downloadUrl = `${API_BASE_URL}/api/jobs/${job._id || job.id}/download`;
-                            window.open(downloadUrl, '_blank');
-                          }}
-                          title="Download ZIP"
-                          aria-label={`Download folder ${job.folder_name} ZIP`}
-                        >
-                          📥
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="btn-danger-icon"
-                        onClick={() => handleDeleteJob(job._id || job.id)}
-                        title="Delete Job"
-                        aria-label={`Delete job ${job.folder_name}`}
-                      >
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
+          <div className="flex items-center gap-4">
+            <div className="text-[11px] text-slate-500 font-mono bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Real-time polling active</span>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Right Side: Parsed Devices List */}
-        <div className="layout-col">
-          <div className="glass-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <h2 className="card-title">
-              <span>🖥️</span> Parsed Network Devices
-            </h2>
+        {/* Dynamic tab components */}
+        <main className="flex-1 p-8 overflow-y-auto max-w-[1600px] w-full mx-auto">
+          {renderTabContent()}
+        </main>
+      </div>
 
-            {/* Controls for filtering and searching */}
-            <div className="devices-controls">
-              <input
-                type="text"
-                className="text-input search-input"
-                placeholder="Search device name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{ padding: '8px 16px' }}
-                aria-label="Search parsed devices"
-              />
-
-              <select
-                className="filter-select"
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value)}
-                aria-label="Filter devices by type"
-              >
-                <option value="All">All Types</option>
-                <option value="Switch">Switches</option>
-                <option value="Router">Routers</option>
-                <option value="Firewall">Firewalls</option>
-                <option value="Unknown">Unknown</option>
-              </select>
-            </div>
-
-            {/* Devices Table */}
-            <div className="devices-table-container" style={{ flexGrow: 1, maxHeight: '680px', overflowY: 'auto' }}>
-              {filteredDevices.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon">🔍</div>
-                  <div>No devices match the filters or configurations haven't been parsed yet.</div>
-                </div>
-              ) : (
-                <table className="devices-table">
-                  <thead>
-                    <tr>
-                      <th>Device Name</th>
-                      <th>Device Type</th>
-                      <th>Parent Upload</th>
-                      <th>Parsed At</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredDevices.map((device) => (
-                      <tr key={device._id || device.id}>
-                        <td style={{ fontWeight: 600 }}>{device.device_name}</td>
-                        <td>
-                          <span className={`device-type-badge device-type-${device.device_type}`}>
-                            {device.device_type}
-                          </span>
-                        </td>
-                        <td>{device.file_path ? device.file_path.split('/').slice(-2)[0] : 'config'}</td>
-                        <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {formatDate(device.parsed_at)}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className="btn"
-                            style={{ padding: '6px 12px', fontSize: '0.8rem', background: 'rgba(255, 255, 255, 0.08)', color: '#fff' }}
-                            onClick={() => setSelectedDevice(device)}
-                          >
-                            <FaEye />
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Modal: View Full Configuration */}
+      {/* Configuration modal viewer overlay */}
       {selectedDevice && (
-        <div className="modal-overlay" onClick={() => setSelectedDevice(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Configuration Viewer: {selectedDevice.device_name}</h3>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{ padding: '6px 12px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
-                  onClick={() => {
-                    const downloadUrl = `${API_BASE_URL}/api/devices/${selectedDevice._id || selectedDevice.id}/download`;
-                    window.open(downloadUrl, '_blank');
-                  }}
-                  title="Download configuration file"
-                >
-                  <FaDownload />
-                  Download  Config
-                </button>
-                <button
-                  type="button"
-                  className="modal-close"
-                  onClick={() => setSelectedDevice(null)}
-                >
-                  &times;
-                </button>
-              </div>
-            </div>
-            <div className="modal-body">
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                <div>
-                  <strong>Device Type:</strong> <span className={`device-type-badge device-type-${selectedDevice.device_type}`}>{selectedDevice.device_type}</span>
-                </div>
-                <div>
-                  <strong>Location:</strong> {selectedDevice.file_path}
-                </div>
-              </div>
-              <pre className="config-pre">
-                {selectedDevice.configuration || 'Empty configuration file.'}
-              </pre>
-            </div>
-          </div>
-        </div>
+        <ConfigModal
+          selectedDevice={selectedDevice}
+          onClose={() => setSelectedDevice(null)}
+          apiBaseUrl={API_BASE_URL}
+        />
       )}
 
-
-
+      {/* Device Type listing modal popup */}
       {showTypeModal && (
-        <div
-          className="modal-overlay"
-          onClick={() => setShowTypeModal(false)}
-        >
-
-          <div
-            className="modal-content"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "80%",
-              maxHeight: "80vh",
-              overflowY: "auto"
-            }}
-          >
-
-            <div className="modal-header">
-
-              <h3>
-                {selectedType} Devices
-              </h3>
-
-              <button
-                type="button"
-                className="modal-close"
-                onClick={() => setShowTypeModal(false)}
-              >
-                &times;
-              </button>
-
-            </div>
-
-            <div className="modal-body">
-
-              {selectedTypeDevices.length === 0 ? (
-
-                <div className="empty-state">
-                  No devices found.
-                </div>
-
-              ) : (
-
-                <table className="devices-table">
-
-                  <thead>
-                    <tr>
-                      <th>Device Name</th>
-                      <th>Device Type</th>
-                      <th>Parsed At</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-
-                    {selectedTypeDevices.map((device) => (
-
-                      <tr key={device._id || device.id}>
-
-                        <td>
-                          {device.device_name}
-                        </td>
-
-                        <td>
-
-                          <span
-                            className={`device-type-badge device-type-${device.device_type}`}
-                          >
-                            {device.device_type}
-                          </span>
-
-                        </td>
-
-                        <td>
-                          {formatDate(device.parsed_at)}
-                        </td>
-
-                        <td>
-
-                          <button
-                            type="button"
-                            className="btn"
-                            style={{
-                              padding: '6px 12px',
-                              fontSize: '0.8rem',
-                              background: 'rgba(255,255,255,0.08)',
-                              color: '#fff'
-                            }}
-                            onClick={() => {
-
-                              setShowTypeModal(false);
-
-                              setSelectedDevice(device);
-                            }}
-                          >
-                            <FaEye />
-                            View
-                          </button>
-
-                        </td>
-
-                      </tr>
-
-                    ))}
-
-                  </tbody>
-
-                </table>
-
-              )}
-
-            </div>
-
-          </div>
-
-        </div>
+        <TypeDevicesModal
+          type={selectedType}
+          devices={selectedTypeDevices}
+          onClose={() => setShowTypeModal(false)}
+          onViewDevice={(device) => {
+            setShowTypeModal(false);
+            setSelectedDevice(device);
+          }}
+        />
       )}
-
-
     </div>
   );
 }
