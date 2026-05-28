@@ -48,6 +48,9 @@ function App() {
   const [typeFilter, setTypeFilter] = useState('All');
   const [selectedDevice, setSelectedDevice] = useState(null); // Device for modal
   const [backendOnline, setBackendOnline] = useState(true);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [selectedTypeDevices, setSelectedTypeDevices] = useState([]);
+  const [selectedType, setSelectedType] = useState("");
 
   // Refs
   const fileInputRef = useRef(null);
@@ -218,6 +221,20 @@ function App() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString();
   };
 
+
+  const handleTypeClick = (type) => {
+
+    const filtered = devices.filter(
+      (device) => device.device_type === type
+    );
+
+    setSelectedType(type);
+    setSelectedTypeDevices(filtered);
+    setShowTypeModal(true);
+  };
+
+
+
   // Filter devices list based on search query and type filter
   const filteredDevices = devices.filter((device) => {
     const matchesSearch = device.device_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -225,6 +242,7 @@ function App() {
     const matchesType = typeFilter === 'All' || device.device_type === typeFilter;
     return matchesSearch && matchesType;
   });
+
 
   return (
     <div className="app-container">
@@ -256,20 +274,51 @@ function App() {
           <span className="stat-value">{stats.total_devices}</span>
           <span className="stat-subtext">Across all completed uploads</span>
         </div>
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          onClick={() => handleTypeClick("Switch")}
+          style={{ cursor: "pointer" }}
+        >
           <span className="stat-label">Switches</span>
           <span className="stat-value">{stats.switches_count}</span>
           <span className="stat-subtext">Identified via "switchport"</span>
         </div>
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          onClick={() => handleTypeClick("Router")}
+          style={{ cursor: "pointer" }}
+        >
           <span className="stat-label">Routers</span>
           <span className="stat-value">{stats.routers_count}</span>
           <span className="stat-subtext">Identified via "router ospf"</span>
         </div>
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          onClick={() => handleTypeClick("Firewall")}
+          style={{ cursor: "pointer" }}
+        >
           <span className="stat-label">Firewalls</span>
           <span className="stat-value">{stats.firewalls_count}</span>
           <span className="stat-subtext">Identified via "firewall"</span>
+        </div>
+        <div
+          className="stat-card"
+          onClick={() => handleTypeClick("AccessPoint")}
+          style={{ cursor: "pointer" }}
+        >
+          <span className="stat-label">Access Points</span>
+
+          <span className="stat-value">
+            {
+              devices.filter(
+                d => d.device_type === "AccessPoint"
+              ).length
+            }
+          </span>
+
+          <span className="stat-subtext">
+            Identified via "wlan"
+          </span>
         </div>
       </section>
 
@@ -590,6 +639,128 @@ function App() {
           </div>
         </div>
       )}
+
+
+
+      {showTypeModal && (
+        <div
+          className="modal-overlay"
+          onClick={() => setShowTypeModal(false)}
+        >
+
+          <div
+            className="modal-content"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "80%",
+              maxHeight: "80vh",
+              overflowY: "auto"
+            }}
+          >
+
+            <div className="modal-header">
+
+              <h3>
+                {selectedType} Devices
+              </h3>
+
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setShowTypeModal(false)}
+              >
+                &times;
+              </button>
+
+            </div>
+
+            <div className="modal-body">
+
+              {selectedTypeDevices.length === 0 ? (
+
+                <div className="empty-state">
+                  No devices found.
+                </div>
+
+              ) : (
+
+                <table className="devices-table">
+
+                  <thead>
+                    <tr>
+                      <th>Device Name</th>
+                      <th>Device Type</th>
+                      <th>Parsed At</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+
+                    {selectedTypeDevices.map((device) => (
+
+                      <tr key={device._id || device.id}>
+
+                        <td>
+                          {device.device_name}
+                        </td>
+
+                        <td>
+
+                          <span
+                            className={`device-type-badge device-type-${device.device_type}`}
+                          >
+                            {device.device_type}
+                          </span>
+
+                        </td>
+
+                        <td>
+                          {formatDate(device.parsed_at)}
+                        </td>
+
+                        <td>
+
+                          <button
+                            type="button"
+                            className="btn"
+                            style={{
+                              padding: '6px 12px',
+                              fontSize: '0.8rem',
+                              background: 'rgba(255,255,255,0.08)',
+                              color: '#fff'
+                            }}
+                            onClick={() => {
+
+                              setShowTypeModal(false);
+
+                              setSelectedDevice(device);
+                            }}
+                          >
+                            <FaEye />
+                            View
+                          </button>
+
+                        </td>
+
+                      </tr>
+
+                    ))}
+
+                  </tbody>
+
+                </table>
+
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+
     </div>
   );
 }
