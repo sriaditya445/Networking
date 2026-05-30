@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { FaTimes, FaEye, FaNetworkWired } from 'react-icons/fa';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 function TypeDevicesModal({ type, devices, onClose, onViewDevice }) {
+
+  useEscapeKey(onClose);
 
   // PAGINATION STATES
   const [currentPage, setCurrentPage] = useState(1);
@@ -133,14 +136,14 @@ function TypeDevicesModal({ type, devices, onClose, onViewDevice }) {
 
                           <span
                             className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold ${device.device_type === 'Switch'
-                                ? 'bg-cyan-100 text-cyan-700'
-                                : device.device_type === 'Router'
-                                  ? 'bg-purple-100 text-purple-700'
-                                  : device.device_type === 'Firewall'
-                                    ? 'bg-rose-100 text-rose-700'
-                                    : device.device_type === 'AccessPoint'
-                                      ? 'bg-emerald-100 text-emerald-700'
-                                      : 'bg-slate-100 text-slate-700'
+                              ? 'bg-cyan-100 text-cyan-700'
+                              : device.device_type === 'Router'
+                                ? 'bg-purple-100 text-purple-700'
+                                : device.device_type === 'Firewall'
+                                  ? 'bg-rose-100 text-rose-700'
+                                  : device.device_type === 'AccessPoint'
+                                    ? 'bg-emerald-100 text-emerald-700'
+                                    : 'bg-slate-100 text-slate-700'
                               }`}
                           >
                             {device.device_type}
@@ -199,8 +202,8 @@ function TypeDevicesModal({ type, devices, onClose, onViewDevice }) {
                   onClick={() => setCurrentPage(currentPage - 1)}
                   disabled={currentPage === 1}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${currentPage === 1
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      : 'bg-slate-800 text-white hover:bg-slate-700'
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-800 text-white hover:bg-slate-700'
                     }`}
                 >
                   Prev
@@ -242,8 +245,8 @@ function TypeDevicesModal({ type, devices, onClose, onViewDevice }) {
                         key={page}
                         onClick={() => setCurrentPage(page)}
                         className={`px-3 py-2 rounded-lg text-sm font-medium transition ${currentPage === page
-                            ? 'bg-cyan-500 text-white'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          ? 'bg-cyan-500 text-white'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                           }`}
                       >
                         {page}
@@ -280,8 +283,8 @@ function TypeDevicesModal({ type, devices, onClose, onViewDevice }) {
                   onClick={() => setCurrentPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition ${currentPage === totalPages
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      : 'bg-slate-800 text-white hover:bg-slate-700'
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-800 text-white hover:bg-slate-700'
                     }`}
                 >
                   Next

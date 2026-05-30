@@ -18,7 +18,7 @@ function ParsedDevices({
   const filteredDevices = devices.filter((device) => {
     const matchesSearch = device.device_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       device.configuration.toLowerCase().includes(searchQuery.toLowerCase());
-    
+
     const matchesType = typeFilter === 'All' || device.device_type === typeFilter;
     return matchesSearch && matchesType;
   });
@@ -45,10 +45,10 @@ function ParsedDevices({
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-bold text-slate-800">Parsed Devices</h2>
+          <h2 className="text-xl font-bold text-slate-800">Discovered Devices</h2>
           <p className="text-xs text-slate-500">Database repository of processed assets and matching specifications.</p>
         </div>
-        
+
         {/* Bulk Action Buttons (Optional/Demo) */}
         <div className="flex items-center gap-2 shrink-0">
           <button
@@ -146,21 +146,20 @@ function ParsedDevices({
               {paginatedDevices.map((device) => {
                 const intfCount = device.parsed_data ? (device.parsed_data.interfaces_count || 0) : 0;
                 return (
-                  <tr 
-                    key={device._id || device.id} 
+                  <tr
+                    key={device._id || device.id}
                     className="hover:bg-slate-50/50 transition-colors text-slate-700"
                   >
                     <td className="px-6 py-4 font-bold text-slate-900 truncate max-w-[180px]" title={device.device_name}>
                       {device.device_name}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold ${
-                        device.device_type === 'Switch' ? 'bg-cyan-50 text-cyan-600 border border-cyan-100' :
-                        device.device_type === 'Router' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
-                        device.device_type === 'Firewall' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
-                        device.device_type === 'AccessPoint' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                        'bg-slate-100 text-slate-600 border border-slate-150'
-                      }`}>
+                      <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold ${device.device_type === 'Switch' ? 'bg-cyan-50 text-cyan-600 border border-cyan-100' :
+                          device.device_type === 'Router' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
+                            device.device_type === 'Firewall' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                              device.device_type === 'AccessPoint' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                'bg-slate-100 text-slate-600 border border-slate-150'
+                        }`}>
                         {device.device_type}
                       </span>
                     </td>
@@ -212,7 +211,7 @@ function ParsedDevices({
             >
               Prev
             </button>
-            
+
             {Array.from({ length: totalPages }).map((_, idx) => {
               const pageNum = idx + 1;
               const isCurrent = pageNum === currentPage;
@@ -220,11 +219,10 @@ function ParsedDevices({
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
-                  className={`w-7 h-7 rounded border font-semibold ${
-                    isCurrent 
+                  className={`w-7 h-7 rounded border font-semibold ${isCurrent
                       ? 'bg-cyan-500 border-cyan-500 text-slate-950'
                       : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
-                  } transition-colors`}
+                    } transition-colors`}
                 >
                   {pageNum}
                 </button>

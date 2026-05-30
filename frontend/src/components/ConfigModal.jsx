@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaCopy, FaDownload, FaTimes, FaTerminal, FaFileCode, FaLink } from 'react-icons/fa';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 function ConfigModal({ selectedDevice, onClose, apiBaseUrl }) {
+  useEscapeKey(onClose);
   const [copied, setCopied] = useState(false);
 
   if (!selectedDevice) return null;
@@ -22,11 +24,11 @@ function ConfigModal({ selectedDevice, onClose, apiBaseUrl }) {
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 md:p-6"
       onClick={onClose}
     >
-      <div 
+      <div
         className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-5xl h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
@@ -44,20 +46,19 @@ function ConfigModal({ selectedDevice, onClose, apiBaseUrl }) {
               <span>{selectedDevice.device_name}.cfg</span>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono border transition-all ${
-                copied 
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                  : 'bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300'
-              }`}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono border transition-all ${copied
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-slate-800 border-slate-700 hover:border-slate-600 text-slate-300'
+                }`}
             >
               <FaCopy className="text-xs" />
               <span>{copied ? 'COPIED!' : 'COPY'}</span>
             </button>
-            
+
             <button
               onClick={handleDownload}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold font-mono bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-colors"
@@ -85,13 +86,12 @@ function ConfigModal({ selectedDevice, onClose, apiBaseUrl }) {
           <div className="flex flex-col gap-1">
             <span className="text-slate-500 uppercase tracking-wider text-[10px]">Device Type</span>
             <div>
-              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                selectedDevice.device_type === 'Switch' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
+              <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${selectedDevice.device_type === 'Switch' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
                 selectedDevice.device_type === 'Router' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                selectedDevice.device_type === 'Firewall' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                selectedDevice.device_type === 'AccessPoint' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                'bg-slate-700/20 text-slate-400 border border-slate-700/30'
-              }`}>
+                  selectedDevice.device_type === 'Firewall' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
+                    selectedDevice.device_type === 'AccessPoint' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
+                      'bg-slate-700/20 text-slate-400 border border-slate-700/30'
+                }`}>
                 {selectedDevice.device_type}
               </span>
             </div>
@@ -138,14 +138,14 @@ function ConfigModal({ selectedDevice, onClose, apiBaseUrl }) {
                     </div>
                   )}
                   {(!selectedDevice.parsed_data.protocols || selectedDevice.parsed_data.protocols.length === 0) &&
-                   (!selectedDevice.parsed_data.vlans || selectedDevice.parsed_data.vlans.length === 0) && (
-                     <span className="text-slate-500 italic">None identified</span>
-                  )}
+                    (!selectedDevice.parsed_data.vlans || selectedDevice.parsed_data.vlans.length === 0) && (
+                      <span className="text-slate-500 italic">None identified</span>
+                    )}
                 </div>
               </div>
             </div>
           )}
-          
+
           <pre className="overflow-x-auto whitespace-pre font-mono text-xs text-slate-400 bg-slate-900/50 p-4 rounded-xl border border-slate-900 max-h-[500px]">
             {selectedDevice.configuration || 'Empty configuration content.'}
           </pre>
