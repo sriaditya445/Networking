@@ -28,9 +28,9 @@ function Sidebar({
     { id: 'dashboard', label: 'Dashboard', icon: FaChartPie },
     { id: 'inventory', label: 'Inventory', icon: FaServer },
     { id: 'upload', label: 'Upload Center', icon: FaUpload },
-    { id: 'devices', label: 'Parsed Devices', icon: FaHdd },
-    { id: 'analytics', label: 'Analytics', icon: FaChartLine },
-    { id: 'queue', label: 'Processing Queue', icon: FaTasks },
+    { id: 'devices', label: 'Discovered Devices', icon: FaHdd },
+    { id: 'analytics', label: 'Reports & Insights', icon: FaChartLine },
+    { id: 'queue', label: 'Tasks in Progress', icon: FaTasks },
     { id: 'configurations', label: 'Configurations', icon: FaTerminal },
     { id: 'downloads', label: 'Downloads', icon: FaDownload },
     { id: 'settings', label: 'Settings', icon: FaCog },
@@ -124,7 +124,7 @@ function Sidebar({
                   uppercase
                 "
               >
-                Parser Engine
+                Your Network. Verified
               </span>
 
             </div>
