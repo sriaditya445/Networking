@@ -3,24 +3,46 @@ import { FaSearch, FaEye, FaFilter, FaDownload } from 'react-icons/fa';
 
 function ParsedDevices({
   devices,
+  jobs,
   searchQuery,
   setSearchQuery,
   typeFilter,
   setTypeFilter,
   onViewDevice,
   formatDate,
-  apiBaseUrl
+  apiBaseUrl,
+  selectedUploadId,
+  setSelectedUploadId,
+  selectedFolderName,
+  setSelectedFolderName
 }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Extract unique folder names from jobs
+  const uniqueFolderNames = [...new Set(jobs.map(job => job.folder_name))];
+
   // Filter devices based on parent query
   const filteredDevices = devices.filter((device) => {
+    // 1. Upload ID Filter
+    const matchesUploadId = !selectedUploadId || device.upload_id === selectedUploadId;
+
+    // 2. Folder Name Filter (fallback in case selectedUploadId is not set but selectedFolderName is, or to sync selection)
+    const deviceJob = jobs.find(j => (j._id || j.id) === device.upload_id);
+    const deviceFolderName = deviceJob ? deviceJob.folder_name : '';
+    const matchesFolderName = !selectedFolderName || deviceFolderName === selectedFolderName;
+
+    // Combine upload ID and folder name filtering
+    const matchesFolder = selectedUploadId ? matchesUploadId : matchesFolderName;
+
+    // 3. Search Filter
     const matchesSearch = device.device_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       device.configuration.toLowerCase().includes(searchQuery.toLowerCase());
 
+    // 4. Device Type Filter
     const matchesType = typeFilter === 'All' || device.device_type === typeFilter;
-    return matchesSearch && matchesType;
+
+    return matchesFolder && matchesSearch && matchesType;
   });
 
   // Pagination computations
@@ -65,6 +87,30 @@ function ParsedDevices({
         </div>
       </div>
 
+      {/* Current Folder Banner */}
+      {selectedUploadId && (
+        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1 font-sans">
+            <h3 className="text-sm font-semibold text-slate-800">
+              Showing Devices From: <span className="font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">{selectedFolderName}</span>
+            </h3>
+            <p className="text-xs text-slate-500">
+              Total Devices: <span className="font-bold text-slate-700">{devices.filter(d => d.upload_id === selectedUploadId).length}</span>
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setSelectedUploadId(null);
+              setSelectedFolderName(null);
+              setCurrentPage(1);
+            }}
+            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold transition-colors border border-rose-100 self-start sm:self-center"
+          >
+            Clear Filter
+          </button>
+        </div>
+      )}
+
       {/* Search and Filters Bar */}
       <div className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
         {/* Search */}
@@ -80,6 +126,41 @@ function ParsedDevices({
               setCurrentPage(1);
             }}
           />
+        </div>
+
+        {/* Folder Filter Dropdown */}
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+            <FaFilter className="text-slate-400 text-[10px]" />
+            <span>Folder:</span>
+          </span>
+          <select
+            className="bg-white border border-slate-200 rounded-lg py-2 pl-3 pr-8 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer"
+            value={selectedFolderName || ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "") {
+                setSelectedUploadId(null);
+                setSelectedFolderName(null);
+              } else {
+                // Find a job with this folder name to extract its upload_id
+                const matchingJob = jobs.find(j => j.folder_name === val);
+                if (matchingJob) {
+                  setSelectedUploadId(matchingJob._id || matchingJob.id);
+                  setSelectedFolderName(val);
+                } else {
+                  setSelectedUploadId(null);
+                  setSelectedFolderName(val);
+                }
+              }
+              setCurrentPage(1);
+            }}
+          >
+            <option value="">All Folders</option>
+            {uniqueFolderNames.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
         </div>
 
         {/* Filter Dropdown */}

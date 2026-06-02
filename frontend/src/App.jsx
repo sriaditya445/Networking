@@ -47,6 +47,9 @@ function App() {
   const [selectedTypeDevices, setSelectedTypeDevices] = useState([]);
   const [selectedType, setSelectedType] = useState("");
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [selectedUploadId, setSelectedUploadId] = useState(null);
+  const [selectedFolderName, setSelectedFolderName] = useState(null);
+
 
   // Fetch all necessary data from FastAPI backend
   const fetchData = async () => {
@@ -220,16 +223,20 @@ function App() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString();
   };
 
-  const handleTypeClick = (type) => {
+  const handleTypeClick = (type, filteredList = null) => {
     let filtered = [];
-    if (type === 'Unknown') {
-      filtered = devices.filter(
-        (device) => !['Switch', 'Router', 'Firewall', 'AccessPoint', 'WLC'].includes(device.device_type)
-      );
+    if (filteredList) {
+      filtered = filteredList;
     } else {
-      filtered = devices.filter(
-        (device) => device.device_type === type
-      );
+      if (type === 'Unknown') {
+        filtered = devices.filter(
+          (device) => !['Switch', 'Router', 'Firewall', 'AccessPoint', 'WLC'].includes(device.device_type)
+        );
+      } else {
+        filtered = devices.filter(
+          (device) => device.device_type === type
+        );
+      }
     }
 
     setSelectedType(type);
@@ -248,12 +255,16 @@ function App() {
             devices={devices}
             onViewDevice={setSelectedDevice}
             setActiveTab={setActiveTab}
+            apiBaseUrl={API_BASE_URL}
+            setSelectedUploadId={setSelectedUploadId}
+            setSelectedFolderName={setSelectedFolderName}
           />
         );
       case 'inventory':
         return (
           <Inventory
             devices={devices}
+            jobs={jobs}
             onTypeClick={handleTypeClick}
           />
         );
@@ -279,6 +290,7 @@ function App() {
         return (
           <ParsedDevices
             devices={devices}
+            jobs={jobs}
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
             typeFilter={typeFilter}
@@ -286,6 +298,10 @@ function App() {
             onViewDevice={setSelectedDevice}
             formatDate={formatDate}
             apiBaseUrl={API_BASE_URL}
+            selectedUploadId={selectedUploadId}
+            setSelectedUploadId={setSelectedUploadId}
+            selectedFolderName={selectedFolderName}
+            setSelectedFolderName={setSelectedFolderName}
           />
         );
       case 'analytics':

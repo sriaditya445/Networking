@@ -38,7 +38,7 @@ function UploadCenter({
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const filesArray = Array.from(e.dataTransfer.files);
       setSelectedFiles(filesArray);
-      
+
       // Auto suggest batch name
       if (folderName === 'configs') {
         setFolderName('batch_' + new Date().toISOString().slice(0, 10).replace(/-/g, ''));
@@ -88,22 +88,20 @@ function UploadCenter({
         <div className="flex gap-2 p-1 bg-slate-100 rounded-xl max-w-sm">
           <button
             type="button"
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-              uploadMode === 'file' 
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${uploadMode === 'file'
+              ? 'bg-white text-slate-800 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+              }`}
             onClick={() => { setUploadMode('file'); setSelectedFiles([]); }}
           >
             Files Mode
           </button>
           <button
             type="button"
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${
-              uploadMode === 'folder' 
-                ? 'bg-white text-slate-800 shadow-sm'
-                : 'text-slate-500 hover:text-slate-800'
-            }`}
+            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${uploadMode === 'folder'
+              ? 'bg-white text-slate-800 shadow-sm'
+              : 'text-slate-500 hover:text-slate-800'
+              }`}
             onClick={() => { setUploadMode('folder'); setSelectedFiles([]); }}
           >
             Folder Mode
@@ -129,11 +127,10 @@ function UploadCenter({
 
           {/* Drag & Drop Zone */}
           <div
-            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${
-              isDragActive 
-                ? 'border-cyan-500 bg-cyan-500/5' 
-                : 'border-slate-200 hover:border-cyan-400 bg-slate-50/50 hover:bg-slate-50'
-            }`}
+            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${isDragActive
+              ? 'border-cyan-500 bg-cyan-500/5'
+              : 'border-slate-200 hover:border-cyan-400 bg-slate-50/50 hover:bg-slate-50'
+              }`}
             onClick={triggerInputClick}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -143,7 +140,7 @@ function UploadCenter({
             <div className="w-14 h-14 rounded-full bg-cyan-50 text-cyan-500 flex items-center justify-center text-2xl shadow-sm border border-cyan-100">
               {uploadMode === 'file' ? <FaCloudUploadAlt /> : <FaFolderOpen />}
             </div>
-            
+
             <div className="space-y-1">
               <p className="text-sm font-semibold text-slate-700">
                 {uploadMode === 'file' ? 'Click to select configuration files' : 'Click to select configuration folder'}
@@ -202,8 +199,8 @@ function UploadCenter({
                 <span className="text-cyan-600 font-bold font-mono">{uploadProgress}%</span>
               </div>
               <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                <div 
-                  className="bg-cyan-500 h-full rounded-full transition-all duration-300" 
+                <div
+                  className="bg-cyan-500 h-full rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
@@ -269,6 +266,60 @@ function UploadCenter({
                     <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                       {job.files_count} files • {formatDate(job.created_at)}
                     </p>
+
+
+                    <div className="flex items-center gap-1 mt-2">
+                      <div
+                        className={`w-2 h-2 rounded-full ${["PENDING", "PROCESSING", "COMPARING", "SUCCESS"].includes(job.status)
+                          ? "bg-green-500"
+                          : "bg-gray-300"
+                          }`}
+                      />
+
+                      <div
+                        className={`w-8 h-0.5 ${["PROCESSING", "COMPARING", "SUCCESS"].includes(job.status)
+                          ? "bg-green-500"
+                          : "bg-gray-300"
+                          }`}
+                      />
+
+                      <div
+                        className={`w-2 h-2 rounded-full ${["PROCESSING", "COMPARING", "SUCCESS"].includes(job.status)
+                          ? "bg-green-500"
+                          : "bg-gray-300"
+                          }`}
+                      />
+
+                      <div
+                        className={`w-8 h-0.5 ${["COMPARING", "SUCCESS"].includes(job.status)
+                          ? "bg-green-500"
+                          : "bg-gray-300"
+                          }`}
+                      />
+
+                      <div
+                        className={`w-2 h-2 rounded-full ${["COMPARING", "SUCCESS"].includes(job.status)
+                          ? "bg-green-500"
+                          : "bg-gray-300"
+                          }`}
+                      />
+
+                      <div
+                        className={`w-8 h-0.5 ${job.status === "SUCCESS"
+                          ? "bg-green-500"
+                          : "bg-gray-300"
+                          }`}
+                      />
+
+                      <div
+                        className={`w-2 h-2 rounded-full ${job.status === "SUCCESS"
+                          ? "bg-green-500"
+                          : "bg-gray-300"
+                          }`}
+                      />
+                    </div>
+
+                    
                   </div>
                   <div className="shrink-0">
                     {renderStatusBadge(job.status)}
