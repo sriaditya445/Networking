@@ -4,6 +4,7 @@ from datetime import datetime
 from bson import ObjectId
 from app.repositories.upload_repository import UploadRepository
 from app.services.device_service import DeviceService
+from app.services.ingestion_service import IngestionService
 from fastapi import HTTPException, status
 from app.core.database import logger
 
@@ -80,25 +81,24 @@ class UploadService:
         os.makedirs(job_folder, exist_ok=True)
 
         try:
-            for file in files:
-                filename = os.path.basename(file.filename)
-                file_path = os.path.join(job_folder, filename)
+            all_processed_files = []
+            for upload in files:
+                processed_files = await IngestionService.process_upload(upload,job_folder)
 
-                # Save raw file to disk
-                with open(file_path, "wb") as buffer:
-                    shutil.copyfileobj(file.file, buffer)
-                
-                # Read configuration content
-                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-                    raw_config = f.read()
-                
+            all_processed_files.extend(processed_files)
+
+            for processed_file in processed_files:
+                filename = processed_file["filename"]
+                file_path = processed_file["file_path"]
+                # content = processed_file["content"]
+
                 logger.info(f"Creating device record for {filename}")
                 # Stage raw device in devices collection as 'pending'                
                 await DeviceService.create_device({
                     "upload_id": job_id,
                     "device_name": os.path.splitext(filename)[0],
                     "device_type": "Pending Analysis",
-                    "configuration": raw_config,
+                    # "configuration": content,
                     "status": "pending",
                     "file_path": file_path,
                     "error_message": None,
