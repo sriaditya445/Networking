@@ -1,6 +1,10 @@
+import os
 import logging
 from motor.motor_asyncio import AsyncIOMotorClient
 from app.core.config import settings
+
+#Create logs directory if it doesn't exist
+os.makedirs("logs", exist_ok=True)
 
 # Configure Logging
 # logging.basicConfig(level=logging.INFO)
