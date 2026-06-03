@@ -9,19 +9,32 @@ class DeviceRepository:
 
     @staticmethod
     async def get_all(query: dict = {}):
-        return await devices_collection.find(query).sort(
-            "parsed_at", -1
+
+        devices = await devices_collection.find(query).sort(
+            "parsed_at",
+            -1
         ).to_list(200)
+
+        for device in devices:
+            device["_id"] = str(device["_id"])
+
+        return devices
 
     @staticmethod
     async def get_by_id(device_id: str):
-        return await devices_collection.find_one(
+
+        device = await devices_collection.find_one(
             {"_id": ObjectId(device_id)}
         )
+
+        if device:
+            device["_id"] = str(device["_id"])
+
+        return device
     
     @staticmethod
     async def update(device_id: str, data: dict):
-        return await device_collections.update_one(
+        return await device_collection.update_one(
             {"_id": ObjectId(device_id)},
             {"$set": data}
         )
@@ -35,3 +48,16 @@ class DeviceRepository:
     @staticmethod
     async def count(query: dict):
         return await devices_collection.count_documents(query)
+
+    # @staticmethod
+    # async def get_all(query: dict = {}):
+    #     return await devices_collection.find(query).sort(
+    #         "parsed_at", -1
+    #     ).to_list(200)
+
+
+    # @staticmethod
+    # async def get_by_id(device_id: str):
+    #     return await devices_collection.find_one(
+    #         {"_id": ObjectId(device_id)}
+    #     )

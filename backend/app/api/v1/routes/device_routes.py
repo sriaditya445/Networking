@@ -19,10 +19,14 @@ from app.services.file_service import (
 
 router = APIRouter()
 
-@router.get("/api/devices", response_model=List[DeviceResponse])
-async def get_devices(upload_id: Optional[str] = None):
+@router.get("/api/devices")
+async def get_devices(
+    device_id: Optional[str] = None,
+    upload_id: Optional[str] = None
+):
     return await DeviceService.get_devices(
-        upload_id
+        device_id=device_id,
+        upload_id=upload_id
     )
 
 @router.get("/api/devices/{device_id}/download")
@@ -31,17 +35,26 @@ async def download_device_config(device_id: str):
         device_id
     )
 
-@router.get("/api/devices/{device_id}",response_model=DeviceResponse)
-async def get_device(device_id: str):
-    device = await DeviceService.get_device(device_id)
 
-    if not device:
-        raise HTTPException(
-            status_code=404,
-            detail="Device not found"
-        )
 
-    return device
+# @router.get("/api/devices", response_model=List[DeviceResponse])
+# async def get_devices(upload_id: Optional[str] = None):
+#     return await DeviceService.get_devices(
+#         upload_id
+#     )
+
+
+# @router.get("/api/devices/{device_id}",response_model=DeviceResponse)
+# async def get_device(device_id: str):
+#     device = await DeviceService.get_device(device_id)
+
+#     if not device:
+#         raise HTTPException(
+#             status_code=404,
+#             detail="Device not found"
+#         )
+
+#     return device
 
 # from bson.errors import InvalidId
 # from fastapi import HTTPException
