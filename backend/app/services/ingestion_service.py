@@ -37,19 +37,25 @@ class IngestionService:
         job_folder: str
     ):
 
-        filename = os.path.basename(upload.filename)
+        relative_path = upload.filename
 
         file_path = os.path.join(
             job_folder,
-            filename
+            relative_path
+        )
+
+        os.makedirs(
+            os.path.dirname(file_path),
+            exist_ok=True
         )
 
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(upload.file, buffer)
 
         return {
-            "filename": filename,
-            "file_path": file_path      
+            "filename": os.path.basename(relative_path),
+            "relative_path": relative_path,
+            "file_path": file_path
         }
 
     @staticmethod
@@ -91,6 +97,10 @@ class IngestionService:
 
                 results.append({
                     "filename": file,
+                    "relative_path": os.path.relpath(
+                        file_path,
+                        extract_dir
+                    ),
                     "file_path": file_path,
                 })
 

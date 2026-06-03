@@ -54,15 +54,28 @@ class UploadService:
         return await UploadRepository.get_all()
 
     @staticmethod
-    async def upload_files(files):
+    async def upload_files(files,folder_name:str):
         job_id = str(ObjectId())
         job_folder = os.path.join(UPLOAD_DIR, job_id)
-        folder_name = "configs"
+        # folder_name = "configs"
 
-        if len(files) == 1 and files[0].filename.lower().endswith(".zip"):
+        # if len(files) == 1 and files[0].filename.lower().endswith(".zip"):
+        #     folder_name = os.path.splitext(
+        #         files[0].filename
+        #     )[0]
+
+        # else:
+        #     folder_name = f"upload_{job_id[:8]}"
+
+        first_path = files[0].filename
+
+        if first_path.lower().endswith(".zip"):
             folder_name = os.path.splitext(
-                files[0].filename
+                os.path.basename(first_path)
             )[0]
+
+        elif "/" in first_path:
+            folder_name = first_path.split("/")[0]
 
         else:
             folder_name = f"upload_{job_id[:8]}"
@@ -115,6 +128,7 @@ class UploadService:
                     "configuration": None,
                     "status": "pending",
                     "file_path": file_path,
+                    "relative_path": processed_file["relative_path"],
                     "error_message": None,
                     "parsed_at": None,
                     "parsed_data": None
@@ -150,7 +164,7 @@ class UploadService:
             "job_folder": job_folder,
             "folder_name": folder_name,
             "status": "pending",
-            "files_count": len(files),
+            "files_count": len(all_processed_files),
             "message": "Upload successful. Raw data staged. Processing starts in background."
         }
 

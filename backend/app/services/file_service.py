@@ -15,6 +15,7 @@ from fastapi import (HTTPException, status)
 
 class FileService:
 
+# remove the device configuration
     @staticmethod
     async def download_device(device_id: str):
         """

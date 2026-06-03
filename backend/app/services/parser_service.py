@@ -51,10 +51,6 @@ async def process_upload_job(upload_id: str, folder_path: str):
                     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
 
-                # content = device.get("configuration", "")
-
-
-
                 if not content:
                     raise ValueError("Configuration content is empty or missing.")
 
