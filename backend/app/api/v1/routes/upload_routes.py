@@ -44,8 +44,8 @@ async def download_job_folder(job_id: str, background_tasks: BackgroundTasks):
 @router.post("/api/upload",status_code=status.HTTP_202_ACCEPTED)
 async def upload_files(
     background_tasks: BackgroundTasks,
-    folder_name: str = Form("configs"),
-    files: List[UploadFile] = File(...)
+    files: list[UploadFile] = File(...)
+    # file: UploadFile = File(...)
 ):
 
     if not files:
@@ -55,8 +55,7 @@ async def upload_files(
         )
 
     response = await UploadService.upload_files(
-        files,
-        folder_name
+        files
     )
     
     # Trigger background tasks to parse the configuration contents

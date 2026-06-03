@@ -25,18 +25,25 @@ class FileService:
                 raise HTTPException(status_code=404, detail="Device not found")
             
             file_path = device.get("file_path")
-            if not file_path or not os.path.exists(file_path):
+            if file_path and os.path.exists(file_path):
 
-                # Fallback to direct text content download if the file is missing from local disk
-                filename = f"{device.get('device_name', 'config')}.cfg"
+                # Direct text content download the file from local disk
                 return Response(
-                    content=device.get("configuration", ""),
+                    path=file_path,
+                    media_type="application/octet-stream",
+                    filename=os.path.basename(file_path),
+                )
+
+            configuration = device.get("configuration")
+
+            if configuration:
+                filename = (f"{device.get('device_name','config')}.cfg")
+                return Response(
+                    content=configuration,
                     media_type="application/octet-stream",
                     headers={"Content-Disposition": f"attachment; filename={filename}"}
                 )
                 
-            return FileResponse(path=file_path, filename=os.path.basename(file_path), media_type="application/octet-stream")
-
         except HTTPException:
             raise
         except Exception as e:
