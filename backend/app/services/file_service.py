@@ -2,7 +2,6 @@ import os
 import shutil
 import tempfile
 
-from fastapi import HTTPException
 from fastapi.responses import (
     FileResponse,
     Response
@@ -11,6 +10,8 @@ from fastapi.responses import (
 from app.repositories.upload_repository import  UploadRepository
 from app.services.device_service import DeviceService
 from app.utils.file_utils import cleanup_temp_file
+from app.core.database import logger
+from fastapi import (HTTPException, status)
 
 class FileService:
 
@@ -28,10 +29,10 @@ class FileService:
             if file_path and os.path.exists(file_path):
 
                 # Direct text content download the file from local disk
-                return Response(
+                return FileResponse(
                     path=file_path,
-                    media_type="application/octet-stream",
                     filename=os.path.basename(file_path),
+                    media_type="application/octet-stream"
                 )
 
             configuration = device.get("configuration")
@@ -73,7 +74,7 @@ class FileService:
             # shutil.make_archive creates <zip_base_name>.zip
             zip_path = shutil.make_archive(zip_base_name, 'zip', folder_path)
 
-            background_tasks.add_task(cleanup_temp_zip, zip_path)
+            background_tasks.add_task(cleanup_temp_file, zip_path)
 
             return FileResponse(
                 path=zip_path,
