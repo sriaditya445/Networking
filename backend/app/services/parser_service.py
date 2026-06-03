@@ -43,11 +43,17 @@ async def process_upload_job(upload_id: str, folder_path: str):
             logger.info(f"Processing device file: {file_path}")
 
             try:
-                content = device.get("configuration", "")
+                file_path = device.get("file_path")
+                content = None
 
-                if ( not content and os.path.exists(file_path) ):
+                if file_path and os.path.exists(file_path):
+
                     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         content = f.read()
+
+                # content = device.get("configuration", "")
+
+
 
                 if not content:
                     raise ValueError("Configuration content is empty or missing.")

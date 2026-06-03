@@ -13,7 +13,6 @@ class IngestionService:
     @staticmethod
     async def process_upload(
         upload: UploadFile,
-        # job_id: str,
         job_folder: str
     ):
 
@@ -24,11 +23,7 @@ class IngestionService:
                 upload,
                 job_folder
             )
-        else:
-            await IngestionService.process_file(
-                upload,
-                job_folder
-            )
+
         return [
             await IngestionService.process_file(
                 upload,
@@ -51,14 +46,6 @@ class IngestionService:
 
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(upload.file, buffer)
-
-        # with open(
-        #     file_path,
-        #     "r",
-        #     encoding="utf-8",
-        #     errors="ignore"
-        # ) as f:
-        #     content = f.read()
 
         return {
             "filename": filename,
@@ -102,58 +89,9 @@ class IngestionService:
                     file
                 )
 
-                # with open(
-                #     file_path,
-                #     "r",
-                #     encoding="utf-8",
-                #     errors="ignore"
-                # ) as f:
-                #     content = f.read()
-
                 results.append({
                     "filename": file,
                     "file_path": file_path,
-                    # "content": content
                 })
 
         return results
-
-
-# for file in files:
-            #     filename = os.path.basename(file.filename)
-            #     file_path = os.path.join(job_folder, filename)
-
-            #     # Save raw file to disk
-            #     with open(file_path, "wb") as buffer:
-            #         shutil.copyfileobj(file.file, buffer)
-                
-            #     # Read configuration content
-            #     with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
-            #         raw_config = f.read()
-                # await IngestionService.stage_device(
-                #     # job_id,
-                #     file,
-                #     file_path,
-                #     content
-                # )
-
-
-    # @staticmethod
-    # async def stage_device(
-    #     job_id,
-    #     filename,
-    #     file_path,
-    #     content
-    # ):
-
-    #     await DeviceService.create_device({
-    #         "upload_id": job_id,
-    #         "device_name": os.path.splitext(filename)[0],
-    #         "device_type": "Pending Analysis",
-    #         "configuration": content,
-    #         "status": "pending",
-    #         "file_path": file_path,
-    #         "error_message": None,
-    #         "parsed_at": None,
-    #         "parsed_data": None
-    #     })

@@ -54,9 +54,24 @@ class UploadService:
         return await UploadRepository.get_all()
 
     @staticmethod
-    async def upload_files(files, folder_name: str):
+    async def upload_files(files):
         job_id = str(ObjectId())
         job_folder = os.path.join(UPLOAD_DIR, job_id)
+        folder_name = "configs"
+
+        if len(files) == 1 and files[0].filename.lower().endswith(".zip"):
+            folder_name = os.path.splitext(
+                files[0].filename
+            )[0]
+
+        else:
+            folder_name = f"upload_{job_id[:8]}"
+   
+        if not files:
+            raise HTTPException(
+                status_code=400,
+                detail="No files uploaded"
+            )
 
         try:
             await UploadRepository.create({
@@ -84,10 +99,9 @@ class UploadService:
             all_processed_files = []
             for upload in files:
                 processed_files = await IngestionService.process_upload(upload,job_folder)
+                all_processed_files.extend(processed_files)
 
-            all_processed_files.extend(processed_files)
-
-            for processed_file in processed_files:
+            for processed_file in all_processed_files:
                 filename = processed_file["filename"]
                 file_path = processed_file["file_path"]
                 # content = processed_file["content"]
@@ -98,7 +112,7 @@ class UploadService:
                     "upload_id": job_id,
                     "device_name": os.path.splitext(filename)[0],
                     "device_type": "Pending Analysis",
-                    # "configuration": content,
+                    "configuration": None,
                     "status": "pending",
                     "file_path": file_path,
                     "error_message": None,
@@ -106,6 +120,13 @@ class UploadService:
                     "parsed_data": None
                 })
                 logger.info(f"Created device record for {filename}")
+            await UploadRepository.update(
+                job_id,
+                {
+                    "files_count": len(all_processed_files),
+                    "updated_at": datetime.utcnow()
+                }
+            )
 
         except Exception as e:
             logger.error(f"Failed to stage files for job {job_id}: {e}")
