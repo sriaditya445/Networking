@@ -45,7 +45,6 @@ async def download_job_folder(job_id: str, background_tasks: BackgroundTasks):
 async def upload_files(
     background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...)
-    # file: UploadFile = File(...)
 ):
 
     if not files:
