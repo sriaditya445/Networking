@@ -1,7 +1,54 @@
 import React from 'react';
-import { FaChartBar, FaCheckCircle, FaExclamationTriangle, FaHourglassHalf, FaCodeBranch } from 'react-icons/fa';
+import { FaChartBar, FaCheckCircle, FaExclamationTriangle, FaHourglassHalf, FaCodeBranch, FaDownload, FaSpinner } from 'react-icons/fa';
 
-function Analytics({ stats, devices, jobs }) {
+function Analytics({ stats, devices, jobs, apiBaseUrl }) {
+  const [selectedReportType, setSelectedReportType] = React.useState('');
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [toast, setToast] = React.useState({ message: '', type: '' });
+
+  const showToast = (message, type) => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast({ message: '', type: '' });
+    }, 4500);
+  };
+
+  const handleDownloadReport = async () => {
+    if (!selectedReportType) return;
+    setIsGenerating(true);
+    try {
+      const url = `${apiBaseUrl || 'http://localhost:8000'}/api/reports/${selectedReportType}`;
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Server returned status ${response.status}`);
+      }
+      const blob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+
+      let filename = 'report.pdf';
+      if (selectedReportType === 'executive-summary') filename = 'network_audit_executive_summary.pdf';
+      else if (selectedReportType === 'device-inventory') filename = 'network_device_inventory.pdf';
+      else if (selectedReportType === 'compliance-audit') filename = 'network_compliance_audit.pdf';
+      else if (selectedReportType === 'config-comparison') filename = 'network_configuration_comparison.pdf';
+      else if (selectedReportType === 'full-network-audit') filename = 'full_network_audit_report.pdf';
+
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      showToast("Report generated and downloaded successfully!", "success");
+    } catch (error) {
+      console.error("Error downloading report:", error);
+      showToast("Failed to generate report. Please verify connection and try again.", "error");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const totalDevices = devices.length || 1;
   const switches = devices.filter(d => d.device_type === 'Switch').length;
   const routers = devices.filter(d => d.device_type === 'Router').length;
@@ -44,10 +91,60 @@ function Analytics({ stats, devices, jobs }) {
 
   return (
     <div className="space-y-6">
-      {/* Title */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">Advanced Analytics</h2>
-        <p className="text-sm text-slate-500">Deeper insights and heuristics parsed from staged configuration files.</p>
+      {/* Title & Report Generator */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Advanced Analytics</h2>
+          <p className="text-sm text-slate-500">Deeper insights and heuristics parsed from staged configuration files.</p>
+        </div>
+
+        {/* Generate Report Section */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 bg-white border border-slate-200/80 rounded-2xl p-3 shadow-sm w-full md:w-auto">
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider hidden lg:block pl-1">
+            Generate Report:
+          </div>
+          <div className="relative w-full sm:w-56">
+            <select
+              value={selectedReportType}
+              onChange={(e) => setSelectedReportType(e.target.value)}
+              disabled={isGenerating}
+              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500/80 transition-all appearance-none cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+            >
+              <option value="">Select Report Type...</option>
+              <option value="executive-summary">Executive Summary Report</option>
+              <option value="device-inventory">Device Inventory Report</option>
+              <option value="compliance-audit">Compliance Audit Report</option>
+              <option value="config-comparison">Configuration Comparison Report</option>
+              <option value="full-network-audit">Full Network Audit Report</option>
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+              </svg>
+            </div>
+          </div>
+          <button
+            onClick={handleDownloadReport}
+            disabled={!selectedReportType || isGenerating}
+            className={`w-full sm:w-auto px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+              !selectedReportType || isGenerating
+                ? 'bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed'
+                : 'bg-slate-900 hover:bg-cyan-500 hover:text-slate-950 text-white font-bold shadow-sm'
+            }`}
+          >
+            {isGenerating ? (
+              <>
+                <FaSpinner className="animate-spin text-xs" />
+                <span>Generating...</span>
+              </>
+            ) : (
+              <>
+                <FaDownload className="text-xs" />
+                <span>Download Report</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Overview Cards */}
@@ -135,6 +232,26 @@ function Analytics({ stats, devices, jobs }) {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification Container */}
+      {toast.message && (
+        <div className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl border shadow-xl transition-all duration-300 ${
+          toast.type === 'success'
+            ? 'bg-emerald-50/90 border-emerald-200/60 text-emerald-900'
+            : 'bg-rose-50/90 border-rose-200/60 text-rose-900'
+        }`}>
+          <span className="text-xs font-bold font-mono">
+            {toast.type === 'success' ? '✓' : '⚠'}
+          </span>
+          <span className="text-xs font-semibold">{toast.message}</span>
+          <button
+            onClick={() => setToast({ message: '', type: '' })}
+            className="text-xs font-black opacity-60 hover:opacity-100 transition-opacity ml-2 focus:outline-none"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 }
