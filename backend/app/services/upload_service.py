@@ -57,15 +57,6 @@ class UploadService:
     async def upload_files(files,folder_name:str):
         job_id = str(ObjectId())
         job_folder = os.path.join(UPLOAD_DIR, job_id)
-        # folder_name = "configs"
-
-        # if len(files) == 1 and files[0].filename.lower().endswith(".zip"):
-        #     folder_name = os.path.splitext(
-        #         files[0].filename
-        #     )[0]
-
-        # else:
-        #     folder_name = f"upload_{job_id[:8]}"
 
         first_path = files[0].filename
 
@@ -90,7 +81,7 @@ class UploadService:
             await UploadRepository.create({
                 "_id": ObjectId(job_id),
                 "folder_name": folder_name,
-                "status": "pending",
+                "status": "uploaded",
                 "files_count": len(files),
                 "folder_path": job_folder,
                 "error_message": None,
@@ -109,35 +100,25 @@ class UploadService:
         os.makedirs(job_folder, exist_ok=True)
 
         try:
-            all_processed_files = []
+
+            saved_files = []
+
             for upload in files:
-                processed_files = await IngestionService.process_upload(upload,job_folder)
-                all_processed_files.extend(processed_files)
 
-            for processed_file in all_processed_files:
-                filename = processed_file["filename"]
-                file_path = processed_file["file_path"]
-                # content = processed_file["content"]
+                result = await IngestionService.process_upload(
+                    upload,
+                    job_folder
+                )
 
-                logger.info(f"Creating device record for {filename}")
-                # Stage raw device in devices collection as 'pending'                
-                await DeviceService.create_device({
-                    "upload_id": job_id,
-                    "device_name": os.path.splitext(filename)[0],
-                    "device_type": "Pending Analysis",
-                    "configuration": None,
-                    "status": "pending",
-                    "file_path": file_path,
-                    "relative_path": processed_file["relative_path"],
-                    "error_message": None,
-                    "parsed_at": None,
-                    "parsed_data": None
-                })
-                logger.info(f"Created device record for {filename}")
+                if isinstance(result, list):
+                    saved_files.extend(result)
+                else:
+                    saved_files.append(result)
+
             await UploadRepository.update(
                 job_id,
                 {
-                    "files_count": len(all_processed_files),
+                    "files_count": len(saved_files),
                     "updated_at": datetime.utcnow()
                 }
             )
@@ -163,8 +144,8 @@ class UploadService:
             "job_id": job_id,
             "job_folder": job_folder,
             "folder_name": folder_name,
-            "status": "pending",
-            "files_count": len(all_processed_files),
+            "status": "uploaded",
+            "files_count": len(files),
             "message": "Upload successful. Raw data staged. Processing starts in background."
         }
 
@@ -203,3 +184,52 @@ class UploadService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to delete job: {str(e)}"
             )
+
+
+
+
+            # all_processed_files = []
+            # for upload in files:
+            #     processed_files = await IngestionService.process_upload(upload,job_folder)
+            #     all_processed_files.extend(processed_files)
+
+
+
+            # for processed_file in all_processed_files:
+            #     filename = processed_file["filename"]
+            #     file_path = processed_file["file_path"]
+            #     # content = processed_file["content"]
+
+            #     logger.info(f"Creating device record for {filename}")
+            #     # Stage raw device in devices collection as 'pending'                
+            #     await DeviceService.create_device({
+            #         "upload_id": job_id,
+            #         "device_name": os.path.splitext(filename)[0],
+            #         "device_type": "Pending Analysis",
+            #         "configuration": None,
+            #         "status": "pending",
+            #         "file_path": file_path,
+            #         "relative_path": processed_file["relative_path"],
+            #         "error_message": None,
+            #         "parsed_at": None,
+            #         "parsed_data": None
+            #     })
+            #     logger.info(f"Created device record for {filename}")
+            # await UploadRepository.update(
+            #     job_id,
+            #     {
+            #         "files_count": len(all_processed_files),
+            #         "updated_at": datetime.utcnow()
+            #     }
+            # )
+
+
+        # folder_name = "configs"
+
+        # if len(files) == 1 and files[0].filename.lower().endswith(".zip"):
+        #     folder_name = os.path.splitext(
+        #         files[0].filename
+        #     )[0]
+
+        # else:
+        #     folder_name = f"upload_{job_id[:8]}"

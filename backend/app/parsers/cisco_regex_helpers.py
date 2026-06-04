@@ -7,7 +7,7 @@ IP_REGEX = re.compile(r"^\s*ip address\s+([0-9.]+)\s+([0-9.]+)", re.IGNORECASE |
 VLAN_REGEX = re.compile(r"switchport access vlan\s+(\d+)", re.IGNORECASE)
 STATIC_ROUTE_REGEX = re.compile(r"^\s*ip route\s+([0-9.]+)\s+([0-9.]+)\s+(\S+)", re.IGNORECASE | re.MULTILINE)
 
-def parse_config_and_segregate(content: str, filename: str) -> tuple[str, str, dict]:
+def parse_device_config(content: str, filename: str) -> tuple[str, str, dict]:
     """
     Parses configuration text using regex templates to extract the hostname,
     segregate it into a component type, and gather sub-component specifications.
@@ -68,4 +68,10 @@ def parse_config_and_segregate(content: str, filename: str) -> tuple[str, str, d
         "protocols": protocols
     }
 
-    return hostname, device_type, parsed_data
+    return {
+        "device_name": hostname,
+        "device_type": device_type,
+        "parsed_data": parsed_data,
+        "configuration_json": configuration_json,
+        "audit_summary": audit_summary
+    }

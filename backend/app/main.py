@@ -8,6 +8,7 @@ from app.api.v1.routes.health_routes import router as health_router
 from app.api.v1.routes.report_routes import router as report_router
 
 from app.core.database import check_db_connection
+from app.workers.scheduler import scheduler
 
 app = FastAPI(
     title="Network Configuration Processing System",
@@ -18,14 +19,19 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup():
 
-    result = await check_db_connection()
+    scheduler.start()
 
-    print(f"MongoDB Connected: {result}")
+# @app.on_event("startup")
+# async def startup():
 
-    print("\nREGISTERED ROUTES:")
+#     result = await check_db_connection()
 
-    for route in app.routes:
-        print(route.path)
+#     print(f"MongoDB Connected: {result}")
+
+#     print("\nREGISTERED ROUTES:")
+
+#     for route in app.routes:
+#         print(route.path)
 
 app.add_middleware(
     CORSMiddleware,

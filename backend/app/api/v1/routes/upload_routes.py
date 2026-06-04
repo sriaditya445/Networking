@@ -4,8 +4,8 @@ from fastapi import (
     APIRouter,
     UploadFile,
     File,
-    Form,
     BackgroundTasks,
+    Form,
     HTTPException,
     status
 )
@@ -14,9 +14,9 @@ from app.services.upload_service import (
     UploadService
 )
 
-from app.services.parser_service import (
-    process_upload_job
-)
+# from app.services.parser_service import (
+#     process_upload_job
+# )
 
 from app.services.file_service import FileService
 
@@ -43,7 +43,7 @@ async def download_job_folder(job_id: str, background_tasks: BackgroundTasks):
 
 @router.post("/api/upload",status_code=status.HTTP_202_ACCEPTED)
 async def upload_files(
-    background_tasks: BackgroundTasks,
+    # background_tasks: BackgroundTasks,
     folder_name: str = Form(...),
     files: list[UploadFile] = File(...)
 ):
@@ -59,10 +59,10 @@ async def upload_files(
     )
     
     # Trigger background tasks to parse the configuration contents
-    background_tasks.add_task(
-        process_upload_job,
-        response["job_id"],
-        response["job_folder"]
-    )
+    # background_tasks.add_task(
+    #     process_upload_job,
+    #     response["job_id"],
+    #     response["job_folder"]
+    # )
 
     return response
