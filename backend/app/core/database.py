@@ -25,6 +25,8 @@ db = client[settings.DATABASE_NAME]
 # Expose collections
 uploads_collection = db["uploads"]
 devices_collection = db["devices"]
+comparisons_collection = db["comparisons"]
+
 
 async def check_db_connection():
     """

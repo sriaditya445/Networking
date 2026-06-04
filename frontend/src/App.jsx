@@ -310,6 +310,7 @@ function App() {
             stats={stats}
             devices={devices}
             jobs={jobs}
+            apiBaseUrl={API_BASE_URL}
           />
         );
       case 'queue':
