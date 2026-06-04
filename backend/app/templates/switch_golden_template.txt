@@ -1,0 +1,19 @@
+hostname {{HOSTNAME}}
+ip domain name {{DOMAIN_NAME}}
+aaa new-model
+aaa authentication login default group radius local
+aaa authorization exec default group radius local
+ip ssh version 2
+ip ssh authentication-retries 3
+ip ssh time-out 60
+service password-encryption
+service tcp-keepalives-in
+service tcp-keepalives-out
+no ip http server
+no ip http secure-server
+spanning-tree mode mst
+spanning-tree portfast default
+ip dhcp snooping
+logging buffered 64000
+ntp server {{NTP_SERVER}}
+snmp-server group {{SNMP_GROUP}} v3 priv

@@ -1,0 +1,7 @@
+config sysname {{HOSTNAME}}
+config domain {{DOMAIN_NAME}}
+config network ssh enable
+config network ssh v2 enable
+config logging syslog facility local0
+config time ntp server 1 {{NTP_SERVER}}
+config snmp v3 enable

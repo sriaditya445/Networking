@@ -16,7 +16,7 @@ from app.services.parser_service import (
 
 class ParserWorker:
 
-    async def process_upload_job(upload_id: str, folder_path: str):
+    async def process_upload_job(upload_id: str):
 
         logger.info(f"Starting parser job: {upload_id}")
 
@@ -62,18 +62,21 @@ class ParserWorker:
                         {"_id": device_id},
                         {
                             "$set": {
-                                "device_name": result["device_name"],
-                                "device_type": result["device_type"],
+                                "device_name": result.get("device_name", "Unknown"),
+                                "device_type": result.get("device_type", "Unknown"),
 
                                 "configuration": content,
 
-                                "parsed_data": result["parsed_data"],
+                                "parsed_data": result.get("parsed_data", {}),
 
                                 "configuration_json":
-                                    result["configuration_json"],
+                                    result.get("configuration_json", {}),
 
+                                "audit_status": result.get("audit_status", "PENDING"),
+                                "audit_score": result.get("audit_score", 0),
                                 "audit_summary":
-                                    result["audit_summary"],
+                                    result.get("audit_summary", {}),
+                                "findings": result.get("findings", []),
 
                                 "status": "success",
                                 "parsed_at": datetime.utcnow()

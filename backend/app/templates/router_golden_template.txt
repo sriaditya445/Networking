@@ -1,0 +1,15 @@
+hostname {{HOSTNAME}}
+ip domain name {{DOMAIN_NAME}}
+aaa new-model
+aaa authentication login default group tacacs local
+aaa authorization exec default group tacacs local
+ip ssh version 2
+ip ssh authentication-retries 3
+ip ssh time-out 60
+service password-encryption
+no ip source-route
+no ip bootp server
+logging buffered 128000
+logging trap warnings
+ntp server {{NTP_SERVER}}
+snmp-server group {{SNMP_GROUP}} v3 priv

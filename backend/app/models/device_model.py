@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any, List
 
 class DeviceModel(BaseModel):
     upload_id: str
@@ -13,3 +13,7 @@ class DeviceModel(BaseModel):
     parsed_at: Optional[datetime] = None
     # parsed_data: Optional[dict] = None
     parsed_data: Optional[Dict[str, Any]] = None
+    audit_status: str = "PENDING"
+    audit_score: Optional[float] = None
+    audit_summary: Optional[Dict[str, int]] = None
+    findings: Optional[List[Dict[str, Any]]] = None
