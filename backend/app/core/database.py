@@ -27,6 +27,12 @@ uploads_collection = db["uploads"]
 devices_collection = db["devices"]
 comparisons_collection = db["comparisons"]
 
+# Audit collections (new for compliance audit platform)
+audit_findings_collection = db["audit_findings"]
+audit_reports_collection = db["audit_reports"]
+batch_jobs_collection = db["batch_jobs"]
+golden_templates_collection = db["golden_templates"]
+
 
 async def check_db_connection():
     """
