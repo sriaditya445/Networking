@@ -6,16 +6,11 @@ from app.workers.audit_worker import AuditWorker
 from app.workers.extraction_worker import (
     ExtractionWorker
 )
-from app.core.database import (
-    uploads_collection
-)
+from app.services.upload_service import UploadService
 
 async def process_uploaded_jobs():
-    uploads = await uploads_collection.find(
-        {
-            "status": "uploaded"
-        }
-    ).to_list(100)
+    all_uploads = await UploadService.get_uploads()
+    uploads = [u for u in all_uploads if u.get("status") == "PENDING"]
 
     if not uploads:
         logger.info(
@@ -29,11 +24,8 @@ async def process_uploaded_jobs():
         )
 
 async def process_pending_uploads():
-    uploads = await uploads_collection.find(
-        {
-            "status": "staged"
-        }
-    ).to_list(100)
+    all_uploads = await UploadService.get_uploads()
+    uploads = [u for u in all_uploads if u.get("status") == "PROCESSING"]
 
     if not uploads:
         logger.info(
@@ -52,11 +44,8 @@ async def process_pending_audits():
     
     Devices move from 'parsed' -> 'success/failed' after audit.
     """
-    uploads = await uploads_collection.find(
-        {
-            "status": "parsed"
-        }
-    ).to_list(100)
+    all_uploads = await UploadService.get_uploads()
+    uploads = [u for u in all_uploads if u.get("status") == "PROCESSING"]
 
     if not uploads:
         logger.info(
@@ -67,6 +56,6 @@ async def process_pending_audits():
     logger.info(f"Processing {len(uploads)} uploads for audit")
 
     for upload in uploads:
-        await AuditWorker.process_audit_job(
+        await AuditWorker.process_pending_audits(
             str(upload["_id"])
         )

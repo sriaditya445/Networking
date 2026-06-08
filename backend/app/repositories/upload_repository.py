@@ -25,6 +25,27 @@ class UploadRepository:
         )
 
     @staticmethod
+    async def increment_counters(job_id: str, inc_fields: dict, set_fields: dict = None):
+        """
+        Atomically increment numeric counters on an upload document.
+
+        Args:
+            job_id: Upload ObjectId string
+            inc_fields: dict of fields to $inc
+            set_fields: optional dict of fields to $set
+        """
+        update_doc = {}
+        if inc_fields:
+            update_doc["$inc"] = inc_fields
+        if set_fields:
+            update_doc.setdefault("$set", {}).update(set_fields)
+
+        return await uploads_collection.update_one(
+            {"_id": ObjectId(job_id)},
+            update_doc
+        )
+
+    @staticmethod
     async def delete(job_id: str):
         return await uploads_collection.delete_one(
             {"_id": ObjectId(job_id)}

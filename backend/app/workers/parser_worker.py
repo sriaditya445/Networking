@@ -1,18 +1,11 @@
 import os
 from datetime import datetime
 
-from app.core.database import (
-    logger,
-    devices_collection
-)
+from app.core.database import logger
 
-from app.repositories.upload_repository import (
-    UploadRepository
-)
-
-from app.services.parser_service import (
-    ParserService
-)
+from app.services.parser_service import ParserService
+from app.services.device_service import DeviceService
+from app.services.upload_service import UploadService
 
 class ParserWorker:
 
@@ -20,16 +13,13 @@ class ParserWorker:
 
         logger.info(f"Starting parser job: {upload_id}")
 
-        await UploadRepository.update(upload_id, {
-            "status": "processing",
+        await UploadService.update_upload(upload_id, {
+            "status": "PROCESSING",
             "updated_at": datetime.utcnow()
         })
 
         try:
-            devices = await devices_collection.find({
-                "upload_id": upload_id,
-                "status": "pending"
-            }).to_list(1000)
+            devices = await DeviceService.find_pending_by_upload(upload_id)
 
             if not devices:
                 logger.warning(f"No pending devices found for {upload_id}")
@@ -49,36 +39,24 @@ class ParserWorker:
                     content = None
 
                     if file_path and os.path.exists(file_path):
-
                         with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                             content = f.read()
 
                     if not content:
                         raise ValueError("Configuration content is empty or missing.")
 
-                    result = (ParserService.parse_device( content, os.path.basename(file_path)))
+                    result = ParserService.parse_device(content, os.path.basename(file_path))
 
-                    await devices_collection.update_one(
-                        {"_id": device_id},
-                        {
-                            "$set": {
-                                "device_name": result.get("device_name", "Unknown"),
-                                "device_type": result.get("device_type", "Unknown"),
+                    parsed_payload = {
+                        "device_name": result.get("device_name", "Unknown"),
+                        "device_type": result.get("device_type", "Unknown"),
+                        "configuration": content,
+                        "parsed_data": result.get("parsed_data", {}),
+                        "configuration_json": result.get("configuration_json", {}),
+                        "parsed_at": datetime.utcnow()
+                    }
 
-                                "configuration": content,
-
-                                "parsed_data": result.get("parsed_data", {}),
-
-                                "configuration_json":
-                                    result.get("configuration_json", {}),
-
-                                # Status set to 'parsed' instead of 'success'
-                                # AuditWorker will update it to 'success' after auditing
-                                "status": "parsed",
-                                "parsed_at": datetime.utcnow()
-                            }
-                        }
-                    )
+                    await DeviceService.update_after_parse(device_id, parsed_payload)
 
                     success_count += 1
 
@@ -87,38 +65,18 @@ class ParserWorker:
                     logger.error( f"Error parsing device {device_id}: {file_error}")
                     failed_count += 1
 
-                    await devices_collection.update_one(
-                        {"_id": device_id},
-                        {
-                            "$set": {
-                                "status": "failed",
-                                "error_message": str(file_error),
-                                "parsed_at": datetime.utcnow()
-                            }
-                        }
-                    )
+                    await DeviceService.update_device(device_id, {
+                        "status": "failed",
+                        "error_message": str(file_error),
+                        "processing_stage": "FAILED",
+                        "parsed_at": datetime.utcnow()
+                    })
 
-            # Update upload counters with parsing results
-            await ParserWorker._update_upload_counters(
-                upload_id,
-                success_count,
-                failed_count
-            )
+            # Update upload counters with parsing results via UploadService
+            await UploadService.increment_batch_counters(upload_id, success_count, failed_count)
 
-            # Change the status state to 'parsed' if at least one succeeded
-            final_status = ("parsed" if success_count > 0 else "failed")
-
-            error_message = (
-                None
-                if success_count > 0
-                else "All configuration files failed during analysis."
-            )
-
-            await UploadRepository.update(upload_id, {
-                "status": final_status,
-                "error_message": error_message,
-                "updated_at": datetime.utcnow()
-            })
+            # Recalculate upload status from device states
+            await UploadService.recalculate_upload_status(upload_id)
 
             logger.info(
                 f"""
@@ -130,59 +88,10 @@ class ParserWorker:
             )
 
         except Exception as error:
-
             logger.error(f"Critical parser failure for {upload_id}: {error}")
-
-            await UploadRepository.update(upload_id, {
-                "status": "failed",
+            await UploadService.update_upload(upload_id, {
+                "status": "FAILED",
                 "error_message": str(error),
                 "updated_at": datetime.utcnow()
             })
-
-    @staticmethod
-    async def _update_upload_counters(
-        upload_id: str,
-        parsed_success: int,
-        parsed_failed: int
-    ):
-        """
-        Update upload document with parsing counters.
-        
-        Args:
-            upload_id: Upload ID
-            parsed_success: Number of successfully parsed devices
-            parsed_failed: Number of failed to parse devices
-        """
-        try:
-            upload = await UploadRepository.get_by_id(upload_id)
             
-            if not upload:
-                logger.error(f"Upload not found: {upload_id}")
-                return
-            
-            # Get total device count
-            total_devices = await devices_collection.count_documents({
-                "upload_id": upload_id
-            })
-            
-            # Increment counters
-            current_success = upload.get("parsed_success_count", 0)
-            current_failed = upload.get("parsed_failed_count", 0)
-            
-            new_success = current_success + parsed_success
-            new_failed = current_failed + parsed_failed
-            
-            await UploadRepository.update(upload_id, {
-                "total_devices": total_devices,
-                "parsed_success_count": new_success,
-                "parsed_failed_count": new_failed,
-                "updated_at": datetime.utcnow()
-            })
-            
-            logger.debug(
-                f"Updated upload counters: {upload_id} "
-                f"(parsed_success: {new_success}, parsed_failed: {new_failed})"
-            )
-            
-        except Exception as e:
-            logger.error(f"Error updating upload counters for {upload_id}: {e}")

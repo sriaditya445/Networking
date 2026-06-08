@@ -183,3 +183,42 @@ class AuditService:
             return False, "Device configuration must be a dictionary"
 
         return True, None
+
+    @staticmethod
+    def simulate_audit(device_id: str, configuration_json: Dict[str, Any], device_type: str) -> Dict[str, Any]:
+        """
+        Produce a deterministic simulated audit result for testing and staging.
+
+        Deterministic rule: use the last hex char of the device_id string; even -> PASS, odd -> FAIL.
+        """
+        try:
+            last_char = str(device_id)[-1]
+            parity = int(last_char, 16) % 2
+        except Exception:
+            parity = 0
+
+        # PASS when parity == 0
+        passed = parity == 0
+
+        if passed:
+            score = 100.0
+            summary = {"compliant": 1, "missing": 0, "non_compliant": 0, "extra": 0}
+            findings = []
+        else:
+            score = 42.0
+            summary = {"compliant": 0, "missing": 1, "non_compliant": 1, "extra": 0}
+            findings = [
+                {
+                    "path": "interfaces.Gi0/1.description",
+                    "status": "NON_COMPLIANT",
+                    "expected": "{{DESCRIPTION}}",
+                    "actual": "missing or incorrect",
+                    "recommendation": "Set interface description to match template"
+                }
+            ]
+
+        return {
+            "score": score,
+            "summary": summary,
+            "findings": findings
+        }

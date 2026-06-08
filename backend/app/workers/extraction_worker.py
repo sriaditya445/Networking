@@ -9,9 +9,7 @@ from app.services.device_service import (
     DeviceService
 )
 
-from app.repositories.upload_repository import (
-    UploadRepository
-)
+from app.services.upload_service import UploadService
 
 
 class ExtractionWorker:
@@ -25,12 +23,11 @@ class ExtractionWorker:
 
         folder_path = upload["folder_path"]
 
-        await UploadRepository.update(
+        await UploadService.update_upload(
             upload_id,
             {
-                "status": "extracting",
-                "updated_at":
-                    datetime.utcnow()
+                "status": "PROCESSING",
+                "updated_at": datetime.utcnow()
             }
         )
 
@@ -88,54 +85,21 @@ class ExtractionWorker:
 
                 await DeviceService.create_device(
                     {
-                        "upload_id":
-                            upload_id,
-
-                        "device_name":
-                            os.path.splitext(
-                                file
-                            )[0],
-
-                        "device_type":
-                            "Pending Analysis",
-
-                        "configuration":
-                            None,
-
-                        "status":
-                            "pending",
-
-                        "file_path":
-                            file_path,
-
-                        "relative_path":
-                            os.path.relpath(
-                                file_path,
-                                folder_path
-                            ),
-
-                        "error_message":
-                            None,
-
-                        "parsed_at":
-                            None,
-
-                        "parsed_data":
-                            None
+                        "upload_id": upload_id,
+                        "device_name": os.path.splitext(file)[0],
+                        "device_type": "Pending Analysis",
+                        "configuration": None,
+                        "batch_status": "PENDING",
+                        "audit_status": "PENDING",
+                        "processing_stage": "PENDING_BATCH",
+                        "file_path": file_path,
+                        "relative_path": os.path.relpath(file_path, folder_path),
+                        "error_message": None,
+                        "parsed_at": None,
+                        "parsed_data": None
                     }
                 )
 
                 device_count += 1
 
-        await UploadRepository.update(
-            upload_id,
-            {
-                "status": "staged",
-
-                "files_count":
-                    device_count,
-
-                "updated_at":
-                    datetime.utcnow()
-            }
-        )
+        await UploadService.update_upload(upload_id, {"files_count": device_count, "updated_at": datetime.utcnow()})

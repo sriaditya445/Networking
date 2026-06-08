@@ -1,3 +1,226 @@
+from datetime import datetime
+
+from app.core.database import logger
+from app.services.device_service import DeviceService
+from app.services.upload_service import UploadService
+from app.services.audit_service import AuditService
+
+
+class AuditWorker:
+    """Audit worker that uses the Service layer exclusively.
+
+    - Finds devices ready for audit via `DeviceService.get_devices`
+    - Updates device processing state via `DeviceService.update_device`
+    - Runs `AuditService.simulate_audit` (deterministic) for now
+    - Updates device with results via `DeviceService.update_after_audit`
+    - Updates upload counters via `UploadService.increment_audit_counters`
+    """
+
+    @staticmethod
+    async def process_pending_audits(upload_id: str):
+        logger.info(f"Starting audit worker for upload: {upload_id}")
+
+        try:
+            devices = await DeviceService.get_devices(
+                upload_id=upload_id,
+                audit_status="PENDING",
+                processing_stage="PENDING_AUDIT"
+            )
+
+            if not devices:
+                logger.info(f"No devices pending audit for upload {upload_id}")
+                return
+
+            success_count = 0
+            failed_count = 0
+
+            for device in devices:
+                device_id = device.get("_id")
+                try:
+                    # mark as processing
+                    await DeviceService.update_device(device_id, {"audit_status": "PROCESSING", "processing_stage": "PROCESSING_AUDIT", "updated_at": datetime.utcnow()})
+
+                    # use deterministic simulation for now
+                    audit_result = AuditService.simulate_audit(device_id, device.get("configuration_json"), device.get("device_type"))
+
+                    passed = (audit_result.get("score", 0) >= 50)
+
+                    await DeviceService.update_after_audit(device_id, audit_result, success=passed)
+
+                    if passed:
+                        success_count += 1
+                    else:
+                        failed_count += 1
+
+                except Exception as e:
+                    logger.error(f"Audit error for device {device_id}: {e}")
+                    failed_count += 1
+                    await DeviceService.update_device(device_id, {"audit_status": "FAILED", "processing_stage": "FAILED", "error_message": str(e), "updated_at": datetime.utcnow()})
+
+            # Update upload counters via service
+            await UploadService.increment_audit_counters(upload_id, success_count, failed_count)
+
+            logger.info(f"Audit worker completed for {upload_id}: success={success_count} failed={failed_count}")
+
+        except Exception as e:
+            logger.error(f"Critical audit worker failure for {upload_id}: {e}")
+from app.core.database import logger
+from app.services.device_service import DeviceService
+from app.services.upload_service import UploadService
+from app.services.audit_service import AuditService
+
+
+class AuditWorker:
+
+    @staticmethod
+    async def process_pending_audits(upload_id: str):
+        """Process devices that are ready for audit using Service layer only."""
+        logger.info(f"Starting audit worker for upload: {upload_id}")
+
+        try:
+            devices = await DeviceService.get_devices(upload_id=upload_id, audit_status="PENDING", processing_stage="PENDING_AUDIT")
+
+            if not devices:
+                logger.info(f"No devices pending audit for upload {upload_id}")
+                return
+
+            success_count = 0
+            failed_count = 0
+
+            for device in devices:
+                device_id = device.get("_id")
+                try:
+                    # mark as processing
+                    await DeviceService.update_device(device_id, {"audit_status": "PROCESSING", "processing_stage": "PROCESSING_AUDIT"})
+
+                    audit_result = AuditService.simulate_audit(device_id, device.get("configuration_json"), device.get("device_type"))
+
+                    passed = (audit_result.get("score", 0) >= 50)
+
+                    await DeviceService.update_after_audit(device_id, audit_result, success=passed)
+
+                    if passed:
+                        success_count += 1
+                    else:
+                        failed_count += 1
+
+                except Exception as e:
+                    logger.error(f"Audit error for device {device_id}: {e}")
+                    failed_count += 1
+                    await DeviceService.update_device(device_id, {"audit_status": "FAILED", "processing_stage": "FAILED", "error_message": str(e)})
+
+            await UploadService.increment_audit_counters(upload_id, success_count, failed_count)
+
+            logger.info(f"Audit worker completed for {upload_id}: success={success_count} failed={failed_count}")
+
+        except Exception as e:
+            logger.error(f"Critical audit worker failure for {upload_id}: {e}")
+from app.core.database import logger
+from app.services.device_service import DeviceService
+from app.services.upload_service import UploadService
+from app.services.audit_service import AuditService
+
+
+class AuditWorker:
+
+    @staticmethod
+    async def process_pending_audits(upload_id: str):
+        """Process devices that are ready for audit using Service layer only."""
+        logger.info(f"Starting audit worker for upload: {upload_id}")
+
+        try:
+            devices = await DeviceService.get_devices(upload_id=upload_id, audit_status="PENDING", processing_stage="PENDING_AUDIT")
+
+            if not devices:
+                logger.info(f"No devices pending audit for upload {upload_id}")
+                return
+
+            success_count = 0
+            failed_count = 0
+
+            for device in devices:
+                device_id = device.get("_id")
+                try:
+                    # mark as processing
+                    await DeviceService.update_device(device_id, {"audit_status": "PROCESSING", "processing_stage": "PROCESSING_AUDIT"})
+
+                    audit_result = AuditService.simulate_audit(device_id, device.get("configuration_json"), device.get("device_type"))
+
+                    passed = (audit_result.get("score", 0) >= 50)
+
+                    await DeviceService.update_after_audit(device_id, audit_result, success=passed)
+
+                    if passed:
+                        success_count += 1
+                    else:
+                        failed_count += 1
+
+                except Exception as e:
+                    logger.error(f"Audit error for device {device_id}: {e}")
+                    failed_count += 1
+                    await DeviceService.update_device(device_id, {"audit_status": "FAILED", "processing_stage": "FAILED", "error_message": str(e)})
+
+            await UploadService.increment_audit_counters(upload_id, success_count, failed_count)
+
+            logger.info(f"Audit worker completed for {upload_id}: success={success_count} failed={failed_count}")
+
+        except Exception as e:
+            logger.error(f"Critical audit worker failure for {upload_id}: {e}")
+from datetime import datetime
+
+from app.core.database import logger
+from app.services.device_service import DeviceService
+from app.services.upload_service import UploadService
+from app.services.audit_service import AuditService
+
+
+class AuditWorker:
+
+    @staticmethod
+    async def process_pending_audits(upload_id: str):
+        logger.info(f"Starting audit worker for upload: {upload_id}")
+
+        try:
+            # Find devices that have been parsed and awaiting audit
+            devices = await DeviceService.get_devices(upload_id=upload_id, status="parsed", audit_status="PENDING")
+
+            if not devices:
+                logger.info(f"No devices pending audit for upload {upload_id}")
+                return
+
+            success_count = 0
+            failed_count = 0
+
+            for device in devices:
+                device_id = device.get("_id")
+                try:
+                    # Mark as auditing
+                    await DeviceService.update_device(device_id, {"audit_status": "RUNNING", "processing_stage": "AUDITING"})
+
+                    # Use deterministic simulated audit for now
+                    audit_result = AuditService.simulate_audit(device_id, device.get("configuration_json"), device.get("device_type"))
+
+                    passed = (audit_result.get("score", 0) >= 50)
+
+                    await DeviceService.update_after_audit(device_id, audit_result, success=passed)
+
+                    if passed:
+                        success_count += 1
+                    else:
+                        failed_count += 1
+
+                except Exception as e:
+                    logger.error(f"Audit error for device {device_id}: {e}")
+                    failed_count += 1
+                    await DeviceService.update_device(device_id, {"audit_status": "FAILED", "processing_stage": "FAILED", "error_message": str(e)})
+
+            # Update upload audit counters
+            await UploadService.increment_audit_counters(upload_id, success_count, failed_count)
+
+            logger.info(f"Audit worker completed for {upload_id}: success={success_count} failed={failed_count}")
+
+        except Exception as e:
+            logger.error(f"Critical audit worker failure for {upload_id}: {e}")
 """
 Audit Worker
 
@@ -121,82 +344,3 @@ class AuditWorker:
                         }
                     )
 
-            # Update upload counters and status
-            await AuditWorker._update_upload_counters(
-                upload_id,
-                success_count,
-                failed_count
-            )
-
-            logger.info(
-                f"Audit job completed for {upload_id}: "
-                f"Success={success_count}, Failed={failed_count}"
-            )
-
-        except Exception as error:
-            logger.error(f"Critical audit job failure for {upload_id}: {error}")
-            await UploadRepository.update(upload_id, {
-                "error_message": f"Audit job failed: {str(error)}",
-                "updated_at": datetime.utcnow()
-            })
-
-    @staticmethod
-    async def _update_upload_counters(
-        upload_id: str,
-        audit_success_count: int,
-        audit_failed_count: int
-    ):
-        """
-        Update upload document with audit counters.
-
-        Args:
-            upload_id: Upload ID
-            audit_success_count: Number of successfully audited devices
-            audit_failed_count: Number of failed audit devices
-        """
-        try:
-            # Get current counters
-            upload = await UploadRepository.get_by_id(upload_id)
-
-            if not upload:
-                logger.error(f"Upload not found: {upload_id}")
-                return
-
-            # Increment counters
-            current_success = upload.get("audit_success_count", 0)
-            current_failed = upload.get("audit_failed_count", 0)
-
-            new_success = current_success + audit_success_count
-            new_failed = current_failed + audit_failed_count
-
-            # Determine new upload status
-            total_devices = upload.get("total_devices", 0)
-            if total_devices == 0:
-                # Count from devices
-                total_devices = await devices_collection.count_documents({
-                    "upload_id": upload_id
-                })
-
-            # All devices audited?
-            all_audited = (new_success + new_failed) >= total_devices
-
-            upload_status = upload.get("status", "processing")
-            if all_audited and upload_status == "processing":
-                upload_status = "success" if new_failed == 0 else "success"  # Mark complete
-
-            # Update upload
-            await UploadRepository.update(upload_id, {
-                "audit_success_count": new_success,
-                "audit_failed_count": new_failed,
-                "total_devices": total_devices,
-                "status": upload_status,
-                "updated_at": datetime.utcnow()
-            })
-
-            logger.debug(
-                f"Updated upload counters: {upload_id} "
-                f"(success: {new_success}, failed: {new_failed})"
-            )
-
-        except Exception as e:
-            logger.error(f"Error updating upload counters for {upload_id}: {e}")
