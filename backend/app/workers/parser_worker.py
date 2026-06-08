@@ -72,13 +72,9 @@ class ParserWorker:
                                 "configuration_json":
                                     result.get("configuration_json", {}),
 
-                                "audit_status": result.get("audit_status", "PENDING"),
-                                "audit_score": result.get("audit_score", 0),
-                                "audit_summary":
-                                    result.get("audit_summary", {}),
-                                "findings": result.get("findings", []),
-
-                                "status": "success",
+                                # Status set to 'parsed' instead of 'success'
+                                # AuditWorker will update it to 'success' after auditing
+                                "status": "parsed",
                                 "parsed_at": datetime.utcnow()
                             }
                         }
@@ -102,8 +98,15 @@ class ParserWorker:
                         }
                     )
 
-            # change the status state as success if all passed not atleast one
-            final_status = ("success" if success_count > 0 else "failed")
+            # Update upload counters with parsing results
+            await ParserWorker._update_upload_counters(
+                upload_id,
+                success_count,
+                failed_count
+            )
+
+            # Change the status state to 'parsed' if at least one succeeded
+            final_status = ("parsed" if success_count > 0 else "failed")
 
             error_message = (
                 None
@@ -135,3 +138,51 @@ class ParserWorker:
                 "error_message": str(error),
                 "updated_at": datetime.utcnow()
             })
+
+    @staticmethod
+    async def _update_upload_counters(
+        upload_id: str,
+        parsed_success: int,
+        parsed_failed: int
+    ):
+        """
+        Update upload document with parsing counters.
+        
+        Args:
+            upload_id: Upload ID
+            parsed_success: Number of successfully parsed devices
+            parsed_failed: Number of failed to parse devices
+        """
+        try:
+            upload = await UploadRepository.get_by_id(upload_id)
+            
+            if not upload:
+                logger.error(f"Upload not found: {upload_id}")
+                return
+            
+            # Get total device count
+            total_devices = await devices_collection.count_documents({
+                "upload_id": upload_id
+            })
+            
+            # Increment counters
+            current_success = upload.get("parsed_success_count", 0)
+            current_failed = upload.get("parsed_failed_count", 0)
+            
+            new_success = current_success + parsed_success
+            new_failed = current_failed + parsed_failed
+            
+            await UploadRepository.update(upload_id, {
+                "total_devices": total_devices,
+                "parsed_success_count": new_success,
+                "parsed_failed_count": new_failed,
+                "updated_at": datetime.utcnow()
+            })
+            
+            logger.debug(
+                f"Updated upload counters: {upload_id} "
+                f"(parsed_success: {new_success}, parsed_failed: {new_failed})"
+            )
+            
+        except Exception as e:
+            logger.error(f"Error updating upload counters for {upload_id}: {e}")

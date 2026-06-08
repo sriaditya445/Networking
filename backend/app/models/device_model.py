@@ -11,8 +11,9 @@ class DeviceModel(BaseModel):
     file_path: str
     error_message: Optional[str] = None
     parsed_at: Optional[datetime] = None
-    # parsed_data: Optional[dict] = None
     parsed_data: Optional[Dict[str, Any]] = None
+    configuration_json: Optional[Dict[str, Any]] = None  # NEW: Hierarchical JSON structure
+    audit_result: Optional[Dict[str, Any]] = None  # NEW: Full audit output from comparison_engine
     audit_status: str = "PENDING"
     audit_score: Optional[float] = None
     audit_summary: Optional[Dict[str, int]] = None

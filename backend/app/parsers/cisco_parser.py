@@ -1,24 +1,24 @@
 from app.parsers.base_parser import BaseParser
 from app.parsers.cisco_regex_helpers import parse_device_config
-from app.services.audit_engine import AuditEngine
+from app.parsers.common.generic_config_parser import GenericConfigParser
 
 class CiscoParser(BaseParser):
     def parse(self, content, filename):
-        # 1. Basic Segregation & Identification
+        # 1. Basic device identification and segregation using regex
         base_parsed = parse_device_config(content, filename)
         
-        # 2. Run the Compliance Audit
-        audit_result = AuditEngine.run_audit(content, base_parsed["device_type"])
+        # 2. Parse configuration to hierarchical JSON (generic parser)
+        # This works for any vendor configuration format
+        config_json = GenericConfigParser.parse_config(content)
         
-        # 3. Merge and return results
+        # 3. Return parsed results WITHOUT running audit here
+        # Audit will happen separately in AuditWorker
         return {
             "device_name": base_parsed["device_name"],
             "vendor": "Cisco",
             "device_type": base_parsed["device_type"],
             "parsed_data": base_parsed["parsed_data"],
-            "configuration_json": base_parsed["configuration_json"],
-            "audit_status": audit_result["score"] >= 100 and "SUCCESS" or "FAILED",
-            "audit_score": audit_result["score"],
-            "audit_summary": audit_result["summary"],
-            "findings": audit_result["findings"]
+            "configuration_json": config_json,
+            # Note: audit_status, audit_score, audit_summary, findings are NOT set here
+            # They will be populated by AuditWorker after device status='parsed'
         }
