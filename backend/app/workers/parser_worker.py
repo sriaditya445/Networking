@@ -67,8 +67,6 @@ class ParserWorker:
 
                                 "configuration": content,
 
-                                "parsed_data": result.get("parsed_data", {}),
-
                                 "configuration_json":
                                     result.get("configuration_json", {}),
 

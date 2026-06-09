@@ -122,6 +122,7 @@ class AuditWorker:
                     )
 
             # Update upload counters and status
+            
             await AuditWorker._update_upload_counters(
                 upload_id,
                 success_count,

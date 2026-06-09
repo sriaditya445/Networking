@@ -17,7 +17,7 @@ class CiscoParser(BaseParser):
             "device_name": base_parsed["device_name"],
             "vendor": "Cisco",
             "device_type": base_parsed["device_type"],
-            "parsed_data": base_parsed["parsed_data"],
+            # "parsed_data": base_parsed["parsed_data"],
             "configuration_json": config_json,
             # Note: audit_status, audit_score, audit_summary, findings are NOT set here
             # They will be populated by AuditWorker after device status='parsed'

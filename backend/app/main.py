@@ -1,11 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.routes.upload_routes import router as upload_router
-from app.api.v1.routes.device_routes import router as device_router
-from app.api.v1.routes.stats_routes import router as stats_router
-from app.api.v1.routes.health_routes import router as health_router
-from app.api.v1.routes.report_routes import router as report_router
+from app.api.routes.upload_routes import router as upload_router
+from app.api.routes.device_routes import router as device_router
+from app.api.routes.stats_routes import router as stats_router
+from app.api.routes.health_routes import router as health_router
+from app.api.routes.report_routes import router as report_router
 
 from app.core.database import check_db_connection
 from app.workers.scheduler import scheduler

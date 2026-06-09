@@ -9,5 +9,3 @@ def detect_vendor(content: str):
         return "Fortigate"
 
     return "Cisco"
-
-

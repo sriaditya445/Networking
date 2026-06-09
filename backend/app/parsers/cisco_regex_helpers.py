@@ -33,45 +33,9 @@ def parse_device_config(content: str, filename: str) -> tuple[str, str, dict]:
     else:
         device_type = "Unknown"
 
-    # 3. Segregate detailed sub-configuration items using Regex
-    interfaces = INTERFACE_REGEX.findall(content)
-    
-    # Extract IP configuration tuples (IP, Netmask)
-    ips = []
-    for m in IP_REGEX.finditer(content):
-        ips.append(f"Interface IP: {m.group(1)} Mask: {m.group(2)}")
-
-    # Extract unique VLANs
-    vlans = sorted(list(set(VLAN_REGEX.findall(content))))
-
-    # Identify active routing protocols
-    protocols = []
-    if "router ospf" in content_lower:
-        protocols.append("OSPF")
-    if "router bgp" in content_lower:
-        protocols.append("BGP")
-    if "router rip" in content_lower:
-        protocols.append("RIP")
-    if "ip route" in content_lower:
-        static_routes = STATIC_ROUTE_REGEX.findall(content)
-        if static_routes:
-            protocols.append(f"Static Route ({len(static_routes)} configured)")
-        else:
-            protocols.append("Static Route")
-
-    # Combine into a structured dict
-    parsed_data = {
-        "interfaces": interfaces[:15],  # Limit list to first 15 for display
-        "interfaces_count": len(interfaces),
-        "ips": ips,
-        "vlans": vlans,
-        "protocols": protocols
-    }
-
     return {
         "device_name": hostname,
         "device_type": device_type,
-        "parsed_data": parsed_data,
         "configuration_json": {},
         "audit_summary": {}
     }
