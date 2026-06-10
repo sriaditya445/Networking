@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
-import { FaTrash, FaDownload, FaSpinner, FaHistory, FaExclamationCircle, FaFilter } from 'react-icons/fa';
+import { FaTrash, FaDownload, FaSpinner, FaHistory, FaExclamationCircle, FaFilter, FaEye } from 'react-icons/fa';
 
 function ProcessingQueue({
   jobs,
   handleDeleteJob,
   formatDate,
   renderStatusBadge,
-  apiBaseUrl
+  apiBaseUrl,
+  setActiveTab,
+  setSelectedUploadId,
+  setSelectedFolderName
 }) {
   const [selectedFolder, setSelectedFolder] = useState('');
 
   // Extract unique folder names
   const uniqueFolders = [...new Set(jobs.map(job => job.folder_name))];
-
+  const handleViewJob = (job) => {
+    setSelectedUploadId(job._id || job.id);
+    setSelectedFolderName(job.folder_name);
+    setActiveTab('devices');
+  };
   // Filter jobs based on selected folder
   const filteredJobs = selectedFolder
     ? jobs.filter(job => job.folder_name === selectedFolder)
@@ -95,32 +102,59 @@ function ProcessingQueue({
                     {renderStatusBadge(job.status)}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2.5">
-                      {job.status === 'success' && (
-                        <a
-                          href={`${apiBaseUrl}/api/jobs/${job._id || job.id}/download`}
-                          download
-                          className="p-2 bg-slate-100 hover:bg-cyan-500 hover:text-slate-950 text-slate-600 rounded-lg transition-colors inline-flex items-center justify-center"
-                          title="Download ZIP"
-                          aria-label={`Download folder ${job.folder_name} ZIP`}
-                        >
-                          <FaDownload className="text-xs" />
-                        </a>
-                      )}
-                      
+                    <div className="flex items-center justify-end gap-2">
+
+                      {/* View */}
+                      <button
+                        disabled={job.status !== "success"}
+                        onClick={() => handleViewJob(job)}
+                        className={`p-2 rounded-lg border shadow-sm transition-colors ${job.status === "success"
+                          ? "bg-white hover:bg-cyan-50 hover:text-cyan-600 text-slate-500 border-slate-200"
+                          : "bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed"
+                          }`}
+                        title={
+                          job.status === "success"
+                            ? "View Devices"
+                            : "Devices not available until processing completes"
+                        }
+                      >
+                        <FaEye className="text-xs" />
+                      </button>
+
+                      {/* Download */}
+                      <button
+                        disabled={job.status !== 'success'}
+                        onClick={() => {
+                          if (job.status === 'success') {
+                            window.open(
+                              `${apiBaseUrl}/api/jobs/${job._id || job.id}/download`,
+                              '_blank'
+                            );
+                          }
+                        }}
+                        className={`p-2 rounded-lg border shadow-sm transition-colors ${job.status === 'success'
+                          ? 'bg-white hover:bg-emerald-50 hover:text-emerald-600 text-slate-500 border-slate-200'
+                          : 'bg-slate-100 text-slate-300 border-slate-100 cursor-not-allowed'
+                          }`}
+                        title="Download ZIP"
+                      >
+                        <FaDownload className="text-xs" />
+                      </button>
+
+                      {/* Delete */}
                       <button
                         type="button"
-                        className="p-2 bg-slate-100 hover:bg-rose-100 hover:text-rose-600 text-slate-500 rounded-lg transition-colors"
+                        className="p-2 bg-white hover:bg-rose-50 hover:text-rose-600 text-slate-500 rounded-lg border border-slate-200 transition-colors shadow-sm"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           handleDeleteJob(job._id || job.id);
                         }}
                         title="Delete Job"
-                        aria-label={`Delete job ${job.folder_name}`}
                       >
                         <FaTrash className="text-xs" />
                       </button>
+
                     </div>
                   </td>
                 </tr>
