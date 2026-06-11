@@ -40,3 +40,4 @@ async def check_db_connection():
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
         return False
+

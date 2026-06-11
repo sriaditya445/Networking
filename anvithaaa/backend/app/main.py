@@ -1,20 +1,12 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes.upload_routes import router as upload_router
-from app.api.routes.device_routes import router as device_router
-from app.api.routes.stats_routes import router as stats_router
-from app.api.routes.health_routes import router as health_router
-from app.api.routes.report_routes import router as report_router
-
-from app.core.database import check_db_connection
-from app.workers.scheduler import scheduler
-
-from contextlib import asynccontextmanager
-
-from app.api.routes import audit, detect, templates
+from app.api import audit, detect, templates
 from app.config import settings
 from app.database.mongodb import close_db, connect_db
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -22,16 +14,13 @@ async def lifespan(app: FastAPI):
     yield
     await close_db()
 
+
 app = FastAPI(
     title="Network Audit & Compliance Platform",
     description="Enterprise network configuration audit, compliance validation, and golden template management",
     version="1.0.0",
     lifespan=lifespan,
 )
-
-@app.on_event("startup")
-async def startup():
-    scheduler.start()
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,12 +30,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(upload_router)
-app.include_router(device_router)
-app.include_router(stats_router)
-app.include_router(health_router)
-app.include_router(report_router)
 app.include_router(audit.router)
 app.include_router(templates.router)
 app.include_router(detect.router)
 
+
+@app.get("/health", tags=["Health"])
+async def health():
+    return {"status": "healthy", "service": "network-audit-platform"}
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    return {
+        "message": "Network Audit & Compliance Platform API",
+        "docs": "/docs",
+        "health": "/health",
+    }

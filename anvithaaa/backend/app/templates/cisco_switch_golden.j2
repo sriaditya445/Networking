@@ -1,0 +1,107 @@
+! ============================================================
+! SYSTEM
+! ============================================================
+version 15.2
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+no service pad
+hostname {{ hostname }}
+!
+! ============================================================
+! AAA
+! ============================================================
+aaa new-model
+aaa authentication login default group tacacs+ local
+aaa authentication enable default group tacacs+ enable
+aaa authorization exec default group tacacs+ local
+aaa authorization commands 15 default group tacacs+ local
+aaa accounting exec default start-stop group tacacs+
+aaa accounting commands 15 default start-stop group tacacs+
+!
+! ============================================================
+! SECURITY
+! ============================================================
+no ip domain-lookup
+login block-for 120 attempts 5 within 60
+login quiet-mode access-class ACL_VTY
+login on-failure log
+login on-success log
+dot1x system-auth-control
+!
+! ============================================================
+! DNS
+! ============================================================
+ip domain-name {{ domain_name }}
+ip name-server {{ dns_servers }}
+!
+! ============================================================
+! NTP
+! ============================================================
+clock timezone EST -5 0
+ntp server {{ ntp_servers }}
+!
+! ============================================================
+! SNMP
+! ============================================================
+snmp-server community {{ snmp_group }} RO ACL_SNMP
+snmp-server location {{ hostname }}-DATACENTER
+snmp-server contact netops@{{ domain_name }}
+snmp-server ifindex persist
+!
+! ============================================================
+! LOGGING
+! ============================================================
+logging buffered 64000
+logging console informational
+logging host {{ syslog_servers }}
+logging trap informational
+logging source-interface Loopback0
+!
+! ============================================================
+! LAYER2
+! ============================================================
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+spanning-tree portfast bpduguard default
+spanning-tree loopguard default
+spanning-tree vlan 1-4094 priority 4096
+!
+! ============================================================
+! LAYER3
+! ============================================================
+ip routing
+ip cef
+!
+! ============================================================
+! INTERFACES
+! ============================================================
+interface Loopback0
+ description Management Loopback
+ ip address {{ ip_address }} 255.255.255.255
+!
+interface range GigabitEthernet1/0/1-48
+ description Access Port
+ switchport mode access
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport nonegotiate
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+!
+! ============================================================
+! PORT CHANNELS
+! ============================================================
+interface Port-channel1
+ description Uplink Port-Channel
+ switchport mode trunk
+ switchport trunk native vlan 999
+ switchport trunk allowed vlan 10,20,30
+!
+! ============================================================
+! HIGH AVAILABILITY
+! ============================================================
+redundancy
+ mode sso
+!

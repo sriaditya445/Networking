@@ -1,0 +1,119 @@
+! ============================================================
+! SYSTEM
+! ============================================================
+version 17.3
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+hostname {{ hostname }}
+!
+! ============================================================
+! AAA
+! ============================================================
+aaa new-model
+aaa authentication login default group tacacs+ local
+aaa authentication dot1x default group radius
+aaa authorization network default group radius
+aaa accounting update periodic 5
+aaa accounting identity default start-stop group radius
+!
+! ============================================================
+! SECURITY
+! ============================================================
+no ip domain-lookup
+login block-for 120 attempts 5 within 60
+login on-failure log
+!
+! ============================================================
+! DNS
+! ============================================================
+ip domain-name {{ domain_name }}
+ip name-server {{ dns_servers }}
+!
+! ============================================================
+! NTP
+! ============================================================
+clock timezone EST -5 0
+ntp server {{ ntp_servers }}
+!
+! ============================================================
+! SNMP
+! ============================================================
+snmp-server community {{ snmp_group }} RO ACL_SNMP
+snmp-server location {{ hostname }}-WLC
+snmp-server contact netops@{{ domain_name }}
+!
+! ============================================================
+! LOGGING
+! ============================================================
+logging buffered 64000
+logging console informational
+logging host {{ syslog_servers }}
+logging trap informational
+!
+! ============================================================
+! RADIUS
+! ============================================================
+radius server ISE-PRIMARY
+ address ipv4 10.0.0.10 auth-port 1812 acct-port 1813
+ key {{ radius_key }}
+!
+! ============================================================
+! TACACS
+! ============================================================
+tacacs server TACACS-PRIMARY
+ address ipv4 10.0.0.11
+ key {{ tacacs_key }}
+!
+! ============================================================
+! WIRELESS
+! ============================================================
+wireless profile policy DEFAULT-WIRELESS-POLICY
+ description Default Wireless Policy
+ no central association
+ no central dhcp
+!
+! ============================================================
+! WLAN
+! ============================================================
+wlan 1 CORP-WLAN
+ ssid CORP-WLAN
+ security wpa psk aes
+ no shutdown
+!
+wlan 2 GUEST-WLAN
+ ssid GUEST-WLAN
+ security wpa psk aes
+ no shutdown
+!
+! ============================================================
+! RF
+! ============================================================
+ap dot11 24ghz rf-profile LOW-DENSITY
+ description RF Profile for 2.4GHz
+ channel auto
+ tx-power auto
+!
+ap dot11 5ghz rf-profile HIGH-DENSITY
+ description RF Profile for 5GHz
+ channel auto
+ tx-power auto
+!
+! ============================================================
+! AVC
+! ============================================================
+flow monitor wireless-avc-basic
+!
+! ============================================================
+! WEBAUTH
+! ============================================================
+parameter-map type webauth global
+ type webauth
+ virtual-ip ipv4 10.0.0.100
+!
+! ============================================================
+! HIGH AVAILABILITY
+! ============================================================
+redundancy
+ mode sso
+!
