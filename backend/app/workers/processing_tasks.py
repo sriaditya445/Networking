@@ -13,7 +13,7 @@ from app.core.database import (
 async def process_uploaded_jobs():
     uploads = await uploads_collection.find(
         {
-            "status": "uploaded"
+            "status": "PENDING_EXTRACTION"
         }
     ).to_list(100)
 
@@ -31,7 +31,7 @@ async def process_uploaded_jobs():
 async def process_pending_uploads():
     uploads = await uploads_collection.find(
         {
-            "status": "staged"
+            "status": "PENDING_PROCESSING"
         }
     ).to_list(100)
 
@@ -54,7 +54,7 @@ async def process_pending_audits():
     """
     uploads = await uploads_collection.find(
         {
-            "status": "parsed"
+            "status": "PROCESSING"
         }
     ).to_list(100)
 

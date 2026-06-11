@@ -13,7 +13,8 @@ class DeviceService:
     async def get_devices(
         device_id: str = None,
         upload_id: str = None,
-        status: str = None
+        processing_status: str = None,
+        audit_status: str = None
     ):
 
         if device_id and upload_id:
@@ -47,10 +48,25 @@ class DeviceService:
         if upload_id:
             query["upload_id"] = upload_id
 
-        if status:
-            query["status"] = status
+        if processing_status:
+            query["processing_status"] = processing_status
 
-        return await DeviceRepository.get_all(query)
+        if audit_status:
+            query["audit_status"] = audit_status
+
+        devices = await DeviceRepository.get_all(
+            query
+        )
+
+        for device in devices:
+
+            device["display_status"] = (
+                DeviceService.get_display_status(
+                    device
+                )
+            )
+
+        return devices
 
     @staticmethod
     async def update_device(device_id: str, data: dict):
@@ -63,13 +79,36 @@ class DeviceService:
     @staticmethod
     async def count_devices(query: dict = None):
         return await DeviceRepository.count(query or {})
+    
+    @staticmethod
+    def get_display_status(device: dict):
 
-            
-    # @staticmethod
-    # async def get_devices( upload_id:str = None , status: str = None):
-    #     query = {}
-    #     if upload_id:
-    #         query["upload_id"] = upload_id
-    #     if status:
-    #         query["status"] = status
-    #     return await DeviceRepository.get_all(query)
+        processing_status = device.get(
+            "processing_status",
+            "PENDING"
+        )
+
+        audit_status = device.get(
+            "audit_status",
+            "PENDING"
+        )
+
+        if processing_status == "FAILED":
+            return "FAILED"
+
+        if processing_status == "PROCESSING":
+            return "PROCESSING_CONFIGURATION"
+
+        if processing_status == "SUCCESS" and audit_status == "PENDING":
+            return "WAITING_FOR_AUDIT"
+
+        if audit_status == "PROCESSING":
+            return "AUDITING"
+
+        if audit_status == "FAILED":
+            return "FAILED"
+
+        if audit_status == "SUCCESS":
+            return "SUCCESS"
+
+        return "PENDING"

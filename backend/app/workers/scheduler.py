@@ -12,21 +12,21 @@ scheduler = AsyncIOScheduler()
 scheduler.add_job(
     process_uploaded_jobs,
     trigger="interval",
-    seconds=20,
+    seconds=5,
     id="extraction_batch_job"
 )
  
 scheduler.add_job(
     process_pending_uploads,
     "interval",
-    seconds=30,
+    seconds=5,
     id="parser_batch_job"
 )
 
 scheduler.add_job(
     process_pending_audits,
     "interval",
-    seconds=40,
+    seconds=5,
     id="audit_batch_job"
 )
 

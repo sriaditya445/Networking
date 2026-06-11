@@ -21,14 +21,14 @@ class ParserWorker:
         logger.info(f"Starting parser job: {upload_id}")
 
         await UploadRepository.update(upload_id, {
-            "status": "processing",
+            "status": "PROCESSING",
             "updated_at": datetime.utcnow()
         })
 
         try:
             devices = await devices_collection.find({
                 "upload_id": upload_id,
-                "status": "pending"
+                "processing_status": "PENDING"
             }).to_list(1000)
 
             if not devices:
@@ -56,6 +56,14 @@ class ParserWorker:
                     if not content:
                         raise ValueError("Configuration content is empty or missing.")
 
+                    await devices_collection.update_one(
+                        {"_id":device_id},
+                        {
+                            "$set":{
+                                "processing_status":"PROCESSING"
+                            }
+                        }
+                    )
                     result = (ParserService.parse_device( content, os.path.basename(file_path)))
 
                     await devices_collection.update_one(
@@ -70,9 +78,7 @@ class ParserWorker:
                                 "configuration_json":
                                     result.get("configuration_json", {}),
 
-                                # Status set to 'parsed' instead of 'success'
-                                # AuditWorker will update it to 'success' after auditing
-                                "status": "parsed",
+                                "processing_status": "SUCCESS",
                                 "parsed_at": datetime.utcnow()
                             }
                         }
@@ -89,7 +95,7 @@ class ParserWorker:
                         {"_id": device_id},
                         {
                             "$set": {
-                                "status": "failed",
+                                "processing_status": "FAILED",
                                 "error_message": str(file_error),
                                 "parsed_at": datetime.utcnow()
                             }
@@ -103,27 +109,13 @@ class ParserWorker:
                 failed_count
             )
 
-            # Change the status state to 'parsed' if at least one succeeded
-            final_status = ("parsed" if success_count > 0 else "failed")
 
-            error_message = (
-                None
-                if success_count > 0
-                else "All configuration files failed during analysis."
-            )
-
-            await UploadRepository.update(upload_id, {
-                "status": final_status,
-                "error_message": error_message,
-                "updated_at": datetime.utcnow()
-            })
 
             logger.info(
                 f"""
                 Parser completed for {upload_id}
                 Success: {success_count}
                 Failed: {failed_count}
-                Final Status: {final_status}
                 """
             )
 
@@ -131,11 +123,6 @@ class ParserWorker:
 
             logger.error(f"Critical parser failure for {upload_id}: {error}")
 
-            await UploadRepository.update(upload_id, {
-                "status": "failed",
-                "error_message": str(error),
-                "updated_at": datetime.utcnow()
-            })
 
     @staticmethod
     async def _update_upload_counters(

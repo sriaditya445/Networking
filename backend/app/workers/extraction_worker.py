@@ -28,7 +28,7 @@ class ExtractionWorker:
         await UploadRepository.update(
             upload_id,
             {
-                "status": "extracting",
+                "status": "EXTRACTING",
                 "updated_at":
                     datetime.utcnow()
             }
@@ -102,8 +102,9 @@ class ExtractionWorker:
                         "configuration":
                             None,
 
-                        "status":
-                            "pending",
+                        "processing_status":
+                            "PENDING",
+                        "audit_status":"PENDING",
 
                         "file_path":
                             file_path,
@@ -130,7 +131,7 @@ class ExtractionWorker:
         await UploadRepository.update(
             upload_id,
             {
-                "status": "staged",
+                "status": "PENDING_PROCESSING",
 
                 "files_count":
                     device_count,

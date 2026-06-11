@@ -81,7 +81,7 @@ class UploadService:
             await UploadRepository.create({
                 "_id": ObjectId(job_id),
                 "folder_name": folder_name,
-                "status": "uploaded",
+                "status": "NEW",
                 "files_count": len(files),
                 "folder_path": job_folder,
                 "error_message": None,
@@ -117,7 +117,7 @@ class UploadService:
 
             await UploadRepository.update(
                 job_id,
-                {
+                {   "status": "PENDING_EXTRACTION",
                     "files_count": len(saved_files),
                     "updated_at": datetime.utcnow()
                 }
@@ -130,7 +130,7 @@ class UploadService:
 
             await UploadRepository.update(
                     job_id,
-                    {"status": "failed", "error_message": f"Staging failed: {e}", "updated_at": datetime.utcnow()}
+                    {"status": "FAILED", "error_message": f"Staging failed: {e}", "updated_at": datetime.utcnow()}
                 )
 
             await DeviceService.delete_devices_by_upload_id(job_id)
@@ -144,7 +144,7 @@ class UploadService:
             "job_id": job_id,
             "job_folder": job_folder,
             "folder_name": folder_name,
-            "status": "uploaded",
+            "status": "NEW",
             "files_count": len(files),
             "message": "Upload successful. Raw data staged. Processing starts in background."
         }
@@ -185,51 +185,38 @@ class UploadService:
                 detail=f"Failed to delete job: {str(e)}"
             )
 
+    @staticmethod
+    async def recalculate_upload_status(upload_id:str):
 
+        devices = await DeviceService.get_devices(
+            upload_id=upload_id
+        )
 
+        if not devices:
+            return
 
-            # all_processed_files = []
-            # for upload in files:
-            #     processed_files = await IngestionService.process_upload(upload,job_folder)
-            #     all_processed_files.extend(processed_files)
+        if any(
+            d.get("processing_status") in ["PENDING", "PROCESSING"]
+            or d.get("audit_status") in ["PENDING", "PROCESSING"]
+            for d in devices
+        ):
+            await UploadRepository.update(
+                upload_id,
+                {"status": "PROCESSING"}
+            )
+            return
 
-
-
-            # for processed_file in all_processed_files:
-            #     filename = processed_file["filename"]
-            #     file_path = processed_file["file_path"]
-            #     # content = processed_file["content"]
-
-            #     logger.info(f"Creating device record for {filename}")
-            #     # Stage raw device in devices collection as 'pending'                
-            #     await DeviceService.create_device({
-            #         "upload_id": job_id,
-            #         "device_name": os.path.splitext(filename)[0],
-            #         "device_type": "Pending Analysis",
-            #         "configuration": None,
-            #         "status": "pending",
-            #         "file_path": file_path,
-            #         "relative_path": processed_file["relative_path"],
-            #         "error_message": None,
-            #         "parsed_at": None,
-            #         "parsed_data": None
-            #     })
-            #     logger.info(f"Created device record for {filename}")
-            # await UploadRepository.update(
-            #     job_id,
-            #     {
-            #         "files_count": len(all_processed_files),
-            #         "updated_at": datetime.utcnow()
-            #     }
-            # )
-
-
-        # folder_name = "configs"
-
-        # if len(files) == 1 and files[0].filename.lower().endswith(".zip"):
-        #     folder_name = os.path.splitext(
-        #         files[0].filename
-        #     )[0]
-
-        # else:
-        #     folder_name = f"upload_{job_id[:8]}"
+        if any(
+            d.get("processing_status") == "FAILED"
+            or d.get("audit_status") == "FAILED"
+            for d in devices
+        ):
+            await UploadRepository.update(
+                upload_id,
+                {"status": "FAILED"}
+            )
+        else:
+            await UploadRepository.update(
+                upload_id,
+                {"status": "SUCCESS"}
+            )

@@ -17,6 +17,7 @@ from app.core.database import logger, devices_collection, uploads_collection
 from app.repositories.upload_repository import UploadRepository
 from app.repositories.device_repository import DeviceRepository
 from app.services.audit_service import AuditService
+from app.services.upload_service import UploadService
 from bson import ObjectId
 
 
@@ -44,7 +45,8 @@ class AuditWorker:
             # Find all devices for this upload with status='parsed'
             devices = await devices_collection.find({
                 "upload_id": upload_id,
-                "status": "parsed"
+                "processing_status":"SUCCESS",
+                "audit_status":"PENDING"
             }).to_list(1000)
 
             if not devices:
@@ -70,6 +72,15 @@ class AuditWorker:
 
                     logger.info(f"Auditing device: {device_name} (ID: {device_id})")
 
+
+                    await devices_collection.update_one(
+                        {"_id":device_id},
+                        {
+                            "$set":{
+                                "audit_status":"PROCESSING"
+                            }
+                        }
+                    )
                     # Run audit
                     audit_result = await AuditService.audit_device(
                         str(device_id),
@@ -78,7 +89,7 @@ class AuditWorker:
                     )
 
                     # Determine audit status based on score
-                    audit_status = "SUCCESS" if audit_result["score"] >= 100 else "FAILED"
+                    audit_status = "SUCCESS" if audit_result["score"] >= 50 else "FAILED"
 
                     # Update device with audit results
                     await devices_collection.update_one(
@@ -90,10 +101,12 @@ class AuditWorker:
                                 "audit_score": audit_result["score"],
                                 "audit_summary": audit_result["summary"],
                                 "findings": audit_result["findings"],
-                                "status": "success",
                                 "updated_at": datetime.utcnow()
                             }
                         }
+                    )
+                    await UploadService.recalculate_upload_status(
+                        upload_id
                     )
 
                     logger.info(
@@ -113,7 +126,7 @@ class AuditWorker:
                         {"_id": device_id},
                         {
                             "$set": {
-                                "status": "failed",
+                                # "status": "failed",
                                 "error_message": f"Audit failed: {str(device_error)}",
                                 "audit_status": "FAILED",
                                 "updated_at": datetime.utcnow()
@@ -122,7 +135,9 @@ class AuditWorker:
                     )
 
             # Update upload counters and status
-            
+            await UploadService.recalculate_upload_status(
+                upload_id
+            )
             await AuditWorker._update_upload_counters(
                 upload_id,
                 success_count,
@@ -181,9 +196,9 @@ class AuditWorker:
             # All devices audited?
             all_audited = (new_success + new_failed) >= total_devices
 
-            upload_status = upload.get("status", "processing")
-            if all_audited and upload_status == "processing":
-                upload_status = "success" if new_failed == 0 else "success"  # Mark complete
+            upload_status = upload.get("status", "PROCESSING")
+            if all_audited and upload_status == "PROCESSING":
+                upload_status = "SUCCESS" if new_failed == 0 else "SUCCESS"  # Mark complete
 
             # Update upload
             await UploadRepository.update(upload_id, {
