@@ -19,14 +19,18 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # MongoDB Connection
-client = AsyncIOMotorClient(settings.MONGODB_URL)
-db = client[settings.DATABASE_NAME]
+_client = None
+_db = None
 
 # Expose collections
 uploads_collection = db["uploads"]
 devices_collection = db["devices"]
-comparisons_collection = db["comparisons"]
 
+# async def get_uploads_collection():
+#     return get_db()["uploads"]
+
+# async def get_devices_collection():
+#     return get_db()["devices"]
 
 async def check_db_connection():
     """
@@ -40,3 +44,27 @@ async def check_db_connection():
     except Exception as e:
         logger.error(f"Failed to connect to MongoDB: {e}")
         return False
+
+    
+async def connect_db() -> None:
+    global _client, _db
+    if _client is None:
+        _client = AsyncIOMotorClient(settings.MONGODB_URL)
+        _db = _client[settings.DATABASE_NAME]
+        await _db.command("ping")
+        # await _ensure_indexes()
+        logger.info("MongoDB Connected")
+
+
+async def close_db() -> None:
+    global _client, _db
+    if _client:
+        _client.close()
+    _client = None
+    _db = None
+
+
+def get_db() -> AsyncIOMotorDatabase:
+    if _db is None:
+        raise RuntimeError("Database not initialized")
+    return _db

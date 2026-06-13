@@ -1,44 +1,43 @@
-from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel
+
 
 class DeviceModel(BaseModel):
     upload_id: str
 
+    # Device Identification
     device_name: str
     device_type: str
+    vendor: str = "Cisco"
 
+    # Raw Config
     configuration: Optional[str] = None
-    configuration_json: Optional[Dict[str, Any]] = None
+    # configuration_json: Optional[Dict[str, Any]] = None
 
-    processing_status: str = "PENDING"
-    template_status: str = "PENDING_TEMPLATE_SELECTION"
-    audit_status: str = "PENDING"
-
+    # Upload File
     file_path: str
 
-    audit_result: Optional[Dict[str, Any]] = None
-    findings: Optional[List[Dict[str, Any]]] = None
+    # Processing Status
+    processing_status: str = "PENDING"
 
+    # Template Selection
+    template_status: str = "PENDING_TEMPLATE_SELECTION"
+    template_id: Optional[str] = None
+    template_name: Optional[str] = None
+
+    # Audit Status
+    audit_status: str = "PENDING"
+
+    # Audit Results
+    audit_score: Optional[float] = None
+    audit_report_id: Optional[str] = None
+    audit_report_id: Optional[str] = None
+
+    # Errors
     error_message: Optional[str] = None
 
+    # Timestamps
     created_at: datetime
     updated_at: datetime
-
-
-# class DeviceModel(BaseModel):
-#     upload_id: str
-#     device_name: str
-#     device_type: str
-#     configuration: str
-#     status: str
-#     file_path: str
-#     error_message: Optional[str] = None
-#     parsed_at: Optional[datetime] = None
-#     parsed_data: Optional[Dict[str, Any]] = None
-#     configuration_json: Optional[Dict[str, Any]] = None  # NEW: Hierarchical JSON structure
-#     audit_result: Optional[Dict[str, Any]] = None  # NEW: Full audit output from comparison_engine
-#     audit_status: str = "PENDING"
-#     audit_score: Optional[float] = None
-#     audit_summary: Optional[Dict[str, int]] = None
-#     findings: Optional[List[Dict[str, Any]]] = None

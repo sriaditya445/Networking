@@ -34,7 +34,7 @@ class DeviceRepository:
     
     @staticmethod
     async def update(device_id: str, data: dict):
-        return await device_collection.update_one(
+        return await devices_collection.update_one(
             {"_id": ObjectId(device_id)},
             {"$set": data}
         )

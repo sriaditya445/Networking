@@ -1,22 +1,28 @@
+import os
+import re
+
 from app.parsers.base_parser import BaseParser
-from app.parsers.cisco_regex_helpers import parse_device_config
+from app.parsers.common.hostname_extractor import extract_hostname
 from app.parsers.common.generic_config_parser import GenericConfigParser
+from app.services.device_detector import detect_device_type
 
 class CiscoParser(BaseParser):
     def parse(self, content, filename):
-        # 1. Basic device identification and segregation using regex
-        base_parsed = parse_device_config(content, filename)
+        # HOSTNAME_REGEX = re.compile(r"^\s*hostname\s+([a-zA-Z0-9-_]+)", re.IGNORECASE | re.MULTILINE)
         
-        # 2. Parse configuration to hierarchical JSON (generic parser)
-        # This works for any vendor configuration format
+        # def _extract_hostname(self, content: str, filename: str):
+        #     match = self.HOSTNAME_REGEX.search(content)
+        #     if match:
+        #         return match.group(1)
+        #     return os.path.splitext(filename)[0]
+
+        hostname = extract_hostname(content,filename)
+        detection = detect_device_type(content)
         config_json = GenericConfigParser.parse_config(content)
         
-        # 3. Return parsed results WITHOUT running audit here
-        # Audit will happen separately in AuditWorker
         return {
-            "device_name": base_parsed["device_name"],
-            "vendor": "Cisco",
-            "device_type": base_parsed["device_type"],
-            # "parsed_data": base_parsed["parsed_data"],
-            "configuration_json": config_json,
+            "device_name": hostname,
+            "vendor": detection.vendor,
+            "device_type": detection.device_type,
+            "configuration_json": config_json
         }

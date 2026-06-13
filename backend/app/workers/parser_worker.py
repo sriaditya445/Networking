@@ -13,6 +13,7 @@ from app.repositories.upload_repository import (
 from app.services.parser_service import (
     ParserService
 )
+from app.services.template_loader import (get_parsed_template)
 
 class ParserWorker:
 
@@ -56,31 +57,26 @@ class ParserWorker:
                     if not content:
                         raise ValueError("Configuration content is empty or missing.")
 
-                    await devices_collection.update_one(
-                        {"_id":device_id},
+                    await DeviceService.update_device(
+                        str(device_id),
                         {
-                            "$set":{
-                                "processing_status":"PROCESSING"
-                            }
+                            "processing_status":"PROCESSING"
                         }
                     )
                     result = (ParserService.parse_device( content, os.path.basename(file_path)))
 
-                    await devices_collection.update_one(
-                        {"_id": device_id},
+                    await DeviceService.update_device(
+                        str(device_id),
                         {
-                            "$set": {
-                                "device_name": result.get("device_name", "Unknown"),
-                                "device_type": result.get("device_type", "Unknown"),
-
-                                "configuration": content,
-
-                                "configuration_json":
-                                    result.get("configuration_json", {}),
-
-                                "processing_status": "SUCCESS",
-                                "parsed_at": datetime.utcnow()
-                            }
+                            
+                            "device_name": result.get("device_name", "Unknown"),
+                            "device_type": result.get("device_type", "Unknown"),
+                            "vendor": result.get("vendor"),
+                            "configuration": content,
+                            "configuration_json":
+                                result.get("configuration_json", {}),
+                            "processing_status": "SUCCESS",
+                            "parsed_at": datetime.utcnow()
                         }
                     )
 
@@ -108,8 +104,6 @@ class ParserWorker:
                 success_count,
                 failed_count
             )
-
-
 
             logger.info(
                 f"""

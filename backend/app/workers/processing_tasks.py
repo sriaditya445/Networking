@@ -9,6 +9,9 @@ from app.workers.extraction_worker import (
 from app.core.database import (
     uploads_collection
 )
+from app.workers.template_selection_worker import (
+    TemplateSelectionWorker
+)
 
 async def process_uploaded_jobs():
     uploads = await uploads_collection.find(
@@ -68,5 +71,19 @@ async def process_pending_audits():
 
     for upload in uploads:
         await AuditWorker.process_audit_job(
+            str(upload["_id"])
+        )
+
+async def process_pending_template_selection():
+
+    uploads = await uploads_collection.find(
+        {
+            "status": "PROCESSING"
+        }
+    ).to_list(100)
+
+    for upload in uploads:
+
+        await TemplateSelectionWorker.process_template_selection(
             str(upload["_id"])
         )
