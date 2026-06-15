@@ -8,7 +8,7 @@ from app.services.recommendation_engine import build_recommendations
 class AuditService:
 
     @staticmethod
-    async def audit_device(device: dict):
+    async def audit_device(device: dict,audit_mode: str = "full"):
 
         template = await TemplateService.find_template(
             vendor=device["vendor"],
@@ -31,7 +31,7 @@ class AuditService:
         compliance = run_compliance_audit(
             template=parsed_template,
             config=parsed_config,
-            audit_mode="full"
+            audit_mode=audit_mode
         )
 
         recommendations = build_recommendations(
@@ -39,6 +39,7 @@ class AuditService:
         )
 
         return {
+            "audit_mode": audit_mode,
             "score": compliance.overall_score,
             "category_scores": compliance.category_scores,
             "passed": [

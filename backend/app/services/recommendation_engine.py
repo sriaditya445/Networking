@@ -1,6 +1,6 @@
 """Generate recommendations and remediation commands for failed compliance rules."""
 
-from app.schemas.common import RuleResult
+from app.schemas.common_schema import RuleResult
 
 RECOMMENDATION_MAP: dict[str, tuple[str, str]] = {
     "aaa new-model": ("Enable AAA new model for centralized authentication", "aaa new-model"),

@@ -10,18 +10,12 @@ class DeviceService:
 
 
     @staticmethod
-    async def get_devices(
-        device_id: str = None,
-        upload_id: str = None,
-        processing_status: str = None,
-        audit_status: str = None
-    ):
+    async def get_devices(**filters):
 
-        if device_id and upload_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Provide either device_id or upload_id, not both"
-            )
+        device_id = filters.pop(
+            "device_id",
+            None
+        )
 
         if device_id:
 
@@ -40,24 +34,17 @@ class DeviceService:
                     status_code=404,
                     detail="Device not found"
                 )
+            device["display_status"] = (
+                DeviceService.get_display_status(
+                    device
+                )
+            )
 
             return device
 
-        query = {}
-
-        if upload_id:
-            query["upload_id"] = upload_id
-
-        if processing_status:
-            query["processing_status"] = processing_status
-
-        if audit_status:
-            query["audit_status"] = audit_status
-
         devices = await DeviceRepository.get_all(
-            query
+            filters
         )
-
         for device in devices:
 
             device["display_status"] = (

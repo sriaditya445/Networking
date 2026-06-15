@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 
-from app.schemas.common import AuditCategory, AuditMode, RuleResult
+from app.schemas.common_schema import AuditCategory, AuditMode, RuleResult
 from app.services.config_parser import ParsedConfig, config_has_control
 from app.services.template_parser import ParsedTemplate
 

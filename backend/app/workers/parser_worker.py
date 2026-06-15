@@ -2,18 +2,20 @@ import os
 from datetime import datetime
 
 from app.core.database import (
-    logger,
-    devices_collection
+    logger
 )
 
-from app.repositories.upload_repository import (
-    UploadRepository
+from app.services.upload_service import (
+    UploadService
+)
+
+from app.services.device_service import (
+    DeviceService
 )
 
 from app.services.parser_service import (
     ParserService
 )
-from app.services.template_loader import (get_parsed_template)
 
 class ParserWorker:
 
@@ -21,16 +23,16 @@ class ParserWorker:
 
         logger.info(f"Starting parser job: {upload_id}")
 
-        await UploadRepository.update(upload_id, {
+        await UploadService.update_upload(upload_id, {
             "status": "PROCESSING",
             "updated_at": datetime.utcnow()
         })
 
         try:
-            devices = await devices_collection.find({
-                "upload_id": upload_id,
-                "processing_status": "PENDING"
-            }).to_list(1000)
+            devices = await DeviceService.get_devices(
+                upload_id = upload_id,
+                processing_status = "PENDING"
+            )
 
             if not devices:
                 logger.warning(f"No pending devices found for {upload_id}")
@@ -87,10 +89,10 @@ class ParserWorker:
                     logger.error( f"Error parsing device {device_id}: {file_error}")
                     failed_count += 1
 
-                    await devices_collection.update_one(
-                        {"_id": device_id},
+                    await DeviceService.update_device(
+                        str(device_id),
                         {
-                            "$set": {
+                            {
                                 "processing_status": "FAILED",
                                 "error_message": str(file_error),
                                 "parsed_at": datetime.utcnow()
@@ -133,14 +135,14 @@ class ParserWorker:
             parsed_failed: Number of failed to parse devices
         """
         try:
-            upload = await UploadRepository.get_by_id(upload_id)
+            upload = await UploadService.get_upload(upload_id)
             
             if not upload:
                 logger.error(f"Upload not found: {upload_id}")
                 return
             
             # Get total device count
-            total_devices = await devices_collection.count_documents({
+            total_devices = await DeviceService.count_devices({
                 "upload_id": upload_id
             })
             
@@ -151,7 +153,7 @@ class ParserWorker:
             new_success = current_success + parsed_success
             new_failed = current_failed + parsed_failed
             
-            await UploadRepository.update(upload_id, {
+            await UploadService.update_upload(upload_id, {
                 "total_devices": total_devices,
                 "parsed_success_count": new_success,
                 "parsed_failed_count": new_failed,

@@ -13,5 +13,3 @@ router = APIRouter()
 @router.get("/api/stats", response_model=StatsResponse)
 async def get_stats():
     return await StatsService.get_stats()
-
-# MongoDBService.get_dashboard_stats()

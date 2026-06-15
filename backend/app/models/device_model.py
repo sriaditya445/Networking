@@ -33,7 +33,6 @@ class DeviceModel(BaseModel):
     # Audit Results
     audit_score: Optional[float] = None
     audit_report_id: Optional[str] = None
-    audit_report_id: Optional[str] = None
 
     # Errors
     error_message: Optional[str] = None

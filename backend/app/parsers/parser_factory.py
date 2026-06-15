@@ -1,5 +1,5 @@
 from app.parsers.cisco_parser import CiscoParser
-from services.device_detector import detect_device_type
+from app.services.device_detector import detect_device_type
 
 class ParserFactory:
 

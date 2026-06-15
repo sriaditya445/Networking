@@ -1,94 +1,233 @@
-from fastapi import APIRouter, Depends, HTTPException
+from datetime import datetime
 
-from app.database.mongodb import get_db
-from app.schemas.common import GoldenTemplateCreate, GoldenTemplateResponse
-from app.services.mongodb_service import MongoDBService
-from app.services.template_loader import list_templates
-from app.services.template_parser import parse_template_content, render_template_preview
+from fastapi import (
+    APIRouter,
+    HTTPException
+)
 
-router = APIRouter(prefix="/api/templates", tags=["Golden Templates"])
+from app.schemas.common_schema import (
+    GoldenTemplateCreate,
+    GoldenTemplateResponse
+)
 
-# GET    /templates
-# GET    /templates/{id}
-# POST   /templates
-# PUT    /templates/{id}
-# DELETE /templates/{id}
+from app.services.template_service import (
+    TemplateService
+)
 
-@router.get("", response_model=list[GoldenTemplateResponse], summary="List golden templates")
-async def get_templates(vendor: str | None = None, device_type: str | None = None, db=Depends(get_db)):
-    templates = await list_templates(db, vendor, device_type)
-    return [
-        GoldenTemplateResponse(
-            id=t["id"],
-            vendor=t["vendor"],
-            device_type=t["device_type"],
-            template_name=t["template_name"],
-            template_type=t.get("template_type", "jinja2"),
-            template_content=t["template_content"],
-            sections=t.get("sections", {}),
-            created_at=t.get("created_at"),
-            updated_at=t.get("updated_at"),
+from app.services.template_parser import (
+    parse_template_content,
+    render_template_preview
+)
+
+router = APIRouter(
+    prefix="/api/templates",
+    tags=["Templates"]
+)
+
+@router.get(
+    "",
+    response_model=list[GoldenTemplateResponse]
+)
+async def get_templates(
+    vendor: str = None,
+    device_type: str = None
+):
+
+    templates = await TemplateRepository.get_all(
+        vendor=vendor,
+        device_type=device_type
+    )
+
+    response = []
+
+    for template in templates:
+
+        response.append(
+            GoldenTemplateResponse(
+                id=str(template["_id"]),
+                vendor=template["vendor"],
+                device_type=template["device_type"],
+                template_name=template["template_name"],
+                template_type=template["template_type"],
+                template_content=template["template_content"],
+                sections=template.get(
+                    "sections",
+                    {}
+                ),
+                created_at=template.get(
+                    "created_at"
+                ),
+                updated_at=template.get(
+                    "updated_at"
+                )
+            )
         )
-        for t in templates
-    ]
 
+    return response
 
-@router.get("/{template_id}", response_model=GoldenTemplateResponse, summary="Get template by ID")
-async def get_template(template_id: str, db=Depends(get_db)):
-    from bson import ObjectId
+@router.get(
+"/{template_id}",
+response_model=GoldenTemplateResponse
+)
+async def get_template(
+    template_id: str
+):
 
-    doc = await db.golden_templates.find_one({"_id": ObjectId(template_id)})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Template not found")
-    doc["id"] = str(doc.pop("_id"))
-    return GoldenTemplateResponse(**doc)
+    template = await TemplateService.get_template(
+        template_id
+    )
 
+    if not template:
 
-@router.post("", response_model=GoldenTemplateResponse, summary="Create golden template")
-async def create_template(template: GoldenTemplateCreate, db=Depends(get_db)):
-    parsed = parse_template_content(template.template_content)
-    mongo = MongoDBService(db)
+        raise HTTPException(
+            status_code=404,
+            detail="Template not found"
+        )
+
+    return GoldenTemplateResponse(
+        id=template["_id"],
+        vendor=template["vendor"],
+        device_type=template["device_type"],
+        template_name=template["template_name"],
+        template_type=template["template_type"],
+        template_content=template["template_content"],
+        sections=template.get(
+            "sections",
+            {}
+        ),
+        created_at=template.get(
+            "created_at"
+        ),
+        updated_at=template.get(
+            "updated_at"
+        )
+    )
+
+@router.post(
+    "",
+    response_model=GoldenTemplateResponse
+)
+
+async def create_template(
+    template: GoldenTemplateCreate
+):
+
+    parsed = parse_template_content(
+        template.template_content
+    )
+
+    doc = template.model_dump()
+
+    doc["sections"] = parsed.sections
+    doc["created_at"] = datetime.utcnow()
+    doc["updated_at"] = datetime.utcnow()
+
+    template_id = await TemplateService.create_template(
+        doc
+    )
+
+    created = await TemplateService.get_template(
+        template_id
+    )
+
+    return GoldenTemplateResponse(
+        id=created["_id"],
+        **{
+            k: v
+            for k, v in created.items()
+            if k != "_id"
+        }
+    )
+
+@router.put(
+    "/{template_id}",
+    response_model=GoldenTemplateResponse
+)
+async def update_template(
+    template_id: str,
+    template: GoldenTemplateCreate
+):
+
+    parsed = parse_template_content(
+        template.template_content
+    )
+
     data = template.model_dump()
+
     data["sections"] = parsed.sections
-    tid = await mongo.create_template(GoldenTemplateCreate(**data))
-    from bson import ObjectId
+    data["updated_at"] = datetime.utcnow()
 
-    doc = await db.golden_templates.find_one({"_id": ObjectId(tid)})
-    doc["id"] = str(doc.pop("_id"))
-    return GoldenTemplateResponse(**doc)
+    updated = await TemplateService.update_template(
+        template_id,
+        data
+    )
 
-
-@router.put("/{template_id}", response_model=GoldenTemplateResponse, summary="Update golden template")
-async def update_template(template_id: str, template: GoldenTemplateCreate, db=Depends(get_db)):
-    parsed = parse_template_content(template.template_content)
-    mongo = MongoDBService(db)
-    data = template.model_dump()
-    data["sections"] = parsed.sections
-    updated = await mongo.update_template(template_id, data)
     if not updated:
-        raise HTTPException(status_code=404, detail="Template not found")
-    from bson import ObjectId
 
-    doc = await db.golden_templates.find_one({"_id": ObjectId(template_id)})
-    doc["id"] = str(doc.pop("_id"))
-    return GoldenTemplateResponse(**doc)
+        raise HTTPException(
+            status_code=404,
+            detail="Template not found"
+        )
 
+    template_doc = await TemplateService.get_template(
+        template_id
+    )
 
-@router.delete("/{template_id}", summary="Delete golden template")
-async def delete_template(template_id: str, db=Depends(get_db)):
-    mongo = MongoDBService(db)
-    deleted = await mongo.delete_template(template_id)
+    return GoldenTemplateResponse(
+        id=template_doc["_id"],
+        **{
+            k: v
+            for k, v in template_doc.items()
+            if k != "_id"
+        }
+    )
+
+@router.delete(
+    "/{template_id}"
+)
+async def delete_template(
+    template_id: str
+):
+
+    deleted = await TemplateService.delete_template(
+        template_id
+    )
+
     if not deleted:
-        raise HTTPException(status_code=404, detail="Template not found")
-    return {"message": "Template deleted"}
 
+        raise HTTPException(
+            status_code=404,
+            detail="Template not found"
+        )
 
-@router.post("/{template_id}/preview", summary="Preview rendered template")
-async def preview_template(template_id: str, variables: dict | None = None, db=Depends(get_db)):
-    from bson import ObjectId
+    return {
+        "message": "Template deleted successfully"
+    }
 
-    doc = await db.golden_templates.find_one({"_id": ObjectId(template_id)})
-    if not doc:
-        raise HTTPException(status_code=404, detail="Template not found")
-    rendered = render_template_preview(doc["template_content"], variables)
-    return {"rendered": rendered}
+@router.post(
+    "/{template_id}/preview"
+)
+async def preview_template(
+    template_id: str,
+    variables: dict | None = None
+):
+
+    template = await TemplateService.get_template(
+        template_id
+    )
+
+    if not template:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Template not found"
+        )
+
+    rendered = render_template_preview(
+        template["template_content"],
+        variables
+    )
+
+    return {
+        "rendered": rendered
+    }

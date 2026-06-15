@@ -26,6 +26,14 @@ class UploadService:
     @staticmethod
     async def get_uploads():
         return await UploadRepository.get_all()
+    
+    @staticmethod
+    async def get_uploads_by_status(
+        status: str
+    ):
+        return await UploadRepository.get_by_status(
+            status
+        )
 
     @staticmethod
     async def get_upload(job_id: str):

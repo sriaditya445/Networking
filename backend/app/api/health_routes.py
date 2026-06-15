@@ -15,7 +15,3 @@ async def health_check():
         "timestamp": datetime.utcnow(),
         "database": "connected" if db_alive else "disconnected"
     }
-
-# @app.on_event("startup")
-# async def startup_db_client():
-#     await check_db_connection()

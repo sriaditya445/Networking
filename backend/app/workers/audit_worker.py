@@ -1,14 +1,5 @@
 from datetime import datetime
 
-from app.core.database import (
-    logger,
-    devices_collection
-)
-
-from app.repositories.upload_repository import (
-    UploadRepository
-)
-
 from app.services.audit_service import (
     AuditService
 )
@@ -39,7 +30,7 @@ class AuditWorker:
 
         logger.info(f"Starting audit job for upload: {upload_id}")
 
-        await UploadRepository.update(
+        await UploadService.update_upload(
             upload_id,
             {
                 "updated_at": datetime.utcnow()
@@ -48,14 +39,24 @@ class AuditWorker:
 
         try:
 
-            devices = await devices_collection.find(
-                {
-                    "upload_id": upload_id,
-                    "processing_status": "SUCCESS",
-                    "template_status": "SELECTED",
-                    "audit_status": "PENDING"
-                }
-            ).to_list(1000)
+            # devices = await DeviceService.get_devices(
+            #     {
+            #         "upload_id": upload_id,
+            #         "processing_status": "SUCCESS",
+            #         "audit_status": "PENDING"
+            #     }
+            # )
+            # devices = [
+            #     d for d in devices
+            #     if d.get("template_status") == "SELECTED"
+            # ]
+
+            devices = await DeviceService.get_devices(
+                upload_id=upload_id,
+                processing_status="SUCCESS",
+                audit_status="PENDING",
+                template_status="SELECTED"
+            )
 
             if not devices:
                 logger.info(f"No pending audits found for upload {upload_id}")
@@ -66,6 +67,15 @@ class AuditWorker:
             success_count = 0
             failed_count = 0
 
+            upload = await UploadService.get_upload(
+                upload_id
+            )
+
+            audit_mode = upload.get(
+                "selected_audit_mode",
+                "full"
+            )
+            
             for device in devices:
 
                 device_id = str(device["_id"])
@@ -84,7 +94,7 @@ class AuditWorker:
                     )
 
                     audit_result = await AuditService.audit_device(
-                        device
+                        device,audit_mode=audit_mode
                     )
 
                     audit_result_id = (
@@ -101,16 +111,10 @@ class AuditWorker:
                         )
                     )
 
-                    audit_status = (
-                        "SUCCESS"
-                        if audit_result["score"] >= 50
-                        else "FAILED"
-                    )
-
                     await DeviceService.update_device(
                         device_id,
                         {
-                            "audit_status": audit_status,
+                            "audit_status": "SUCCESS",
                             "audit_score": audit_result["score"],
                             "audit_result_id": audit_result_id,
                             "audit_report_id": audit_report_id,
@@ -168,7 +172,7 @@ class AuditWorker:
                 f"{upload_id}: {error}"
             )
 
-            await UploadRepository.update(
+            await UploadService.update_upload(
                 upload_id,
                 {
                     "error_message": f"Audit job failed: {error}",
@@ -185,7 +189,7 @@ class AuditWorker:
 
         try:
 
-            upload = await UploadRepository.get_by_id(
+            upload = await UploadService.get_upload(
                 upload_id
             )
 
@@ -200,13 +204,13 @@ class AuditWorker:
 
             if total_devices == 0:
 
-                total_devices = await devices_collection.count_documents(
+                total_devices = await DeviceService.count_devices(
                     {
                         "upload_id": upload_id
                     }
                 )
 
-            await UploadRepository.update(
+            await UploadService.update_upload(
                 upload_id,
                 {
                     "audit_success_count": audit_success_count,

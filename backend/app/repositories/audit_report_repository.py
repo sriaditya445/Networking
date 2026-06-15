@@ -1,21 +1,24 @@
 from bson import ObjectId
 
-from app.core.database import audit_reports_collection
-
+# from app.core.database import audit_reports_collection
+from app.core.database import get_db
 
 class AuditReportRepository:
+    @staticmethod
+    def collection():
+        return get_db().audit_reports
 
     @staticmethod
     async def create(data: dict):
 
-        return await audit_reports_collection.insert_one(
+        return await AuditReportRepository.collection().insert_one(
             data
         )
 
     @staticmethod
     async def get_by_id(report_id: str):
 
-        report = await audit_reports_collection.find_one(
+        report = await AuditReportRepository.collection().find_one(
             {
                 "_id": ObjectId(report_id)
             }
@@ -29,7 +32,7 @@ class AuditReportRepository:
     @staticmethod
     async def get_all():
 
-        reports = await audit_reports_collection.find(
+        reports = await AuditReportRepository.collection().find(
             {}
         ).sort(
             "created_at",
@@ -46,7 +49,7 @@ class AuditReportRepository:
         device_id: str
     ):
 
-        reports = await audit_reports_collection.find(
+        reports = await AuditReportRepository.collection().find(
             {
                 "device_id": device_id
             }
@@ -60,7 +63,7 @@ class AuditReportRepository:
     @staticmethod
     async def delete(report_id: str):
 
-        return await audit_reports_collection.delete_one(
+        return await AuditReportRepository.collection().delete_one(
             {
                 "_id": ObjectId(report_id)
             }

@@ -4,6 +4,7 @@ from app.services.device_service import DeviceService
 from app.repositories.template_repository import (
     TemplateRepository
 )
+from datetime import datetime
 
 
 class TemplateService:
@@ -55,3 +56,40 @@ class TemplateService:
         )
 
         return None
+    @staticmethod
+    async def create_template(
+        template_doc: dict
+    ):
+
+        return await TemplateRepository.create(
+            template_doc
+        )
+
+    @staticmethod
+    async def get_template(
+        template_id: str
+    ):
+
+        return await TemplateRepository.get_by_id(
+            template_id
+        )
+
+    @staticmethod
+    async def update_template(
+        template_id: str,
+        data: dict
+    ):
+
+        return await TemplateRepository.update(
+            template_id,
+            data
+        )
+
+    @staticmethod
+    async def delete_template(
+        template_id: str
+    ):
+
+        return await TemplateRepository.delete(
+            template_id
+        )

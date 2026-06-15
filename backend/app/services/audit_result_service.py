@@ -1,13 +1,12 @@
 from datetime import datetime
 
-from app.models.audit_result_model import (
+from app.models.audit_results import (
     AuditResultModel
 )
 
 from app.repositories.audit_result_repository import (
     AuditResultRepository
 )
-
 
 class AuditResultService:
 
@@ -20,17 +19,11 @@ class AuditResultService:
         result_doc = AuditResultModel(
             device_id=str(device["_id"]),
             template_id=device["template_id"],
-            audit_mode="full",
+            audit_mode=audit_result["audit_mode"],
             overall_score=audit_result["score"],
-            category_scores=audit_result[
-                "category_scores"
-            ],
-            passed_rules=audit_result[
-                "passed"
-            ],
-            failed_rules=audit_result[
-                "failed"
-            ],
+            category_scores=audit_result["category_scores"],
+            passed_rules=audit_result["passed"],
+            failed_rules=audit_result["failed"],
             created_at=datetime.utcnow()
         )
 
@@ -41,24 +34,23 @@ class AuditResultService:
         return str(result.inserted_id)
 
     @staticmethod
-    async def get_result(
-        result_id: str
-    ):
-
+    async def get_result(result_id: str):
         return await AuditResultRepository.get_by_id(
             result_id
         )
 
     @staticmethod
-    async def get_device_results(
-        device_id: str
-    ):
-
+    async def get_device_results(device_id: str):
         return await AuditResultRepository.get_by_device_id(
             device_id
         )
 
     @staticmethod
     async def get_all_results():
-
         return await AuditResultRepository.get_all()
+
+    @staticmethod
+    async def delete_result(result_id: str):
+        await AuditResultRepository.delete(
+            result_id
+        )

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.models.audit_report_model import (
+from app.models.audit_reports import (
     AuditReportModel
 )
 
@@ -66,4 +66,13 @@ class AuditReportService:
 
         return await AuditReportRepository.get_by_device_id(
             device_id
+        )
+
+    @staticmethod
+    async def delete_report(
+        report_id: str
+    ):
+
+        await AuditReportRepository.delete(
+            report_id
         )
