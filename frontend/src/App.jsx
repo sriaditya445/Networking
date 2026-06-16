@@ -291,6 +291,7 @@ function App() {
             renderStatusBadge={renderStatusBadge}
             selectedTemplate={selectedTemplate}
             setSelectedTemplate={setSelectedTemplate}
+            devices={devices}
           />
         );
       case 'devices':

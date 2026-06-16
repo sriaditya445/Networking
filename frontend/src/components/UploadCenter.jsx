@@ -13,6 +13,7 @@ function UploadCenter({
   backendOnline,
   handleUploadSubmit,
   jobs,
+  devices,
   formatDate,
   selectedTemplate,
   setSelectedTemplate,
@@ -22,6 +23,7 @@ function UploadCenter({
 
   const [templates, setTemplates] = useState([]);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
 
@@ -87,6 +89,23 @@ function UploadCenter({
 
   // Get recent 5 jobs
   const uploadHistory = [...jobs].slice(0, 5);
+  const filteredDevices = selectedJob
+    ? devices.filter(
+      (device) =>
+        device.upload_id === (selectedJob._id || selectedJob.id)
+    )
+    : [];
+
+  const deviceCounts = filteredDevices.reduce(
+    (acc, device) => {
+      const type = device.device_type || "Unknown";
+
+      acc[type] = (acc[type] || 0) + 1;
+
+      return acc;
+    },
+    {}
+  );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -140,6 +159,59 @@ function UploadCenter({
 
 
             <div className="space-y-2">
+
+
+              {/* Detected Device Types */}
+
+              {Object.keys(deviceCounts).length > 0 && (
+
+                <div className="space-y-3">
+                  {selectedJob && (
+                    <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-3">
+
+                      <div className="text-xs text-slate-500">
+                        Selected Upload
+                      </div>
+
+                      <div className="font-semibold text-cyan-700">
+                        {selectedJob.folder_name}
+                      </div>
+
+                    </div>
+                  )}
+
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                    Detected Device Types
+                  </label>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+                    {Object.entries(deviceCounts).map(
+                      ([type, count]) => (
+
+                        <div
+                          key={type}
+                          className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-cyan-400 transition-all"
+                        >
+
+                          <div className="text-sm font-bold text-slate-800">
+                            {type}
+                          </div>
+
+                          <div className="text-xs text-slate-500 mt-1">
+                            {count} Devices
+                          </div>
+
+                        </div>
+
+                      )
+                    )}
+
+                  </div>
+
+                </div>
+
+              )}
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                 Golden Template
               </label>
@@ -148,7 +220,7 @@ function UploadCenter({
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-800 focus:outline-none focus:border-cyan-500"
-                // required
+              // required
               >
                 <option value="">
                   Select Template
@@ -163,6 +235,34 @@ function UploadCenter({
                   </option>
                 ))}
               </select>
+
+              {selectedTemplate && (
+
+                <div className="mt-3 bg-cyan-50 border border-cyan-100 rounded-xl p-4">
+
+                  <h4 className="font-semibold text-cyan-700">
+                    Selected Audit Template
+                  </h4>
+
+                  <div className="mt-2 text-sm text-slate-700">
+
+                    <p>
+                      Template:
+                      <span className="font-mono ml-2">
+                        {selectedTemplate}
+                      </span>
+                    </p>
+
+                    <p className="mt-2 text-slate-500">
+                      Only devices matching this template
+                      will be audited.
+                    </p>
+
+                  </div>
+
+                </div>
+
+              )}
             </div>
           </div>
 
@@ -224,7 +324,6 @@ function UploadCenter({
               selectedFiles.length === 0 ||
               uploading ||
               !backendOnline
-              // !selectedTemplate
             }
           >
             {uploading ? (
@@ -306,8 +405,19 @@ function UploadCenter({
           ) : (
             <div className="space-y-3 text-xs">
               {uploadHistory.map((job) => (
-                <div key={job._id || job.id} className="flex justify-between items-start gap-2 border-b border-slate-50 pb-2.5 last:border-0 last:pb-0">
-                  <div className="min-w-0 flex-1">
+
+
+                <div
+                  key={job._id || job.id}
+                  onClick={() => setSelectedJob(job)}
+                  className={`cursor-pointer flex justify-between items-start gap-2 border-b border-slate-50 pb-2.5 last:border-0 last:pb-0 rounded-lg p-2 transition
+
+  ${selectedJob?._id === job._id
+                      ? "bg-cyan-50 border border-cyan-200"
+                      : "hover:bg-slate-50"
+                    }
+  `}
+                >                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-700 truncate">{job.folder_name}</p>
                     <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                       {job.files_count} files • {formatDate(job.created_at)}
