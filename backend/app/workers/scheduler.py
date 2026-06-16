@@ -23,13 +23,6 @@ scheduler.add_job(
     id="parser_batch_job"
 )
 
-# scheduler.add_job(
-#     process_pending_template_selection,
-#     trigger="interval",
-#     seconds=5,
-#     id="template_selection_job"
-# )
-
 scheduler.add_job(
     process_pending_audits,
     "interval",

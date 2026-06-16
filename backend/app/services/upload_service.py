@@ -5,9 +5,7 @@ from bson import ObjectId
 from app.repositories.upload_repository import UploadRepository
 from app.services.device_service import DeviceService
 from app.services.ingestion_service import IngestionService
-from app.services.template_service import (
-    TemplateService
-)
+from app.services.template_service import (TemplateService)
 from fastapi import HTTPException, status
 from app.core.database import logger
 from collections import defaultdict
@@ -274,19 +272,10 @@ class UploadService:
         for device in devices:
 
             key = (
-                device.get(
-                    "vendor",
-                    "Unknown"
-                ),
-                device.get(
-                    "device_type",
-                    "unknown"
-                ),
-                device.get(
-                    "model"
-                )
+                device.get("vendor","Unknown"),
+                device.get("device_type","unknown"),
+                device.get("model")
             )
-
             grouped[key] += 1
 
         groups = []
@@ -336,65 +325,6 @@ class UploadService:
             ),
             "groups": groups
         }
-
-    # @staticmethod
-    # async def get_template_options(
-    #     upload_id: str
-    # ):
-
-    #     devices = await DeviceService.get_devices(
-    #         upload_id=upload_id
-    #     )
-
-    #     grouped = defaultdict(int)
-
-    #     for device in devices:
-
-    #         key = (
-    #             device.get("vendor"),
-    #             device.get("device_type"),
-    #             device.get("model")
-    #         )
-
-    #         grouped[key] += 1
-
-    #     response = []
-
-    #     for (
-    #         vendor,
-    #         device_type,
-    #         model
-    #     ), count in grouped.items():
-
-    #         templates = await TemplateRepository.get_all(
-    #             vendor=vendor,
-    #             device_type=device_type
-    #         )
-
-    #         response.append(
-    #             {
-    #                 "vendor": vendor,
-    #                 "device_type": device_type,
-    #                 "model": model,
-    #                 "device_count": count,
-    #                 "templates": [
-    #                     {
-    #                         "template_id": str(
-    #                             template["_id"]
-    #                         ),
-    #                         "template_name": template[
-    #                             "template_name"
-    #                         ]
-    #                     }
-    #                     for template in templates
-    #                 ]
-    #             }
-    #         )
-
-    #     return {
-    #         "upload_id": upload_id,
-    #         "groups": response
-    #     }
 
     @staticmethod
     async def assign_templates(
@@ -552,21 +482,6 @@ class UploadService:
             "groups": response
         }
 
-    @staticmethod
-    async def start_audit(
-        upload_id: str
-    ):
-
-        await UploadService.update_upload(
-            upload_id,
-            {
-                "status": "PROCESSING"
-            }
-        )
-
-        return {
-            "message": "Audit started"
-        }
 
     @staticmethod
     async def save_audit_selection(
@@ -604,5 +519,4 @@ class UploadService:
             "upload_id": upload_id,
             "status": "READY_FOR_AUDIT"
         }
-
         

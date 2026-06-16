@@ -39,16 +39,6 @@ async def process_pending_uploads():
             str(upload["_id"])
         )
 
-# async def process_pending_template_selection():
-
-#     uploads = await UploadService.get_uploads_by_status("PROCESSING")
-
-#     for upload in uploads:
-
-#         await TemplateSelectionWorker.process_template_selection(
-#             str(upload["_id"])
-#         )
-
 async def process_pending_audits():
     """
     Process pending audits for uploads in 'parsed' status.
@@ -65,6 +55,13 @@ async def process_pending_audits():
     logger.info(f"Processing {len(uploads)} uploads for audit")
 
     for upload in uploads:
+        await UploadService.update_upload(
+            str(upload_id),
+            {
+                "status": "PROCESSING",
+                "updated_at": datetime.utcnow()
+            }
+        )
         await AuditWorker.process_audit_job(
             str(upload["_id"])
         )

@@ -17,7 +17,7 @@ from app.services.upload_service import (
 from app.services.file_service import FileService
 
 from app.schemas.upload_schema import (
-    UploadJobResponse,TemplateAssignmentRequest
+    UploadJobResponse
 )
 
 from app.schemas.audit_selection_schema import (
@@ -59,27 +59,27 @@ async def upload_files(
     
     return response
 
-@router.get(
-    "/api/uploads/{upload_id}/template-options"
-)
-async def get_template_options(
-    upload_id: str
-):
-    return await UploadService.get_template_options(
-        upload_id
-    )
+# @router.get(
+#     "/api/uploads/{upload_id}/template-options"
+# )
+# async def get_template_options(
+#     upload_id: str
+# ):
+#     return await UploadService.get_template_options(
+#         upload_id
+#     )
 
-@router.post(
-    "/api/uploads/{upload_id}/templates"
-)
-async def assign_templates(
-    upload_id: str,
-    request: TemplateAssignmentRequest
-):
-    return await UploadService.assign_templates(
-        upload_id,
-        request
-    )
+# @router.post(
+#     "/api/uploads/{upload_id}/templates"
+# )
+# async def assign_templates(
+#     upload_id: str,
+#     request: TemplateAssignmentRequest
+# ):
+#     return await UploadService.assign_templates(
+#         upload_id,
+#         request
+#     )
 
 @router.get(
     "/api/uploads/{upload_id}/audit-options"
@@ -101,14 +101,4 @@ async def save_audit_selection(
     return await UploadService.save_audit_selection(
         upload_id,
         request
-    )
-
-@router.post(
-    "/api/uploads/{upload_id}/start-audit"
-)
-async def start_audit(
-    upload_id: str
-):
-    return await UploadService.start_audit(
-        upload_id
     )

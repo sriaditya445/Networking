@@ -1,26 +1,11 @@
 from datetime import datetime
 
-from app.services.audit_service import (
-    AuditService
-)
-
-from app.services.device_service import (
-    DeviceService
-)
-
-from app.services.upload_service import (
-    UploadService
-)
-
-from app.services.audit_result_service import (
-    AuditResultService
-)
-
-from app.services.audit_report_service import (
-    AuditReportService
-)
 from app.core.database import logger
-
+from app.services.audit_service import AuditService
+from app.services.device_service import DeviceService
+from app.services.upload_service import UploadService
+from app.services.audit_result_service import AuditResultService
+from app.services.audit_report_service import AuditReportService
 
 class AuditWorker:
 
@@ -39,6 +24,8 @@ class AuditWorker:
         )
 
         try:
+            upload = await UploadService.get_upload(upload_id)
+            audit_selections = upload.get("audit_selections",[])
             
             devices = await DeviceService.get_devices(
                 upload_id=upload_id,
@@ -51,28 +38,25 @@ class AuditWorker:
                 logger.info(f"No pending audits found for upload {upload_id}")
                 return
 
-            logger.info(f"Found {len(devices)} devices to audit")
-
             success_count = 0
             failed_count = 0
-
-            upload = await UploadService.get_upload(
-                upload_id
-            )
-
-            audit_mode = upload.get(
-                "selected_audit_mode",
-                "full"
-            )
             
             for device in devices:
-
                 device_id = str(device["_id"])
-                device_name = device.get("device_name", "Unknown")
 
                 try:
-
-                    logger.info(f"Auditing device: {device_name}")
+                    selection = next(
+                        (
+                            s
+                            for s in audit_selections
+                            if s["vendor"] == device.get("vendor")
+                            and s["device_type"] == device.get("device_type")
+                            and s.get("model") == device.get("model")
+                        ),
+                        None
+                    )
+                    if not selection:
+                        raise ValueError("No audit selection found")
 
                     await DeviceService.update_device(
                         device_id,
@@ -83,7 +67,9 @@ class AuditWorker:
                     )
 
                     audit_result = await AuditService.audit_device(
-                        device,audit_mode=audit_mode
+                        device,
+                        audit_mode=selection.get("audit_mode","FULL"),
+                        selected_sections=selection.get("selected_sections",[])
                     )
 
                     audit_result_id = (
@@ -113,27 +99,21 @@ class AuditWorker:
 
                     success_count += 1
 
-                    logger.info(
-                        f"Audit completed for "
-                        f"{device_name} "
-                        f"(score={audit_result['score']})"
-                    )
-
-                except Exception as device_error:
+                except Exception as error:
 
                     failed_count += 1
 
                     logger.error(
                         f"Audit failed for "
-                        f"{device_name}: "
-                        f"{device_error}"
+                        f"{device.get('device_name')}: "
+                        f"{error}"
                     )
 
                     await DeviceService.update_device(
                         device_id,
                         {
                             "audit_status": "FAILED",
-                            "error_message": f"Audit failed: {device_error}",
+                            "error_message": f"Audit failed: {error}",
                             "updated_at": datetime.utcnow()
                         }
                     )
@@ -142,6 +122,14 @@ class AuditWorker:
                 upload_id,
                 success_count,
                 failed_count
+            )
+            
+            await UploadService.update_upload(
+                upload_id,
+                {
+                    "status": "COMPLETED",
+                    "updated_at": datetime.utcnow()
+                }
             )
 
             await UploadService.recalculate_upload_status(
@@ -177,27 +165,11 @@ class AuditWorker:
     ):
 
         try:
-
-            upload = await UploadService.get_upload(
-                upload_id
+            total_devices = await DeviceService.count_devices(
+                {
+                    "upload_id": upload_id
+                }
             )
-
-            if not upload:
-                logger.error(f"Upload not found: {upload_id}")
-                return
-
-            total_devices = upload.get(
-                "total_devices",
-                0
-            )
-
-            if total_devices == 0:
-
-                total_devices = await DeviceService.count_devices(
-                    {
-                        "upload_id": upload_id
-                    }
-                )
 
             await UploadService.update_upload(
                 upload_id,
@@ -212,5 +184,5 @@ class AuditWorker:
         except Exception as e:
 
             logger.error(
-                f"Error updating audit counters: {e}"
+                f"Failed updating audit counters: {e}"
             )
