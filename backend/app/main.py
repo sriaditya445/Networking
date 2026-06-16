@@ -1,13 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.routes.upload_routes import router as upload_router
-from app.api.v1.routes.device_routes import router as device_router
-from app.api.v1.routes.stats_routes import router as stats_router
-from app.api.v1.routes.health_routes import router as health_router
-from app.api.v1.routes.report_routes import router as report_router
-
-from app.core.database import check_db_connection
+from app.api.upload_routes import router as upload_router
+from app.api.device_routes import router as device_router
+from app.api.stats_routes import router as stats_router
+from app.api.health_routes import router as health_router
+from app.api.audit_routes import router as audit_router
+from app.api.template_routes import router as template_router
+from app.api.detect_routes import router as detect_router
+from app.core.database import check_db_connection,connect_db, close_db
+from app.workers.scheduler import scheduler
 
 app = FastAPI(
     title="Network Configuration Processing System",
@@ -17,15 +19,25 @@ app = FastAPI(
 
 @app.on_event("startup")
 async def startup():
+    await connect_db()
+    scheduler.start()
 
-    result = await check_db_connection()
+@app.on_event("shutdown")
+async def shutdown():
+    scheduler.shutdown()
+    await close_db()
 
-    print(f"MongoDB Connected: {result}")
+# @app.on_event("startup")
+# async def startup():
 
-    print("\nREGISTERED ROUTES:")
+#     result = await check_db_connection()
 
-    for route in app.routes:
-        print(route.path)
+#     print(f"MongoDB Connected: {result}")
+
+#     print("\nREGISTERED ROUTES:")
+
+#     for route in app.routes:
+#         print(route.path)
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,5 +51,7 @@ app.include_router(upload_router)
 app.include_router(device_router)
 app.include_router(stats_router)
 app.include_router(health_router)
-app.include_router(report_router)
+app.include_router(audit_router)
+app.include_router(template_router)
+app.include_router(detect_router)
 

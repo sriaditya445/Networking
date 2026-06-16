@@ -5,8 +5,12 @@ from bson import ObjectId
 from app.repositories.upload_repository import UploadRepository
 from app.services.device_service import DeviceService
 from app.services.ingestion_service import IngestionService
+from app.services.template_service import (
+    TemplateService
+)
 from fastapi import HTTPException, status
 from app.core.database import logger
+from collections import defaultdict
 
 BASE_DIR = os.path.dirname(
     os.path.dirname(
@@ -26,6 +30,14 @@ class UploadService:
     @staticmethod
     async def get_uploads():
         return await UploadRepository.get_all()
+    
+    @staticmethod
+    async def get_uploads_by_status(
+        status: str
+    ):
+        return await UploadRepository.get_by_status(
+            status
+        )
 
     @staticmethod
     async def get_upload(job_id: str):
@@ -57,15 +69,6 @@ class UploadService:
     async def upload_files(files,folder_name:str):
         job_id = str(ObjectId())
         job_folder = os.path.join(UPLOAD_DIR, job_id)
-        # folder_name = "configs"
-
-        # if len(files) == 1 and files[0].filename.lower().endswith(".zip"):
-        #     folder_name = os.path.splitext(
-        #         files[0].filename
-        #     )[0]
-
-        # else:
-        #     folder_name = f"upload_{job_id[:8]}"
 
         first_path = files[0].filename
 
@@ -90,7 +93,7 @@ class UploadService:
             await UploadRepository.create({
                 "_id": ObjectId(job_id),
                 "folder_name": folder_name,
-                "status": "pending",
+                "status": "NEW",
                 "files_count": len(files),
                 "folder_path": job_folder,
                 "error_message": None,
@@ -109,35 +112,25 @@ class UploadService:
         os.makedirs(job_folder, exist_ok=True)
 
         try:
-            all_processed_files = []
+
+            saved_files = []
+
             for upload in files:
-                processed_files = await IngestionService.process_upload(upload,job_folder)
-                all_processed_files.extend(processed_files)
 
-            for processed_file in all_processed_files:
-                filename = processed_file["filename"]
-                file_path = processed_file["file_path"]
-                # content = processed_file["content"]
+                result = await IngestionService.process_upload(
+                    upload,
+                    job_folder
+                )
 
-                logger.info(f"Creating device record for {filename}")
-                # Stage raw device in devices collection as 'pending'                
-                await DeviceService.create_device({
-                    "upload_id": job_id,
-                    "device_name": os.path.splitext(filename)[0],
-                    "device_type": "Pending Analysis",
-                    "configuration": None,
-                    "status": "pending",
-                    "file_path": file_path,
-                    "relative_path": processed_file["relative_path"],
-                    "error_message": None,
-                    "parsed_at": None,
-                    "parsed_data": None
-                })
-                logger.info(f"Created device record for {filename}")
+                if isinstance(result, list):
+                    saved_files.extend(result)
+                else:
+                    saved_files.append(result)
+
             await UploadRepository.update(
                 job_id,
-                {
-                    "files_count": len(all_processed_files),
+                {   "status": "PENDING_EXTRACTION",
+                    "files_count": len(saved_files),
                     "updated_at": datetime.utcnow()
                 }
             )
@@ -149,7 +142,7 @@ class UploadService:
 
             await UploadRepository.update(
                     job_id,
-                    {"status": "failed", "error_message": f"Staging failed: {e}", "updated_at": datetime.utcnow()}
+                    {"status": "FAILED", "error_message": f"Staging failed: {e}", "updated_at": datetime.utcnow()}
                 )
 
             await DeviceService.delete_devices_by_upload_id(job_id)
@@ -163,8 +156,8 @@ class UploadService:
             "job_id": job_id,
             "job_folder": job_folder,
             "folder_name": folder_name,
-            "status": "pending",
-            "files_count": len(all_processed_files),
+            "status": "NEW",
+            "files_count": len(files),
             "message": "Upload successful. Raw data staged. Processing starts in background."
         }
 
@@ -203,3 +196,413 @@ class UploadService:
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Failed to delete job: {str(e)}"
             )
+
+    @staticmethod
+    async def recalculate_upload_status(upload_id:str):
+
+        devices = await DeviceService.get_devices(
+            upload_id=upload_id
+        )
+
+        if not devices:
+            return
+
+        if any(
+            d.get("processing_status") in ["PENDING", "PROCESSING"]
+            or d.get("audit_status") in ["PENDING", "PROCESSING"]
+            for d in devices
+        ):
+            await UploadRepository.update(
+                upload_id,
+                {"status": "PROCESSING"}
+            )
+            return
+
+        if any(
+            d.get("processing_status") == "FAILED"
+            or d.get("audit_status") == "FAILED"
+            for d in devices
+        ):
+            await UploadRepository.update(
+                upload_id,
+                {"status": "FAILED"}
+            )
+        else:
+            await UploadRepository.update(
+                upload_id,
+                {"status": "SUCCESS"}
+            )
+
+    @staticmethod
+    async def get_template_options(
+        upload_id: str
+    ):
+
+        upload = await UploadRepository.get_by_id(
+            upload_id
+        )
+
+        if not upload:
+            raise HTTPException(
+                status_code=404,
+                detail="Upload not found"
+            )
+
+        if upload.get("status") != "WAITING_TEMPLATE_SELECTION":
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Template selection is not available. "
+                    f"Current upload status: "
+                    f"{upload.get('status')}"
+                )
+            )
+
+        devices = await DeviceService.get_devices(
+            upload_id=upload_id
+        )
+
+        if not devices:
+            return {
+                "upload_id": upload_id,
+                "status": upload.get("status"),
+                "groups": []
+            }
+
+        grouped = defaultdict(int)
+
+        for device in devices:
+
+            key = (
+                device.get(
+                    "vendor",
+                    "Unknown"
+                ),
+                device.get(
+                    "device_type",
+                    "unknown"
+                ),
+                device.get(
+                    "model"
+                )
+            )
+
+            grouped[key] += 1
+
+        groups = []
+
+        for (
+            vendor,
+            device_type,
+            model
+        ), count in grouped.items():
+
+            templates = await TemplateService.get_templates(
+                vendor=vendor,
+                device_type=device_type
+            )
+
+            groups.append(
+                {
+                    "vendor": vendor,
+                    "device_type": device_type,
+                    "model": model,
+                    "device_count": count,
+                    "templates": [
+                        {
+                            "template_id": str(
+                                template["_id"]
+                            ),
+                            "template_name": template[
+                                "template_name"
+                            ],
+                            "template_type": template.get(
+                                "template_type",
+                                "jinja2"
+                            )
+                        }
+                        for template in templates
+                    ]
+                }
+            )
+
+        return {
+            "upload_id": upload_id,
+            "upload_status": upload.get(
+                "status"
+            ),
+            "total_device_groups": len(
+                groups
+            ),
+            "groups": groups
+        }
+
+    # @staticmethod
+    # async def get_template_options(
+    #     upload_id: str
+    # ):
+
+    #     devices = await DeviceService.get_devices(
+    #         upload_id=upload_id
+    #     )
+
+    #     grouped = defaultdict(int)
+
+    #     for device in devices:
+
+    #         key = (
+    #             device.get("vendor"),
+    #             device.get("device_type"),
+    #             device.get("model")
+    #         )
+
+    #         grouped[key] += 1
+
+    #     response = []
+
+    #     for (
+    #         vendor,
+    #         device_type,
+    #         model
+    #     ), count in grouped.items():
+
+    #         templates = await TemplateRepository.get_all(
+    #             vendor=vendor,
+    #             device_type=device_type
+    #         )
+
+    #         response.append(
+    #             {
+    #                 "vendor": vendor,
+    #                 "device_type": device_type,
+    #                 "model": model,
+    #                 "device_count": count,
+    #                 "templates": [
+    #                     {
+    #                         "template_id": str(
+    #                             template["_id"]
+    #                         ),
+    #                         "template_name": template[
+    #                             "template_name"
+    #                         ]
+    #                     }
+    #                     for template in templates
+    #                 ]
+    #             }
+    #         )
+
+    #     return {
+    #         "upload_id": upload_id,
+    #         "groups": response
+    #     }
+
+    @staticmethod
+    async def assign_templates(
+        upload_id: str,
+        request
+    ):
+
+        upload = await UploadRepository.get_by_id(
+            upload_id
+        )
+
+        if not upload:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Upload not found"
+            )
+
+        devices = await DeviceService.get_devices(
+            upload_id=upload_id
+        )
+
+        updated_devices = 0
+
+        for assignment in request.assignments:
+
+            template = await TemplateService.get_template(
+                assignment.template_id
+            )
+
+            if not template:
+
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Template not found: {assignment.template_id}"
+                )
+
+            for device in devices:
+
+                if (
+                    device.get("vendor")
+                    == assignment.vendor
+                    and
+                    device.get("device_type")
+                    == assignment.device_type
+                ):
+
+                    await DeviceService.update_device(
+                        str(device["_id"]),
+                        {
+                            "template_id": assignment.template_id,
+                            "template_name": template[
+                                "template_name"
+                            ],
+                            "template_status": "SELECTED",
+                            "updated_at": datetime.utcnow()
+                        }
+                    )
+
+                    updated_devices += 1
+
+        await UploadRepository.update(
+            upload_id,
+            {
+                "status": "WAITING_AUDIT_SELECTION",
+                "updated_at": datetime.utcnow()
+            }
+        )
+
+        return {
+            "message":
+                "Templates assigned successfully",
+            "updated_devices":
+                updated_devices,
+            "status":
+                "WAITING_AUDIT_SELECTION"
+        }
+
+    @staticmethod
+    async def get_audit_options(
+        upload_id: str
+    ):
+
+        upload = await UploadRepository.get_by_id(
+            upload_id
+        )
+
+        if not upload:
+            raise HTTPException(
+                status_code=404,
+                detail="Upload not found"
+            )
+
+        devices = await DeviceService.get_devices(
+            upload_id=upload_id
+        )
+
+        grouped = defaultdict(int)
+
+        for device in devices:
+
+            if device.get(
+                "template_status"
+            ) != "SELECTED":
+                continue
+
+            key = (
+                device.get("vendor"),
+                device.get("device_type"),
+                device.get("model"),
+                device.get("template_id"),
+                device.get("template_name")
+            )
+
+            grouped[key] += 1
+
+        response = []
+
+        for (
+            vendor,
+            device_type,
+            model,
+            template_id,
+            template_name
+        ), count in grouped.items():
+
+            template = await TemplateService.get_template(
+                template_id
+            )
+
+            sections = []
+
+            if template:
+                sections = list(
+                    template.get(
+                        "sections",
+                        {}
+                    ).keys()
+                )
+
+            response.append(
+                {
+                    "vendor": vendor,
+                    "device_type": device_type,
+                    "model": model,
+                    "device_count": count,
+                    "template_id": template_id,
+                    "template_name": template_name,
+                    "available_sections": sections
+                }
+            )
+
+        return {
+            "upload_id": upload_id,
+            "groups": response
+        }
+
+    @staticmethod
+    async def start_audit(
+        upload_id: str
+    ):
+
+        await UploadService.update_upload(
+            upload_id,
+            {
+                "status": "PROCESSING"
+            }
+        )
+
+        return {
+            "message": "Audit started"
+        }
+
+    @staticmethod
+    async def save_audit_selection(
+        upload_id: str,
+        request
+    ):
+
+        upload = await UploadRepository.get_by_id(
+            upload_id
+        )
+
+        if not upload:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Upload not found"
+            )
+
+        await UploadRepository.update(
+            upload_id,
+            {
+                "audit_selections": [
+                    selection.model_dump()
+                    for selection in request.selections
+                ],
+                "status": "READY_FOR_AUDIT",
+                "updated_at": datetime.utcnow()
+            }
+        )
+
+        return {
+            "message": (
+                "Audit selections saved successfully"
+            ),
+            "upload_id": upload_id,
+            "status": "READY_FOR_AUDIT"
+        }
+
+        

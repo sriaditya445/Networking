@@ -49,7 +49,6 @@ function App() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedUploadId, setSelectedUploadId] = useState(null);
   const [selectedFolderName, setSelectedFolderName] = useState(null);
-  const [selectedTemplate, setSelectedTemplate] = useState("");
 
 
   // Fetch all necessary data from FastAPI backend
@@ -116,10 +115,6 @@ function App() {
 
     const formData = new FormData();
     formData.append('folder_name', folderName || 'configs');
-    formData.append(
-      "template_id",
-      selectedTemplate
-    );
 
     selectedFiles.forEach((file) => {
       // Use webkitRelativePath for folder structure if available, or just filename
@@ -289,9 +284,6 @@ function App() {
             jobs={jobs}
             formatDate={formatDate}
             renderStatusBadge={renderStatusBadge}
-            selectedTemplate={selectedTemplate}
-            setSelectedTemplate={setSelectedTemplate}
-            devices={devices}
           />
         );
       case 'devices':
@@ -329,9 +321,6 @@ function App() {
             formatDate={formatDate}
             renderStatusBadge={renderStatusBadge}
             apiBaseUrl={API_BASE_URL}
-            setActiveTab={setActiveTab}
-            setSelectedUploadId={setSelectedUploadId}
-            setSelectedFolderName={setSelectedFolderName}
           />
         );
       case 'configurations':
