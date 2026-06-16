@@ -19,6 +19,7 @@ from app.services.audit_result_service import (
 from app.services.audit_report_service import (
     AuditReportService
 )
+from app.core.database import logger
 
 
 class AuditWorker:
@@ -38,19 +39,7 @@ class AuditWorker:
         )
 
         try:
-
-            # devices = await DeviceService.get_devices(
-            #     {
-            #         "upload_id": upload_id,
-            #         "processing_status": "SUCCESS",
-            #         "audit_status": "PENDING"
-            #     }
-            # )
-            # devices = [
-            #     d for d in devices
-            #     if d.get("template_status") == "SELECTED"
-            # ]
-
+            
             devices = await DeviceService.get_devices(
                 upload_id=upload_id,
                 processing_status="SUCCESS",

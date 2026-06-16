@@ -12,6 +12,8 @@ class DeviceModel(BaseModel):
     device_type: str
     vendor: str = "Cisco"
 
+    model: Optional[str] = None
+
     # Raw Config
     configuration: Optional[str] = None
     # configuration_json: Optional[Dict[str, Any]] = None
@@ -26,6 +28,10 @@ class DeviceModel(BaseModel):
     template_status: str = "PENDING_TEMPLATE_SELECTION"
     template_id: Optional[str] = None
     template_name: Optional[str] = None
+    template_selection_type: str = "AUTO"
+
+    scope_type: str = "FULL"
+    selected_sections: List[str] = []
 
     # Audit Status
     audit_status: str = "PENDING"

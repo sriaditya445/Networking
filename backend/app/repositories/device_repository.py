@@ -51,16 +51,3 @@ class DeviceRepository:
     @staticmethod
     async def count(query: dict):
         return await DeviceRepository.collection().count_documents(query)
-
-    # @staticmethod
-    # async def get_by_upload_and_status(
-    #     upload_id: str,
-    #     processing_status: str
-    # ):
-    #     return await DeviceRepository.collection().find(
-    #         {
-    #             "upload_id": upload_id,
-    #             "processing_status": processing_status
-    #         }
-    #     ).to_list(1000)
-

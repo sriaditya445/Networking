@@ -24,7 +24,7 @@ class ParserWorker:
         logger.info(f"Starting parser job: {upload_id}")
 
         await UploadService.update_upload(upload_id, {
-            "status": "PROCESSING",
+            "status": "PARSING",
             "updated_at": datetime.utcnow()
         })
 
@@ -91,12 +91,10 @@ class ParserWorker:
 
                     await DeviceService.update_device(
                         str(device_id),
-                        {
-                            {
-                                "processing_status": "FAILED",
-                                "error_message": str(file_error),
-                                "parsed_at": datetime.utcnow()
-                            }
+                        {  
+                            "processing_status": "FAILED",
+                            "error_message": str(file_error),
+                            "parsed_at": datetime.utcnow()                       
                         }
                     )
 
@@ -152,13 +150,22 @@ class ParserWorker:
             
             new_success = current_success + parsed_success
             new_failed = current_failed + parsed_failed
-            
+
             await UploadService.update_upload(upload_id, {
                 "total_devices": total_devices,
                 "parsed_success_count": new_success,
                 "parsed_failed_count": new_failed,
                 "updated_at": datetime.utcnow()
             })
+
+            if total_devices == (new_success + new_failed):
+                await UploadService.update_upload(
+                    upload_id,
+                    {
+                        "status": "WAITING_TEMPLATE_SELECTION",
+                        "updated_at": datetime.utcnow()
+                    }
+                )
             
             logger.debug(
                 f"Updated upload counters: {upload_id} "

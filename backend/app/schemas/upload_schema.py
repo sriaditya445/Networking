@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, BeforeValidator
-from typing import Optional, Annotated
+from typing import Optional, Annotated,List
 from datetime import datetime
 
 PyObjectId = Annotated[str, BeforeValidator(str)]
@@ -18,3 +18,18 @@ class UploadJobResponse(BaseModel):
         populate_by_name = True
         json_encoders = {datetime: lambda v: v.isoformat()}
         arbitrary_types_allowed = True
+
+class TemplateAssignment(BaseModel):
+
+    vendor: str
+
+    device_type: str
+
+    model: str | None = None
+
+    template_id: str
+
+
+class TemplateAssignmentRequest(BaseModel):
+
+    assignments: List[TemplateAssignment]

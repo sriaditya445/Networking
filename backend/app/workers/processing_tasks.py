@@ -39,13 +39,23 @@ async def process_pending_uploads():
             str(upload["_id"])
         )
 
+# async def process_pending_template_selection():
+
+#     uploads = await UploadService.get_uploads_by_status("PROCESSING")
+
+#     for upload in uploads:
+
+#         await TemplateSelectionWorker.process_template_selection(
+#             str(upload["_id"])
+#         )
+
 async def process_pending_audits():
     """
     Process pending audits for uploads in 'parsed' status.
     
     Devices move from 'parsed' -> 'success/failed' after audit.
     """
-    uploads = await UploadService.get_uploads_by_status("PROCESSING")
+    uploads = await UploadService.get_uploads_by_status("READY_FOR_AUDIT")
     if not uploads:
         logger.info(
             "No uploads pending audit."
@@ -56,15 +66,5 @@ async def process_pending_audits():
 
     for upload in uploads:
         await AuditWorker.process_audit_job(
-            str(upload["_id"])
-        )
-
-async def process_pending_template_selection():
-
-    uploads = await UploadService.get_uploads_by_status("PROCESSING")
-
-    for upload in uploads:
-
-        await TemplateSelectionWorker.process_template_selection(
             str(upload["_id"])
         )

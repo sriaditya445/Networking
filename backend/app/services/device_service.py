@@ -75,6 +75,11 @@ class DeviceService:
             "PENDING"
         )
 
+        template_status = device.get(
+            "template_status",
+            "PENDING_TEMPLATE_SELECTION"
+        )
+
         audit_status = device.get(
             "audit_status",
             "PENDING"
@@ -84,10 +89,16 @@ class DeviceService:
             return "FAILED"
 
         if processing_status == "PROCESSING":
-            return "PROCESSING_CONFIGURATION"
+            return "PARSING"
 
-        if processing_status == "SUCCESS" and audit_status == "PENDING":
-            return "WAITING_FOR_AUDIT"
+        if processing_status != "SUCCESS":
+            return "PENDING"
+
+        if template_status == "PENDING_TEMPLATE_SELECTION":
+            return "WAITING_TEMPLATE_SELECTION"
+
+        if template_status == "SELECTED" and audit_status == "PENDING":
+            return "READY_FOR_AUDIT"
 
         if audit_status == "PROCESSING":
             return "AUDITING"

@@ -18,6 +18,11 @@ from app.services.template_parser import (
     parse_template_content,
     render_template_preview
 )
+from fastapi import (
+    UploadFile,
+    File,
+    Form
+)
 
 router = APIRouter(
     prefix="/api/templates",
@@ -33,7 +38,7 @@ async def get_templates(
     device_type: str = None
 ):
 
-    templates = await TemplateRepository.get_all(
+    templates = await TemplateService.get_templates(
         vendor=vendor,
         device_type=device_type
     )
@@ -104,30 +109,51 @@ async def get_template(
     )
 
 @router.post(
-    "",
+    "/upload",
     response_model=GoldenTemplateResponse
 )
+async def upload_template(
 
-async def create_template(
-    template: GoldenTemplateCreate
+    vendor: str = Form(...),
+
+    device_type: str = Form(...),
+
+    template_name: str = Form(...),
+
+    file: UploadFile = File(...)
 ):
 
+    content = (
+        await file.read()
+    ).decode(
+        "utf-8"
+    )
+
     parsed = parse_template_content(
-        template.template_content
+        content
     )
 
-    doc = template.model_dump()
+    doc = {
+        "vendor": vendor,
+        "device_type": device_type,
+        "template_name": template_name,
+        "template_type": "jinja2",
+        "template_content": content,
+        "sections": parsed.sections,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
+    }
 
-    doc["sections"] = parsed.sections
-    doc["created_at"] = datetime.utcnow()
-    doc["updated_at"] = datetime.utcnow()
-
-    template_id = await TemplateService.create_template(
-        doc
+    template_id = (
+        await TemplateService.create_template(
+            doc
+        )
     )
 
-    created = await TemplateService.get_template(
-        template_id
+    created = (
+        await TemplateService.get_template(
+            template_id
+        )
     )
 
     return GoldenTemplateResponse(
@@ -138,6 +164,42 @@ async def create_template(
             if k != "_id"
         }
     )
+
+# @router.post(
+#     "",
+#     response_model=GoldenTemplateResponse
+# )
+
+# async def create_template(
+#     template: GoldenTemplateCreate
+# ):
+
+#     parsed = parse_template_content(
+#         template.template_content
+#     )
+
+#     doc = template.model_dump()
+
+#     doc["sections"] = parsed.sections
+#     doc["created_at"] = datetime.utcnow()
+#     doc["updated_at"] = datetime.utcnow()
+
+#     template_id = await TemplateService.create_template(
+#         doc
+#     )
+
+#     created = await TemplateService.get_template(
+#         template_id
+#     )
+
+#     return GoldenTemplateResponse(
+#         id=created["_id"],
+#         **{
+#             k: v
+#             for k, v in created.items()
+#             if k != "_id"
+#         }
+#     )
 
 @router.put(
     "/{template_id}",
