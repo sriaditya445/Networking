@@ -13,17 +13,10 @@ function UploadCenter({
   backendOnline,
   handleUploadSubmit,
   jobs,
-  devices,
   formatDate,
-  selectedTemplate,
-  setSelectedTemplate,
   renderStatusBadge
 }) {
-
-
-  const [templates, setTemplates] = useState([]);
   const [isDragActive, setIsDragActive] = useState(false);
-  const [selectedJob, setSelectedJob] = useState(null);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
   const [showTypeModal, setShowTypeModal] = useState(false);
@@ -434,11 +427,7 @@ function UploadCenter({
           <button
             type="submit"
             className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold py-3 px-6 rounded-xl transition-all shadow-[0_4px_14px_rgba(6,182,212,0.25)] hover:shadow-[0_6px_20px_rgba(6,182,212,0.35)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
-            disabled={
-              selectedFiles.length === 0 ||
-              uploading ||
-              !backendOnline
-            }
+            disabled={selectedFiles.length === 0 || uploading || !backendOnline}
           >
             {uploading ? (
               <>
@@ -592,7 +581,7 @@ function UploadCenter({
                       />
                     </div>
 
-
+                    
                   </div>
                   <div className="shrink-0">
                     {renderStatusBadge(job.status)}

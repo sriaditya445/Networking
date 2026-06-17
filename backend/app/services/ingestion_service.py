@@ -58,12 +58,12 @@ class IngestionService:
             "file_path": file_path
         }
 
+
     @staticmethod
     async def process_zip(
         upload: UploadFile,
         job_folder: str
     ):
-        results = []
 
         zip_path = os.path.join(
             job_folder,
@@ -71,37 +71,61 @@ class IngestionService:
         )
 
         with open(zip_path, "wb") as buffer:
-            shutil.copyfileobj(upload.file, buffer)
+            shutil.copyfileobj(
+                upload.file,
+                buffer
+            )
 
-        extract_dir = os.path.join(
-            job_folder,
-            "extracted"
-        )
+        return {
+            "filename": upload.filename,
+            "file_path": zip_path,
+            "is_zip": True
+        }
 
-        os.makedirs(
-            extract_dir,
-            exist_ok=True
-        )
+    # @staticmethod
+    # async def process_zip(
+    #     upload: UploadFile,
+    #     job_folder: str
+    # ):
+    #     results = []
 
-        with zipfile.ZipFile(zip_path, "r") as zip_ref:
-            zip_ref.extractall(extract_dir)
+    #     zip_path = os.path.join(
+    #         job_folder,
+    #         upload.filename
+    #     )
 
-        for root, _, files in os.walk(extract_dir):
+    #     with open(zip_path, "wb") as buffer:
+    #         shutil.copyfileobj(upload.file, buffer)
 
-            for file in files:
+    #     extract_dir = os.path.join(
+    #         job_folder,
+    #         "extracted"
+    #     )
 
-                file_path = os.path.join(
-                    root,
-                    file
-                )
+    #     os.makedirs(
+    #         extract_dir,
+    #         exist_ok=True
+    #     )
 
-                results.append({
-                    "filename": file,
-                    "relative_path": os.path.relpath(
-                        file_path,
-                        extract_dir
-                    ),
-                    "file_path": file_path,
-                })
+    #     with zipfile.ZipFile(zip_path, "r") as zip_ref:
+    #         zip_ref.extractall(extract_dir)
 
-        return results
+    #     for root, _, files in os.walk(extract_dir):
+
+    #         for file in files:
+
+    #             file_path = os.path.join(
+    #                 root,
+    #                 file
+    #             )
+
+    #             results.append({
+    #                 "filename": file,
+    #                 "relative_path": os.path.relpath(
+    #                     file_path,
+    #                     extract_dir
+    #                 ),
+    #                 "file_path": file_path,
+    #             })
+
+    #     return results

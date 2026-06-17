@@ -1,0 +1,9 @@
+hostname {{HOSTNAME}}
+domain-name {{DOMAIN_NAME}}
+ssh version 2
+ssh timeout 60
+aaa authentication ssh console LOCAL
+logging enable
+logging buffered warning
+ntp server {{NTP_SERVER}} source inside
+snmp-server group {{SNMP_GROUP}} v3 priv
