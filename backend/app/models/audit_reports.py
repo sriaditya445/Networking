@@ -11,6 +11,9 @@ class AuditReportModel(BaseModel):
     device_type: str
     template_id: str
 
+    audit_mode: str
+    selected_sections: List[str] = []
+
     overall_score: float
     category_scores: Dict[str, float]
 

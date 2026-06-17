@@ -131,7 +131,7 @@ class ExtractionWorker:
         await UploadRepository.update(
             upload_id,
             {
-                "status": "PENDING_PROCESSING",
+                "status": "ANALYZING_DEVICES",
 
                 "files_count":
                     device_count,

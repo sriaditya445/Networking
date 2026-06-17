@@ -17,6 +17,12 @@ class DeviceService:
             None
         )
 
+        filters = {
+            k: v
+            for k, v in filters.items()
+            if v is not None
+        }
+
         if device_id:
 
             if not ObjectId.is_valid(device_id):
@@ -75,11 +81,6 @@ class DeviceService:
             "PENDING"
         )
 
-        template_status = device.get(
-            "template_status",
-            "PENDING_TEMPLATE_SELECTION"
-        )
-
         audit_status = device.get(
             "audit_status",
             "PENDING"
@@ -89,24 +90,21 @@ class DeviceService:
             return "FAILED"
 
         if processing_status == "PROCESSING":
-            return "PARSING"
+            return "DEVICE_ANALYSIS_IN_PROGRESS"
 
         if processing_status != "SUCCESS":
             return "PENDING"
 
-        if template_status == "PENDING_TEMPLATE_SELECTION":
-            return "WAITING_TEMPLATE_SELECTION"
-
-        if template_status == "SELECTED" and audit_status == "PENDING":
+        if audit_status == "PENDING":
             return "READY_FOR_AUDIT"
 
         if audit_status == "PROCESSING":
-            return "AUDITING"
+            return "AUDIT_IN_PROGRESS"
 
         if audit_status == "FAILED":
             return "FAILED"
 
         if audit_status == "SUCCESS":
-            return "SUCCESS"
+            return "COMPLETED"
 
         return "PENDING"

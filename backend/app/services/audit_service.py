@@ -10,9 +10,8 @@ class AuditService:
     @staticmethod
     async def audit_device(device: dict,audit_mode: str = "full",selected_sections: list[str] | None = None):
 
-        template = await TemplateService.find_template(
-            vendor=device["vendor"],
-            device_type=device["device_type"]
+        template = await TemplateService.get_template(
+            device["template_id"]
         )
 
         if not template:
@@ -28,23 +27,11 @@ class AuditService:
             device["configuration"]
         )
 
-        if selected_sections:
-            parsed_template.controls = [
-                control
-                for control in parsed_template.controls
-                if control.category in selected_sections
-            ]
-
-            parsed_template.sections = {
-                category: controls
-                for category, controls in parsed_template.sections.items()
-                if category in selected_sections
-            }
-
         compliance = run_compliance_audit(
             template=parsed_template,
             config=parsed_config,
-            audit_mode=audit_mode
+            audit_mode=audit_mode,
+            selected_sections=selected_sections
         )
 
         recommendations = build_recommendations(

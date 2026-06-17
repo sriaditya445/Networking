@@ -6,6 +6,7 @@ from dataclasses import dataclass
 class DetectionResult:
     device_type: str
     vendor: str
+    model: str | None
     confidence: float
     matched_patterns: list[str]
 
@@ -76,6 +77,14 @@ VENDOR_PATTERNS: dict[str, list[tuple[str, float]]] = {
     ],
 }
 
+MODEL_PATTERNS = {
+    "C3650": [r"ws-c3650-\S+",r"c3650-\S+"],
+    "C3850": [r"ws-c3850-\S+",r"c3850-\S+"],
+    "C9200": [r"c9200-\S+"],
+    "C9300": [r"c9300-\S+"],
+    "ISR4331": [r"isr4331"]
+}
+
 
 def detect_device_type(config_content: str) -> DetectionResult:
     """Score config against patterns and return best device type match."""
@@ -99,6 +108,7 @@ def detect_device_type(config_content: str) -> DetectionResult:
         return DetectionResult(
             device_type="unknown",
             vendor=_detect_vendor(config_content),
+            model=_detect_model(config_content),
             confidence=0.0,
             matched_patterns=[],
         )
@@ -109,6 +119,7 @@ def detect_device_type(config_content: str) -> DetectionResult:
     return DetectionResult(
         device_type=best_type,
         vendor=_detect_vendor(config_content),
+        model=_detect_model(config_content),
         confidence=round(confidence, 2),
         matched_patterns=matched[best_type],
     )
@@ -125,3 +136,14 @@ def _detect_vendor(config_content: str) -> str:
 
     best = max(scores, key=lambda k: scores[k])
     return best if scores[best] > 0.3 else "Cisco"
+
+def _detect_model(config_content: str) -> str | None:
+    for model, patterns in MODEL_PATTERNS.items():
+        for pattern in patterns:
+            if re.search(
+                pattern,
+                config_content,
+                re.MULTILINE | re.IGNORECASE
+            ):
+                return model
+    return None

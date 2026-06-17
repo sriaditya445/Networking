@@ -23,7 +23,6 @@ from app.schemas.upload_schema import (
 from app.schemas.audit_selection_schema import (
     AuditSelectionRequest
 )
-
 router = APIRouter()
 
 @router.get("/api/uploads",response_model=List[UploadJobResponse])
@@ -31,12 +30,12 @@ async def get_uploads():
     return await UploadService.get_uploads()
 
 @router.delete("/api/uploads/{upload_id}")
-async def delete_job(upload_id: str):
-    return await UploadService.delete_job(upload_id)
+async def delete_upload(upload_id: str):
+    return await UploadService.delete_upload(upload_id)
 
 @router.get("/api/uploads/{upload_id}/download")
-async def download_job_folder(upload_id: str, background_tasks: BackgroundTasks):
-    return await FileService.download_job(
+async def download_upload_folder(upload_id: str, background_tasks: BackgroundTasks):
+    return await FileService.download_upload(
         upload_id,
         background_tasks
     )
@@ -58,28 +57,6 @@ async def upload_files(
     )
     
     return response
-
-# @router.get(
-#     "/api/uploads/{upload_id}/template-options"
-# )
-# async def get_template_options(
-#     upload_id: str
-# ):
-#     return await UploadService.get_template_options(
-#         upload_id
-#     )
-
-# @router.post(
-#     "/api/uploads/{upload_id}/templates"
-# )
-# async def assign_templates(
-#     upload_id: str,
-#     request: TemplateAssignmentRequest
-# ):
-#     return await UploadService.assign_templates(
-#         upload_id,
-#         request
-#     )
 
 @router.get(
     "/api/uploads/{upload_id}/audit-options"

@@ -7,7 +7,7 @@ class GoldenTemplateModel(BaseModel):
 
     vendor: str
     device_type: str
-    model: Optional[str]
+    model: Optional[str] = None
 
     template_name: str
     template_type: str = "jinja2"

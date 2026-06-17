@@ -92,6 +92,7 @@ class AuditReportResponse(BaseModel):
 class GoldenTemplateCreate(BaseModel):
     vendor: str = "Cisco"
     device_type: str
+    model: str | None = None
     template_name: str
     template_type: str = "jinja2"
     template_content: str

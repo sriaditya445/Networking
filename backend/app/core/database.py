@@ -40,7 +40,7 @@ async def _ensure_indexes():
         [
             ("vendor", 1),
             ("device_type", 1),
-            ("template_name", 1)
+            ("model", 1)
         ],
         unique=True
     )

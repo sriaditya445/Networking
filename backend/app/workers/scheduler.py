@@ -2,7 +2,7 @@
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.workers.processing_tasks import (
-    process_uploaded_jobs,
+    process_uploaded_uploads,
     process_pending_uploads,
     process_pending_audits,
 )
@@ -10,7 +10,7 @@ from app.workers.processing_tasks import (
 scheduler = AsyncIOScheduler()
 
 scheduler.add_job(
-    process_uploaded_jobs,
+    process_uploaded_uploads,
     trigger="interval",
     seconds=5,
     id="extraction_batch_job"

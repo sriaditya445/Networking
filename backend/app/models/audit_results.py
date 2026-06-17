@@ -10,6 +10,7 @@ class AuditResultModel(BaseModel):
     template_id: str
 
     audit_mode: str
+    selected_sections: List[str] = []
 
     overall_score: float
 

@@ -16,7 +16,7 @@ class DeviceModel(BaseModel):
 
     # Raw Config
     configuration: Optional[str] = None
-    # configuration_json: Optional[Dict[str, Any]] = None
+    configuration_json: Optional[Dict[str, Any]] = None
 
     # Upload File
     file_path: str
@@ -28,7 +28,6 @@ class DeviceModel(BaseModel):
     template_status: str = "PENDING_TEMPLATE_SELECTION"
     template_id: Optional[str] = None
     template_name: Optional[str] = None
-    template_selection_type: str = "AUTO"
 
     scope_type: str = "FULL"
     selected_sections: List[str] = []

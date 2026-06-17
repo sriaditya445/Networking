@@ -44,9 +44,18 @@ def run_compliance_audit(
     template: ParsedTemplate,
     config: ParsedConfig,
     audit_mode: str = "full",
+    selected_sections: list[str] | None = None
 ) -> ComplianceResult:
+
     """Compare template controls against config and produce PASS/FAIL results."""
-    categories = MODE_TO_CATEGORIES.get(audit_mode, ALL_CATEGORIES)
+    categories = (
+        selected_sections
+        if selected_sections
+        else MODE_TO_CATEGORIES.get(
+            audit_mode,
+            ALL_CATEGORIES
+        )
+    )
     result = ComplianceResult()
     category_stats: dict[str, dict[str, int]] = {}
 

@@ -62,12 +62,31 @@ def parse_template_content(template_content: str) -> ParsedTemplate:
     for line in lines:
         stripped = line.strip()
 
-        section_match = re.match(r"^!\s*={3,}\s*(.+?)\s*={3,}", stripped, re.I)
-        if section_match:
-            current_category = _resolve_category(section_match.group(1))
+        lines = template_content.splitlines()
+
+    for i, line in enumerate(lines):
+
+        stripped = line.strip()
+
+        if (
+            stripped.startswith("!")
+            and "=" in stripped
+            and i + 1 < len(lines)
+            and i + 2 < len(lines)
+        ):
+            middle = lines[i + 1].strip()
+
+            if middle.startswith("!"):
+                header = middle.lstrip("!").strip()
+
+                if header:
+                    current_category = _resolve_category(
+                        header
+                    )
+
             continue
 
-        header_match = re.match(r"^!\s*---\s*(.+?)\s*---", stripped, re.I)
+        header_match = re.match(r"^!\s*(SYSTEM|AAA|SECURITY|DNS|NTP|SNMP|LOGGING|OSPF|BGP|STATIC ROUTES|INTERFACES|HIGH AVAILABILITY|WIRELESS|WLAN|RF|AVC|WEBAUTH)\s*$", stripped, re.I)
         if header_match:
             current_category = _resolve_category(header_match.group(1))
             continue

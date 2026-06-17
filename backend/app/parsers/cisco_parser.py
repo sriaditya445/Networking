@@ -8,14 +8,6 @@ from app.services.device_detector import detect_device_type
 
 class CiscoParser(BaseParser):
     def parse(self, content, filename):
-        # HOSTNAME_REGEX = re.compile(r"^\s*hostname\s+([a-zA-Z0-9-_]+)", re.IGNORECASE | re.MULTILINE)
-        
-        # def _extract_hostname(self, content: str, filename: str):
-        #     match = self.HOSTNAME_REGEX.search(content)
-        #     if match:
-        #         return match.group(1)
-        #     return os.path.splitext(filename)[0]
-
         hostname = extract_hostname(content,filename)
         detection = detect_device_type(content)
         config_json = GenericConfigParser.parse_config(content)
@@ -24,5 +16,6 @@ class CiscoParser(BaseParser):
             "device_name": hostname,
             "vendor": detection.vendor,
             "device_type": detection.device_type,
+            "model": detection.model,
             "configuration_json": config_json
         }

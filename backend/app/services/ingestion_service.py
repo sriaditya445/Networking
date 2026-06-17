@@ -13,7 +13,7 @@ class IngestionService:
     @staticmethod
     async def process_upload(
         upload: UploadFile,
-        job_folder: str
+        upload_folder: str
     ):
 
         filename = upload.filename.lower()
@@ -21,26 +21,26 @@ class IngestionService:
         if filename.endswith(".zip"):
             return await IngestionService.process_zip(
                 upload,
-                job_folder
+                upload_folder
             )
 
         return [
             await IngestionService.process_file(
                 upload,
-                job_folder
+                upload_folder
             )
         ]
 
     @staticmethod
     async def process_file(
         upload: UploadFile,
-        job_folder: str
+        upload_folder: str
     ):
 
         relative_path = upload.filename
 
         file_path = os.path.join(
-            job_folder,
+            upload_folder,
             relative_path
         )
 
@@ -62,11 +62,11 @@ class IngestionService:
     @staticmethod
     async def process_zip(
         upload: UploadFile,
-        job_folder: str
+        upload_folder: str
     ):
 
         zip_path = os.path.join(
-            job_folder,
+            upload_folder,
             upload.filename
         )
 
@@ -85,12 +85,12 @@ class IngestionService:
     # @staticmethod
     # async def process_zip(
     #     upload: UploadFile,
-    #     job_folder: str
+    #     upload_folder: str
     # ):
     #     results = []
 
     #     zip_path = os.path.join(
-    #         job_folder,
+    #         upload_folder,
     #         upload.filename
     #     )
 
@@ -98,7 +98,7 @@ class IngestionService:
     #         shutil.copyfileobj(upload.file, buffer)
 
     #     extract_dir = os.path.join(
-    #         job_folder,
+    #         upload_folder,
     #         "extracted"
     #     )
 

@@ -10,11 +10,11 @@ from app.services.audit_report_service import AuditReportService
 class AuditWorker:
 
     @staticmethod
-    async def process_audit_job(
+    async def process_audit_upload(
         upload_id: str
     ):
 
-        logger.info(f"Starting audit job for upload: {upload_id}")
+        logger.info(f"Starting audit upload for upload: {upload_id}")
 
         await UploadService.update_upload(
             upload_id,
@@ -27,12 +27,15 @@ class AuditWorker:
             upload = await UploadService.get_upload(upload_id)
             audit_selections = upload.get("audit_selections",[])
             
-            devices = await DeviceService.get_devices(
-                upload_id=upload_id,
-                processing_status="SUCCESS",
-                audit_status="PENDING",
-                template_status="SELECTED"
-            )
+            devices = [
+                d
+                for d in await DeviceService.get_devices(
+                    upload_id=upload_id,
+                    processing_status="SUCCESS",
+                    audit_status="PENDING"
+                )
+                if d.get("template_id")
+            ]
 
             if not devices:
                 logger.info(f"No pending audits found for upload {upload_id}")
@@ -49,9 +52,8 @@ class AuditWorker:
                         (
                             s
                             for s in audit_selections
-                            if s["vendor"] == device.get("vendor")
-                            and s["device_type"] == device.get("device_type")
-                            and s.get("model") == device.get("model")
+                            if s["template_id"]
+                            == device.get("template_id")
                         ),
                         None
                     )
@@ -123,21 +125,13 @@ class AuditWorker:
                 success_count,
                 failed_count
             )
-            
-            await UploadService.update_upload(
-                upload_id,
-                {
-                    "status": "COMPLETED",
-                    "updated_at": datetime.utcnow()
-                }
-            )
 
             await UploadService.recalculate_upload_status(
                 upload_id
             )
 
             logger.info(
-                f"Audit job completed for {upload_id}. "
+                f"Audit upload completed for {upload_id}. "
                 f"Success={success_count}, "
                 f"Failed={failed_count}"
             )
@@ -145,14 +139,14 @@ class AuditWorker:
         except Exception as error:
 
             logger.error(
-                f"Critical audit job failure for "
+                f"Critical audit upload failure for "
                 f"{upload_id}: {error}"
             )
 
             await UploadService.update_upload(
                 upload_id,
                 {
-                    "error_message": f"Audit job failed: {error}",
+                    "error_message": f"Audit upload failed: {error}",
                     "updated_at": datetime.utcnow()
                 }
             )

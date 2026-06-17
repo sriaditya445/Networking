@@ -2,16 +2,7 @@
 
 # from app.core.database import golden_templates_collection
 from bson import ObjectId
-DEFAULT_TEMPLATE_MAP = {
-    ("Cisco", "switch"): "Cisco3650Standard",
-    ("Cisco", "router"): "CiscoRouterStandard",
-    ("Cisco", "wlc"): "Cisco9800WLCStandard",
-    ("Cisco", "nexus"): "CiscoNexusStandard",
-    ("Cisco", "firewall"): "CiscoFirewallStandard",
-}
-
 from app.core.database import get_db
-
 
 class TemplateRepository:
 
@@ -23,31 +14,36 @@ class TemplateRepository:
     async def find_template(
         vendor: str,
         device_type: str,
-        template_name: str | None = None
+        model: str | None = None
     ):
 
-        query = {
-            "vendor": vendor,
-            "device_type": device_type
-        }
+        # Exact model match
+        template = await TemplateRepository.collection().find_one(
+            {
+                "vendor": vendor,
+                "device_type": device_type,
+                "model": model
+            }
+        )
 
-        if template_name:
-            query["template_name"] = template_name
+        # Fallback to generic template
+        if not template and model is not None:
 
-        else:
-            default_name = DEFAULT_TEMPLATE_MAP.get(
-                (vendor, device_type)
+            template = await TemplateRepository.collection().find_one(
+                {
+                    "vendor": vendor,
+                    "device_type": device_type,
+                    "model": None
+                }
             )
 
-            if default_name:
-                query["template_name"] = default_name
-
-        return await TemplateRepository.collection().find_one(query)
+        return template
 
     @staticmethod
     async def get_all(
         vendor: str = None,
-        device_type: str = None
+        device_type: str = None,
+        model: str | None = None
     ):
 
         query = {}
@@ -57,6 +53,9 @@ class TemplateRepository:
 
         if device_type:
             query["device_type"] = device_type
+
+        if model:
+            query["model"] = model
 
         return await TemplateRepository.collection().find(
             query
