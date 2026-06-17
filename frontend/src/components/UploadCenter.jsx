@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { FaCloudUploadAlt, FaFolderOpen, FaFileAlt, FaTrash, FaCheckCircle, FaSpinner, FaHistory } from 'react-icons/fa';
+import React, { useState, useRef, useEffect } from 'react';
+import { FaCloudUploadAlt, FaFolderOpen, FaFileAlt, FaTrash, FaCheckCircle, FaSpinner, FaHistory, FaEye } from 'react-icons/fa';
 
 function UploadCenter({
   folderName,
@@ -19,6 +19,28 @@ function UploadCenter({
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
+  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [selectedTypeDevices, setSelectedTypeDevices] = useState([]);
+  const [selectedTypeName, setSelectedTypeName] = useState("");
+  const [compareStatus, setCompareStatus] = useState({});
+
+
+  // useEffect(() => {
+  //   fetch("http://localhost:8000/api/templates")
+  //     .then((res) => res.json())
+  //     .then((data) => setTemplates(data))
+  //     .catch((err) => console.error("Failed to load templates:", err));
+  // }, []);
+
+
+  const handleCompare = (type) => {
+
+    setCompareStatus(prev => ({
+      ...prev,
+      [type]: "SUCCESS"
+    }));
+
+  };
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -28,6 +50,18 @@ function UploadCenter({
     } else if (e.type === "dragleave") {
       setIsDragActive(false);
     }
+  };
+
+
+  const handleViewTypeDevices = (type) => {
+
+    const typeDevices = filteredDevices.filter(
+      d => d.device_type === type
+    );
+
+    setSelectedTypeDevices(typeDevices);
+    setSelectedTypeName(type);
+    setShowTypeModal(true);
   };
 
   const handleDrop = (e) => {
@@ -74,6 +108,36 @@ function UploadCenter({
 
   // Get recent 5 jobs
   const uploadHistory = [...jobs].slice(0, 5);
+  const filteredDevices = selectedJob
+    ? devices.filter(
+      (device) =>
+        device.upload_id === (selectedJob._id || selectedJob.id)
+    )
+    : [];
+
+  const deviceCounts = filteredDevices.reduce(
+    (acc, device) => {
+      const type = device.device_type || "Unknown";
+
+      acc[type] = (acc[type] || 0) + 1;
+
+      return acc;
+    },
+    {}
+  );
+  const totalDeviceTypes =
+    Object.keys(deviceCounts).length;
+
+  const completedDeviceTypes =
+    Object.values(compareStatus).filter(
+      status => status === "SUCCESS"
+    ).length;
+
+  const folderStatus =
+    totalDeviceTypes > 0 &&
+      completedDeviceTypes === totalDeviceTypes
+      ? "SUCCESS"
+      : "PENDING";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -123,6 +187,190 @@ function UploadCenter({
               placeholder="e.g. branch_office_configs"
               required
             />
+
+
+
+            <div className="space-y-2">
+
+
+              {/* Detected Device Types */}
+
+              {Object.keys(deviceCounts).length > 0 && (
+
+                <div className="space-y-3">
+                  {selectedJob && (
+                    <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-3">
+
+                      <div className="text-xs text-slate-500">
+                        Selected Upload
+                      </div>
+
+                      <div className="flex justify-between items-center">
+
+                        <div className="font-semibold text-cyan-700">
+                          {selectedJob.folder_name}
+                        </div>
+
+                        <div>
+                          {folderStatus === "SUCCESS" ? (
+                            <span className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs">
+                              SUCCESS
+                            </span>
+                          ) : (
+                            <span className="px-2 py-1 rounded bg-yellow-100 text-yellow-700 text-xs">
+                              PENDING
+                            </span>
+                          )}
+                        </div>
+
+                      </div>
+
+                    </div>
+                  )}
+
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                    Detected Device Types
+                  </label>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+
+                    {Object.entries(deviceCounts).map(
+                      ([type, count]) => (
+
+                        <div
+                          key={type}
+                          onClick={() => handleCompare(type)}
+                          className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-cyan-400 transition-all"
+                        >
+
+                          <div className="flex justify-between items-center">
+
+                            <div>
+                              <div className="text-sm font-bold text-slate-800">
+                                {type}
+                              </div>
+
+                              <div className="text-xs text-slate-500 mt-1">
+                                {count} Devices
+                              </div>
+
+                              <div className="mt-2">
+                                {compareStatus[type] === "SUCCESS" ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                    <span className="text-green-600 text-xs font-semibold">
+                                      Success
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                                    <span className="text-red-600 text-xs font-semibold">
+                                      Pending
+                                    </span>
+                                  </div>
+                                )}
+
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewTypeDevices(type);
+                              }}
+                              className="p-2 rounded-lg bg-slate-100 hover:bg-cyan-50"
+                            >
+                              <FaEye className="text-cyan-600" />
+                            </button>
+
+                          </div>
+
+                        </div>
+
+                      )
+                    )}
+
+                    <div className="mt-4 flex justify-end">
+
+                      <button
+                        type="button"
+                        onClick={() => {
+
+                          const updatedStatus = {};
+
+                          Object.keys(deviceCounts).forEach(type => {
+                            updatedStatus[type] = "SUCCESS";
+                          });
+
+                          setCompareStatus(updatedStatus);
+
+                        }}
+                        className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-medium"
+                      >
+                        Process All
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              )}
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                Golden Template
+              </label>
+
+              <select
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-800 focus:outline-none focus:border-cyan-500"
+              // required
+              >
+                <option value="">
+                  Select Template
+                </option>
+
+                {templates.map((template) => (
+                  <option
+                    key={template._id}
+                    value={template._id}
+                  >
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+
+              {selectedTemplate && (
+
+                <div className="mt-3 bg-cyan-50 border border-cyan-100 rounded-xl p-4">
+
+                  <h4 className="font-semibold text-cyan-700">
+                    Selected Audit Template
+                  </h4>
+
+                  <div className="mt-2 text-sm text-slate-700">
+
+                    <p>
+                      Template:
+                      <span className="font-mono ml-2">
+                        {selectedTemplate}
+                      </span>
+                    </p>
+
+                    <p className="mt-2 text-slate-500">
+                      Only devices matching this template
+                      will be audited.
+                    </p>
+
+                  </div>
+
+                </div>
+
+              )}
+            </div>
           </div>
 
           {/* Drag & Drop Zone */}
@@ -260,8 +508,22 @@ function UploadCenter({
           ) : (
             <div className="space-y-3 text-xs">
               {uploadHistory.map((job) => (
-                <div key={job._id || job.id} className="flex justify-between items-start gap-2 border-b border-slate-50 pb-2.5 last:border-0 last:pb-0">
-                  <div className="min-w-0 flex-1">
+
+
+                <div
+                  key={job._id || job.id}
+                  onClick={() => {
+                    setSelectedJob(job);
+                    setCompareStatus({});
+                  }}
+                  className={`cursor-pointer flex justify-between items-start gap-2 border-b border-slate-50 pb-2.5 last:border-0 last:pb-0 rounded-lg p-2 transition
+
+  ${selectedJob?._id === job._id
+                      ? "bg-cyan-50 border border-cyan-200"
+                      : "hover:bg-slate-50"
+                    }
+  `}
+                >                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-700 truncate">{job.folder_name}</p>
                     <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                       {job.files_count} files • {formatDate(job.created_at)}
@@ -330,8 +592,88 @@ function UploadCenter({
           )}
         </div>
       </div>
+
+      {showTypeModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+          <div className="bg-white rounded-xl p-6 w-[700px] max-h-[80vh] overflow-auto">
+
+            <div className="flex justify-between mb-4">
+
+              <h2 className="text-lg font-bold">
+                {selectedTypeName} Devices
+              </h2>
+
+              <button
+                onClick={() => setShowTypeModal(false)}
+              >
+                ✕
+              </button>
+
+            </div>
+
+            <table className="w-full">
+
+              <thead>
+                <tr>
+                  <th className="text-left">Hostname</th>
+                  <th className="text-left">Type</th>
+                  <th className="text-left">Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {selectedTypeDevices.map(device => (
+                  <tr
+                    key={device._id}
+                    className="border-t"
+                  >
+                    <td className="py-2">
+                      {device.device_name}
+                    </td>
+
+                    <td>
+                      {device.device_type}
+                    </td>
+
+                    <td>
+                      {compareStatus[selectedTypeName] === "SUCCESS" ? (
+
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          <span className="text-green-600 text-xs font-semibold">
+                            Success
+                          </span>
+                        </div>
+
+                      ) : (
+
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                          <span className="text-red-600 text-xs font-semibold">
+                            Pending
+                          </span>
+                        </div>
+
+                      )}
+                    </td>
+                  </tr>
+                ))}
+
+              </tbody>
+
+            </table>
+
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 }
+
+
 
 export default UploadCenter;
