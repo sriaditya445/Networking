@@ -7,16 +7,14 @@ from app.workers.extraction_worker import (
     ExtractionWorker
 )
 from app.services.upload_service import (UploadService)
-from app.workers.template_selection_worker import (
-    TemplateSelectionWorker
-)
+from datetime import datetime
 
-async def process_uploaded_jobs():
+async def process_uploaded_uploads():
     uploads = await UploadService.get_uploads_by_status("PENDING_EXTRACTION")
 
     if not uploads:
         logger.info(
-            "No uploaded jobs found."
+            "No uploaded uploads found."
         )
         return
 
@@ -26,7 +24,7 @@ async def process_uploaded_jobs():
         )
 
 async def process_pending_uploads():
-    uploads = await UploadService.get_uploads_by_status("PENDING_PROCESSING")
+    uploads = await UploadService.get_uploads_by_status("ANALYZING_DEVICES")
 
     if not uploads:
         logger.info(
@@ -38,16 +36,6 @@ async def process_pending_uploads():
         await ParserWorker.process_upload_job(
             str(upload["_id"])
         )
-
-# async def process_pending_template_selection():
-
-#     uploads = await UploadService.get_uploads_by_status("PROCESSING")
-
-#     for upload in uploads:
-
-#         await TemplateSelectionWorker.process_template_selection(
-#             str(upload["_id"])
-#         )
 
 async def process_pending_audits():
     """
@@ -65,6 +53,13 @@ async def process_pending_audits():
     logger.info(f"Processing {len(uploads)} uploads for audit")
 
     for upload in uploads:
-        await AuditWorker.process_audit_job(
+        await UploadService.update_upload(
+            str(upload["_id"]),
+            {
+                "status": "AUDIT_IN_PROGRESS",
+                "updated_at": datetime.utcnow()
+            }
+        )
+        await AuditWorker.process_audit_upload(
             str(upload["_id"])
         )

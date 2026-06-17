@@ -10,11 +10,11 @@ class StatsService:
     async def get_stats():
 
         try:
-            total_jobs = await  UploadRepository. count({})
-            pending_jobs = await  UploadRepository. count({"status": {"$in": ["pending", "processing"]}})
-            # processing_jobs = await  UploadRepository. count({"status": "processing"})
-            success_jobs = await  UploadRepository. count({"status": "success"})
-            failed_jobs = await  UploadRepository. count({"status": "failed"})
+            total_uploads = await  UploadRepository. count({})
+            pending_uploads = await  UploadRepository. count({"status": {"$in": ["pending", "processing"]}})
+            # processing_uploads = await  UploadRepository. count({"status": "processing"})
+            success_uploads = await  UploadRepository. count({"status": "success"})
+            failed_uploads = await  UploadRepository. count({"status": "failed"})
 
             total_devices = await DeviceService.count_devices()
             switches = await DeviceService.count_devices({"device_type": "Switch"})
@@ -27,11 +27,11 @@ class StatsService:
             })
 
             return {
-                "total_jobs": total_jobs,
-                # "pending_jobs": pending_jobs + processing_jobs,
-                "pending_jobs": pending_jobs,
-                "success_jobs": success_jobs,
-                "failed_jobs": failed_jobs,
+                "total_uploads": total_uploads,
+                # "pending_uploads": pending_uploads + processing_uploads,
+                "pending_uploads": pending_uploads,
+                "success_uploads": success_uploads,
+                "failed_uploads": failed_uploads,
                 "total_devices": total_devices,
                 "switches_count": switches,
                 "routers_count": routers,

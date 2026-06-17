@@ -1,0 +1,28 @@
+! SYSTEM
+version 16.12
+hostname {{ hostname }}
+
+! AAA
+aaa new-model
+
+! SECURITY
+no ip domain-lookup
+
+! DNS
+ip domain-name {{ domain_name }}
+
+! NTP
+ntp server {{ ntp_servers }}
+
+! SNMP
+snmp-server community {{ snmp_group }} RO
+
+! LOGGING
+logging host {{ syslog_servers }}
+
+! INTERFACES
+interface GigabitEthernet1/0/1
+
+! HIGH AVAILABILITY
+interface GigabitEthernet1/0/2
+ standby 1 ip {{ ip_address }}

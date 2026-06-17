@@ -16,17 +16,12 @@ from app.services.device_service import (
 from app.services.parser_service import (
     ParserService
 )
-
+from app.services.template_service import (TemplateService)
 class ParserWorker:
 
     async def process_upload_job(upload_id: str):
 
-        logger.info(f"Starting parser job: {upload_id}")
-
-        await UploadService.update_upload(upload_id, {
-            "status": "PARSING",
-            "updated_at": datetime.utcnow()
-        })
+        logger.info(f"Starting parser upload: {upload_id}")
 
         try:
             devices = await DeviceService.get_devices(
@@ -67,21 +62,25 @@ class ParserWorker:
                     )
                     result = (ParserService.parse_device( content, os.path.basename(file_path)))
 
+                    template = await TemplateService.find_template(
+                        vendor=result.get("vendor"),
+                        device_type=result.get("device_type"),
+                        model=result.get("model")
+                    )
+
                     await DeviceService.update_device(
                         str(device_id),
                         {
-                            
-                            "device_name": result.get("device_name", "Unknown"),
-                            "device_type": result.get("device_type", "Unknown"),
-                            "vendor": result.get("vendor"),
+                            **result,
                             "configuration": content,
-                            "configuration_json":
-                                result.get("configuration_json", {}),
                             "processing_status": "SUCCESS",
-                            "parsed_at": datetime.utcnow()
+                            "parsed_at": datetime.utcnow(),
+                            "template_status": "SELECTED" if template else "FAILED",
+                            "template_id": (
+                                str(template["_id"]) if template else None)
                         }
                     )
-
+                    
                     success_count += 1
 
                 except Exception as file_error:
@@ -162,7 +161,7 @@ class ParserWorker:
                 await UploadService.update_upload(
                     upload_id,
                     {
-                        "status": "WAITING_TEMPLATE_SELECTION",
+                        "status": "WAITING_AUDIT_SELECTION",
                         "updated_at": datetime.utcnow()
                     }
                 )

@@ -9,17 +9,17 @@ class UploadRepository:
         return get_db().uploads
 
     @staticmethod
-    async def create(job_doc: dict):
-        return await UploadRepository.collection().insert_one(job_doc)
+    async def create(upload_doc: dict):
+        return await UploadRepository.collection().insert_one(upload_doc)
 
     @staticmethod
     async def get_all():
         return await UploadRepository.collection().find().sort("created_at", -1).to_list(100)
 
     @staticmethod
-    async def get_by_id(job_id: str):
+    async def get_by_id(upload_id: str):
         return await UploadRepository.collection().find_one(
-            {"_id": ObjectId(job_id)}
+            {"_id": ObjectId(upload_id)}
         )
     
     @staticmethod
@@ -29,16 +29,16 @@ class UploadRepository:
         ).to_list(100)
 
     @staticmethod
-    async def update(job_id: str, data: dict):
+    async def update(upload_id: str, data: dict):
         return await UploadRepository.collection().update_one(
-            {"_id": ObjectId(job_id)},
+            {"_id": ObjectId(upload_id)},
             {"$set": data}
         )
 
     @staticmethod
-    async def delete(job_id: str):
+    async def delete(upload_id: str):
         return await UploadRepository.collection().delete_one(
-            {"_id": ObjectId(job_id)}
+            {"_id": ObjectId(upload_id)}
         )
 
     @staticmethod

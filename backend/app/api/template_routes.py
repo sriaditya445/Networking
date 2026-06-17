@@ -35,12 +35,14 @@ router = APIRouter(
 )
 async def get_templates(
     vendor: str = None,
-    device_type: str = None
+    device_type: str = None,
+    model:str | None = None
 ):
 
     templates = await TemplateService.get_templates(
         vendor=vendor,
-        device_type=device_type
+        device_type=device_type,
+        model = model
     )
 
     response = []
@@ -52,19 +54,13 @@ async def get_templates(
                 id=str(template["_id"]),
                 vendor=template["vendor"],
                 device_type=template["device_type"],
+                model=template.get("model"),
                 template_name=template["template_name"],
                 template_type=template["template_type"],
                 template_content=template["template_content"],
-                sections=template.get(
-                    "sections",
-                    {}
-                ),
-                created_at=template.get(
-                    "created_at"
-                ),
-                updated_at=template.get(
-                    "updated_at"
-                )
+                sections=template.get("sections", {}),
+                created_at=template.get("created_at"),
+                updated_at=template.get("updated_at")
             )
         )
 
@@ -93,19 +89,13 @@ async def get_template(
         id=template["_id"],
         vendor=template["vendor"],
         device_type=template["device_type"],
+        model=template.get("model"),
         template_name=template["template_name"],
         template_type=template["template_type"],
         template_content=template["template_content"],
-        sections=template.get(
-            "sections",
-            {}
-        ),
-        created_at=template.get(
-            "created_at"
-        ),
-        updated_at=template.get(
-            "updated_at"
-        )
+        sections=template.get("sections", {}),
+        created_at=template.get("created_at"),
+        updated_at=template.get("updated_at")
     )
 
 @router.post(
@@ -113,13 +103,10 @@ async def get_template(
     response_model=GoldenTemplateResponse
 )
 async def upload_template(
-
     vendor: str = Form(...),
-
     device_type: str = Form(...),
-
+    model: str | None = Form(None),
     template_name: str = Form(...),
-
     file: UploadFile = File(...)
 ):
 
@@ -133,9 +120,13 @@ async def upload_template(
         content
     )
 
+    if model in ["", "None", "null"]:
+        model = None
+
     doc = {
         "vendor": vendor,
         "device_type": device_type,
+        "model": model,
         "template_name": template_name,
         "template_type": "jinja2",
         "template_content": content,
@@ -150,11 +141,7 @@ async def upload_template(
         )
     )
 
-    created = (
-        await TemplateService.get_template(
-            template_id
-        )
-    )
+    created = await TemplateService.get_template(template_id)
 
     return GoldenTemplateResponse(
         id=created["_id"],
@@ -164,42 +151,6 @@ async def upload_template(
             if k != "_id"
         }
     )
-
-# @router.post(
-#     "",
-#     response_model=GoldenTemplateResponse
-# )
-
-# async def create_template(
-#     template: GoldenTemplateCreate
-# ):
-
-#     parsed = parse_template_content(
-#         template.template_content
-#     )
-
-#     doc = template.model_dump()
-
-#     doc["sections"] = parsed.sections
-#     doc["created_at"] = datetime.utcnow()
-#     doc["updated_at"] = datetime.utcnow()
-
-#     template_id = await TemplateService.create_template(
-#         doc
-#     )
-
-#     created = await TemplateService.get_template(
-#         template_id
-#     )
-
-#     return GoldenTemplateResponse(
-#         id=created["_id"],
-#         **{
-#             k: v
-#             for k, v in created.items()
-#             if k != "_id"
-#         }
-#     )
 
 @router.put(
     "/{template_id}",
