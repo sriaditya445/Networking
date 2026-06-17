@@ -13,9 +13,19 @@ function UploadCenter({
   backendOnline,
   handleUploadSubmit,
   jobs,
+  devices,
+
   formatDate,
+  selectedTemplate,
+  setSelectedTemplate,
+
   renderStatusBadge
 }) {
+
+
+  const [templates, setTemplates] = useState([]);
+  const [selectedJob, setSelectedJob] = useState(null);
+
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
@@ -581,7 +591,7 @@ function UploadCenter({
                       />
                     </div>
 
-                    
+
                   </div>
                   <div className="shrink-0">
                     {renderStatusBadge(job.status)}
