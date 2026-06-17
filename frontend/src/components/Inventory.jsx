@@ -25,13 +25,42 @@ function Inventory({ devices, jobs, onTypeClick }) {
     : devices;
 
   // Counts based on filtered devices
-  const switches = filteredDevices.filter(d => d.device_type === 'Switch');
+  const switches = filteredDevices.filter(
+    d =>
+      d.device_type === "L2 Switch" ||
+      d.device_type === "L3 Switch" ||
+      d.device_type === "Core Switch"
+  );
   const routers = filteredDevices.filter(d => d.device_type === 'Router');
   const firewalls = filteredDevices.filter(d => d.device_type === 'Firewall');
   const aps = filteredDevices.filter(d => d.device_type === 'AccessPoint');
   const wlcs = filteredDevices.filter(d => d.device_type === 'WLC');
-  const unknowns = filteredDevices.filter(d => !['Switch', 'Router', 'Firewall', 'AccessPoint', 'WLC'].includes(d.device_type));
+  // const unknowns = filteredDevices.filter(d => !['Switch', 'Router', 'Firewall', 'AccessPoint', 'WLC'].includes(d.device_type));
 
+  const unknowns = filteredDevices.filter(
+    d =>
+      ![
+        "L2 Switch",
+        "L3 Switch",
+        "Core Switch",
+        "Router",
+        "Firewall",
+        "AccessPoint",
+        "WLC"
+      ].includes(d.device_type)
+  );
+  console.log(filteredDevices);
+  const l2Count = filteredDevices.filter(
+    d => d.device_type === "L2 Switch"
+  ).length;
+
+  const l3Count = filteredDevices.filter(
+    d => d.device_type === "L3 Switch"
+  ).length;
+
+  const coreCount = filteredDevices.filter(
+    d => d.device_type === "Core Switch"
+  ).length;
   const components = [
     {
       id: 'Switch',
@@ -43,7 +72,13 @@ function Inventory({ devices, jobs, onTypeClick }) {
       description: 'L2/L3 Network switches identified via "switchport" configuration directives.',
       gradient: 'from-cyan-500/20 to-teal-500/10 hover:border-cyan-400/40',
       // SVG: Switchboard matrix ports
-      icon: <FaNetworkWired className="text-5xl text-cyan-500" />
+      icon: <FaNetworkWired className="text-5xl text-cyan-500" />,
+
+      subCategories: {
+        l2: l2Count,
+        l3: l3Count,
+        core: coreCount
+      }
     },
     {
       id: 'Router',
@@ -164,6 +199,32 @@ function Inventory({ devices, jobs, onTypeClick }) {
             <p className="text-xs text-slate-500 leading-relaxed max-w-[90%] mt-2">
               {comp.description}
             </p>
+
+            {/* Switch Sub Categories */}
+            {comp.id === "Switch" && (
+              <div className="mt-3 rounded-lg p-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">L2 Switches</span>
+                  <span className="font-semibold">
+                    {comp.subCategories?.l2 || 0}
+                  </span>
+                </div>
+
+                <div className="flex justify-between mt-1">
+                  <span className="text-slate-600">L3 Switches</span>
+                  <span className="font-semibold">
+                    {comp.subCategories?.l3 || 0}
+                  </span>
+                </div>
+
+                <div className="flex justify-between mt-1">
+                  <span className="text-slate-600">Core Switches</span>
+                  <span className="font-semibold">
+                    {comp.subCategories?.core || 0}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Bottom Counter & Link */}
             <div className="flex justify-between items-center border-t border-slate-100 pt-4 mt-auto">
