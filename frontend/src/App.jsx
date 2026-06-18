@@ -13,6 +13,8 @@ import ProcessingQueue from './components/ProcessingQueue';
 import Configurations from './components/Configurations';
 import Downloads from './components/Downloads';
 import SettingsTab from './components/SettingsTab';
+import VendorManagement from './components/VendorManagement';
+import DeviceManagement from './components/DeviceManagement';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -21,10 +23,10 @@ function App() {
   const [jobs, setJobs] = useState([]);
   const [devices, setDevices] = useState([]);
   const [stats, setStats] = useState({
-    total_jobs: 0,
-    pending_jobs: 0,
-    success_jobs: 0,
-    failed_jobs: 0,
+    total_uploads: 0,
+    pending_uploads: 0,
+    success_uploads: 0,
+    failed_uploads: 0,
     total_devices: 0,
     switches_count: 0,
     routers_count: 0,
@@ -63,7 +65,7 @@ function App() {
       setBackendOnline(true);
 
       // 2. Fetch Jobs
-      const jobsRes = await fetch(`${API_BASE_URL}/api/jobs`);
+      const jobsRes = await fetch(`${API_BASE_URL}/api/uploads`);
       if (jobsRes.ok) {
         const jobsData = await jobsRes.json();
         setJobs(jobsData);
@@ -163,7 +165,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/uploads/${jobId}`, {
         method: 'DELETE'
       });
       if (response.ok) {
@@ -247,6 +249,10 @@ function App() {
   // Render content of active tab
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'vendor_management':
+        return <VendorManagement />;
+      case 'device_management':
+        return <DeviceManagement />;
       case 'dashboard':
         return (
           <Dashboard
@@ -282,6 +288,7 @@ function App() {
             backendOnline={backendOnline}
             handleUploadSubmit={handleUploadSubmit}
             jobs={jobs}
+            devices={devices}
             formatDate={formatDate}
             renderStatusBadge={renderStatusBadge}
           />

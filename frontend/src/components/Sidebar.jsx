@@ -13,7 +13,9 @@ import {
   FaSignOutAlt,
   FaUserCircle,
   FaBars,
-  FaTimes
+  FaTimes,
+  FaBuilding,
+  FaNetworkWired
 } from 'react-icons/fa';
 
 function Sidebar({
@@ -26,6 +28,8 @@ function Sidebar({
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: FaChartPie },
+    { id: 'vendor_management', label: 'Vendor Management', icon: FaBuilding },
+    { id: 'device_management', label: 'Device Management', icon: FaNetworkWired },
     { id: 'inventory', label: 'Inventory', icon: FaServer },
     { id: 'upload', label: 'Upload Center', icon: FaUpload },
     { id: 'devices', label: 'Discovered Devices', icon: FaHdd },
