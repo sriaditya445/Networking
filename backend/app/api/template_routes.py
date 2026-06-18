@@ -8,6 +8,7 @@ from fastapi import (
 from app.schemas.common_schema import (
     GoldenTemplateCreate,
     GoldenTemplateResponse,
+    GoldenTemplateListResponse,
     ActionResponse
 )
 
@@ -31,7 +32,7 @@ router = APIRouter(
 
 @router.get(
     "",
-    response_model=list[GoldenTemplateResponse]
+    response_model=list[GoldenTemplateListResponse]
 )
 async def get_templates(
     vendor: str = None,

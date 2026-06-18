@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class ActionResponse(BaseModel):
     message: str
     id: str
-    
+
 class DeviceType(str, Enum):
     SWITCH = "switch"
     ROUTER = "router"
@@ -92,6 +92,15 @@ class AuditReportResponse(BaseModel):
     audit_mode: str = "full"
     created_at: datetime | None = None
 
+class GoldenTemplateListResponse(BaseModel):
+    id: str
+    vendor: str
+    device_type: str
+    model: str | None = None
+    template_name: str
+    template_type: str
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
 
 class GoldenTemplateCreate(BaseModel):
     vendor: Vendor = Vendor.CISCO
