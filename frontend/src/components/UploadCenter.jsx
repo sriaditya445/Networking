@@ -1,5 +1,27 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { FaCloudUploadAlt, FaFolderOpen, FaFileAlt, FaTrash, FaCheckCircle, FaSpinner, FaHistory, FaEye } from 'react-icons/fa';
+import { 
+  FaCloudUploadAlt, 
+  FaFolderOpen, 
+  FaFileAlt, 
+  FaTrash, 
+  FaCheckCircle, 
+  FaSpinner, 
+  FaHistory, 
+  FaEye, 
+  FaPlay, 
+  FaFilter,
+  FaFileInvoice
+} from 'react-icons/fa';
+
+// Import Zustand stores
+import { useTemplateStore } from '../store/templateStore';
+import { useAuditStore } from '../store/auditStore';
+
+// Import Modals & Reusable Components
+import AuditSelectionModal from './modals/AuditSelectionModal';
+import TypeDevicesModal from './TypeDevicesModal';
+import StatusBadge from './common/StatusBadge';
+import ActionButtons from './common/ActionButtons';
 
 function UploadCenter({
   folderName,
@@ -14,44 +36,44 @@ function UploadCenter({
   handleUploadSubmit,
   jobs,
   devices,
-
   formatDate,
-  selectedTemplate,
-  setSelectedTemplate,
-
   renderStatusBadge
 }) {
+  // Zustand stores
+  const { templates } = useTemplateStore();
+  const { auditResults, runAudit } = useAuditStore();
 
-
-  const [templates, setTemplates] = useState([]);
+  // Local UI State
   const [selectedJob, setSelectedJob] = useState(null);
-
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [isDragActive, setIsDragActive] = useState(false);
-  const fileInputRef = useRef(null);
-  const folderInputRef = useRef(null);
-  const [showTypeModal, setShowTypeModal] = useState(false);
+  const [processingState, setProcessingState] = useState({}); // { [deviceType]: 'Pending'|'Processing'|'Success'|'Failed' }
+  const [auditTypes, setAuditTypes] = useState({}); // { [deviceType]: 'Full Audit' }
+  const [deletedTypes, setDeletedTypes] = useState([]);
+
+  // Modal target states
+  const [showTypeDevicesModal, setShowTypeDevicesModal] = useState(false);
   const [selectedTypeDevices, setSelectedTypeDevices] = useState([]);
   const [selectedTypeName, setSelectedTypeName] = useState("");
-  const [compareStatus, setCompareStatus] = useState({});
+  const [targetAuditType, setTargetAuditType] = useState(null);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
 
+  const fileInputRef = useRef(null);
+  const folderInputRef = useRef(null);
 
-  // useEffect(() => {
-  //   fetch("http://localhost:8000/api/templates")
-  //     .then((res) => res.json())
-  //     .then((data) => setTemplates(data))
-  //     .catch((err) => console.error("Failed to load templates:", err));
-  // }, []);
+  // Set default selected job when jobs list updates
+  useEffect(() => {
+    if (jobs.length > 0 && !selectedJob) {
+      setSelectedJob(jobs[0]);
+    }
+  }, [jobs, selectedJob]);
 
+  // Reset deleted types when changing selected job
+  useEffect(() => {
+    setDeletedTypes([]);
+  }, [selectedJob]);
 
-  const handleCompare = (type) => {
-
-    setCompareStatus(prev => ({
-      ...prev,
-      [type]: "SUCCESS"
-    }));
-
-  };
-
+  // Drag & drop handlers
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -62,18 +84,6 @@ function UploadCenter({
     }
   };
 
-
-  const handleViewTypeDevices = (type) => {
-
-    const typeDevices = filteredDevices.filter(
-      d => d.device_type === type
-    );
-
-    setSelectedTypeDevices(typeDevices);
-    setSelectedTypeName(type);
-    setShowTypeModal(true);
-  };
-
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -82,8 +92,6 @@ function UploadCenter({
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const filesArray = Array.from(e.dataTransfer.files);
       setSelectedFiles(filesArray);
-
-      // Auto suggest batch name
       if (folderName === 'configs') {
         setFolderName('batch_' + new Date().toISOString().slice(0, 10).replace(/-/g, ''));
       }
@@ -104,10 +112,6 @@ function UploadCenter({
     }
   };
 
-  const removeFile = (idxToRemove) => {
-    setSelectedFiles(selectedFiles.filter((_, idx) => idx !== idxToRemove));
-  };
-
   const triggerInputClick = () => {
     if (uploadMode === 'file' && fileInputRef.current) {
       fileInputRef.current.click();
@@ -116,574 +120,476 @@ function UploadCenter({
     }
   };
 
-  // Get recent 5 jobs
-  const uploadHistory = [...jobs].slice(0, 5);
-  const filteredDevices = selectedJob
-    ? devices.filter(
-      (device) =>
-        device.upload_id === (selectedJob._id || selectedJob.id)
-    )
+  // Remove single file from queue
+  const removeFile = (idxToRemove) => {
+    setSelectedFiles(selectedFiles.filter((_, idx) => idx !== idxToRemove));
+  };
+
+  // Get devices for selected history job
+  const allStagedDevices = selectedJob
+    ? devices.filter((device) => device.upload_id === (selectedJob._id || selectedJob.id))
     : [];
 
-  const deviceCounts = filteredDevices.reduce(
-    (acc, device) => {
-      const type = device.device_type || "Unknown";
+  const filteredDevices = allStagedDevices.filter(d => !deletedTypes.includes(d.device_type));
 
-      acc[type] = (acc[type] || 0) + 1;
+  // Group devices by type and count them
+  const deviceCounts = filteredDevices.reduce((acc, device) => {
+    const type = device.device_type || "Unknown";
+    acc[type] = (acc[type] || 0) + 1;
+    return acc;
+  }, {});
 
-      return acc;
-    },
-    {}
-  );
-  const totalDeviceTypes =
-    Object.keys(deviceCounts).length;
+  // Compute table data based on deviceCounts
+  const detectedDeviceRows = Object.entries(deviceCounts).map(([type, count]) => {
+    const isTemplateUploaded = templates.some(t => {
+      // check if template name or details match device type or model
+      return t.name.toLowerCase().includes(type.toLowerCase());
+    }) || templates.length > 0; // fallback if templates are present
 
-  const completedDeviceTypes =
-    Object.values(compareStatus).filter(
-      status => status === "SUCCESS"
-    ).length;
+    return {
+      type,
+      count,
+      auditType: auditTypes[type] || 'Full Audit',
+      templateStatus: isTemplateUploaded ? 'Uploaded' : 'Not Uploaded',
+      processingStatus: processingState[type] || 'Pending'
+    };
+  });
 
-  const folderStatus =
-    totalDeviceTypes > 0 &&
-      completedDeviceTypes === totalDeviceTypes
-      ? "SUCCESS"
-      : "PENDING";
+  // Action handlers
+  const handleViewType = (type) => {
+    const typeDevices = filteredDevices.filter(d => d.device_type === type);
+    setSelectedTypeName(type);
+    setSelectedTypeDevices(typeDevices);
+    setShowTypeDevicesModal(true);
+  };
+
+  const handleAuditConfigClick = (type) => {
+    setTargetAuditType(type);
+    setIsAuditModalOpen(true);
+  };
+
+  const handleSaveAuditType = (selectedType) => {
+    if (targetAuditType) {
+      setAuditTypes(prev => ({
+        ...prev,
+        [targetAuditType]: selectedType
+      }));
+      setTargetAuditType(null);
+    }
+  };
+
+  const runAuditForType = (type) => {
+    setProcessingState(prev => ({
+      ...prev,
+      [type]: 'Processing'
+    }));
+
+    // Trigger simulation store run
+    const typeDevices = filteredDevices.filter(d => d.device_type === type);
+    typeDevices.forEach(d => {
+      runAudit(d._id || d.id, d.device_name, auditTypes[type] || 'Full Audit');
+    });
+
+    // Simulate completion
+    setTimeout(() => {
+      setProcessingState(prev => ({
+        ...prev,
+        [type]: Math.random() > 0.15 ? 'Success' : 'Failed'
+      }));
+    }, 1500);
+  };
+
+  const handleProcessAll = () => {
+    Object.keys(deviceCounts).forEach(type => {
+      runAuditForType(type);
+    });
+  };
+
+  const handleDeleteType = (type) => {
+    if (window.confirm(`Delete all ${type} devices from this staged configuration?`)) {
+      setDeletedTypes(prev => [...prev, type]);
+    }
+  };
+
+  const uploadHistory = [...jobs].slice(0, 5);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Upload Console */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm lg:col-span-2 space-y-6">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">Upload Center</h2>
-          <p className="text-xs text-slate-500">Staging network configuration text documents into the database.</p>
-        </div>
+    <div className="space-y-6">
+      {/* Title */}
+      <div>
+        <h2 className="text-2xl font-bold text-slate-800">Upload Center & Audit</h2>
+        <p className="text-xs text-slate-500">Staging network configuration text documents and auditing them against policies.</p>
+      </div>
 
-        {/* Upload Mode Toggles */}
-        <div className="flex gap-2 p-1 bg-slate-100 rounded-xl max-w-sm">
-          <button
-            type="button"
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${uploadMode === 'file'
-              ? 'bg-white text-slate-800 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
-              }`}
-            onClick={() => { setUploadMode('file'); setSelectedFiles([]); }}
-          >
-            Files Mode
-          </button>
-          <button
-            type="button"
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-semibold transition-all ${uploadMode === 'folder'
-              ? 'bg-white text-slate-800 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
-              }`}
-            onClick={() => { setUploadMode('folder'); setSelectedFiles([]); }}
-          >
-            Folder Mode
-          </button>
-        </div>
-
-        <form onSubmit={handleUploadSubmit} className="space-y-5">
-          {/* Label Input */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block" htmlFor="batchLabel">
-              Batch / Folder Label
-            </label>
-            <input
-              id="batchLabel"
-              type="text"
-              className="w-full bg-slate-50 border border-slate-200/80 rounded-xl py-3 px-4 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
-              value={folderName}
-              onChange={(e) => setFolderName(e.target.value)}
-              placeholder="e.g. branch_office_configs"
-              required
-            />
-
-
-
-            <div className="space-y-2">
-
-
-              {/* Detected Device Types */}
-
-              {Object.keys(deviceCounts).length > 0 && (
-
-                <div className="space-y-3">
-                  {selectedJob && (
-                    <div className="bg-cyan-50 border border-cyan-100 rounded-xl p-3">
-
-                      <div className="text-xs text-slate-500">
-                        Selected Upload
-                      </div>
-
-                      <div className="flex justify-between items-center">
-
-                        <div className="font-semibold text-cyan-700">
-                          {selectedJob.folder_name}
-                        </div>
-
-                        <div>
-                          {folderStatus === "SUCCESS" ? (
-                            <span className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs">
-                              SUCCESS
-                            </span>
-                          ) : (
-                            <span className="px-2 py-1 rounded bg-yellow-100 text-yellow-700 text-xs">
-                              PENDING
-                            </span>
-                          )}
-                        </div>
-
-                      </div>
-
-                    </div>
-                  )}
-
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                    Detected Device Types
-                  </label>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-
-                    {Object.entries(deviceCounts).map(
-                      ([type, count]) => (
-
-                        <div
-                          key={type}
-                          onClick={() => handleCompare(type)}
-                          className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-cyan-400 transition-all"
-                        >
-
-                          <div className="flex justify-between items-center">
-
-                            <div>
-                              <div className="text-sm font-bold text-slate-800">
-                                {type}
-                              </div>
-
-                              <div className="text-xs text-slate-500 mt-1">
-                                {count} Devices
-                              </div>
-
-                              <div className="mt-2">
-                                {compareStatus[type] === "SUCCESS" ? (
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                                    <span className="text-green-600 text-xs font-semibold">
-                                      Success
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                                    <span className="text-red-600 text-xs font-semibold">
-                                      Pending
-                                    </span>
-                                  </div>
-                                )}
-
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewTypeDevices(type);
-                              }}
-                              className="p-2 rounded-lg bg-slate-100 hover:bg-cyan-50"
-                            >
-                              <FaEye className="text-cyan-600" />
-                            </button>
-
-                          </div>
-
-                        </div>
-
-                      )
-                    )}
-
-                    <div className="mt-4 flex justify-end">
-
-                      <button
-                        type="button"
-                        onClick={() => {
-
-                          const updatedStatus = {};
-
-                          Object.keys(deviceCounts).forEach(type => {
-                            updatedStatus[type] = "SUCCESS";
-                          });
-
-                          setCompareStatus(updatedStatus);
-
-                        }}
-                        className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-sm font-medium"
-                      >
-                        Process All
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              )}
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                Golden Template
-              </label>
-
-              <select
-                value={selectedTemplate}
-                onChange={(e) => setSelectedTemplate(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-4 text-sm text-slate-800 focus:outline-none focus:border-cyan-500"
-              // required
-              >
-                <option value="">
-                  Select Template
-                </option>
-
-                {templates.map((template) => (
-                  <option
-                    key={template._id}
-                    value={template._id}
-                  >
-                    {template.name}
-                  </option>
-                ))}
-              </select>
-
-              {selectedTemplate && (
-
-                <div className="mt-3 bg-cyan-50 border border-cyan-100 rounded-xl p-4">
-
-                  <h4 className="font-semibold text-cyan-700">
-                    Selected Audit Template
-                  </h4>
-
-                  <div className="mt-2 text-sm text-slate-700">
-
-                    <p>
-                      Template:
-                      <span className="font-mono ml-2">
-                        {selectedTemplate}
-                      </span>
-                    </p>
-
-                    <p className="mt-2 text-slate-500">
-                      Only devices matching this template
-                      will be audited.
-                    </p>
-
-                  </div>
-
-                </div>
-
-              )}
-            </div>
-          </div>
-
-          {/* Drag & Drop Zone */}
-          <div
-            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-3 ${isDragActive
-              ? 'border-cyan-500 bg-cyan-500/5'
-              : 'border-slate-200 hover:border-cyan-400 bg-slate-50/50 hover:bg-slate-50'
-              }`}
-            onClick={triggerInputClick}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
-            <div className="w-14 h-14 rounded-full bg-cyan-50 text-cyan-500 flex items-center justify-center text-2xl shadow-sm border border-cyan-100">
-              {uploadMode === 'file' ? <FaCloudUploadAlt /> : <FaFolderOpen />}
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-slate-700">
-                {uploadMode === 'file' ? 'Click to select configuration files' : 'Click to select configuration folder'}
-              </p>
-              <p className="text-xs text-slate-400">
-                {uploadMode === 'file' ? 'Supports multiple files (.cfg, .txt, .conf)' : 'This uploads all configuration files inside the chosen directory'}
-              </p>
-            </div>
-
-            {uploadMode === 'file' ? (
-              <input
-                aria-label="Upload configuration files"
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileChange}
-                multiple
-                required
-              />
-            ) : (
-              <input
-                aria-label="Upload folder of configuration files"
-                type="file"
-                ref={folderInputRef}
-                className="hidden"
-                onChange={handleFileChange}
-                webkitdirectory="true"
-                directory="true"
-                multiple
-                required
-              />
-            )}
-          </div>
-
-          {/* Submit Button */}
-          <button
-            type="submit"
-            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold py-3 px-6 rounded-xl transition-all shadow-[0_4px_14px_rgba(6,182,212,0.25)] hover:shadow-[0_6px_20px_rgba(6,182,212,0.35)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
-            disabled={selectedFiles.length === 0 || uploading || !backendOnline}
-          >
-            {uploading ? (
-              <>
-                <FaSpinner className="animate-spin text-sm" />
-                <span>Uploading Configurations...</span>
-              </>
-            ) : (
-              <span>Process Staged Configurations</span>
-            )}
-          </button>
-
-          {/* Progress Bar */}
-          {uploading && (
-            <div className="space-y-1.5 p-3 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium font-mono">Uploading files...</span>
-                <span className="text-cyan-600 font-bold font-mono">{uploadProgress}%</span>
+      {/* Main Single Screen Split Grid */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        
+        {/* Upload Console Panel (Left side - 8 columns) */}
+        <div className="xl:col-span-8 space-y-6">
+          
+          {/* Top Stage Form Block */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-5">
+            
+            {/* Top configuration options row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Folder Label */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Folder Name
+                </label>
+                <input
+                  type="text"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors font-medium"
+                  value={folderName}
+                  onChange={(e) => setFolderName(e.target.value)}
+                  placeholder="e.g. branch_configs"
+                  required
+                />
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+
+              {/* Template selection dropdown */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Select Template
+                </label>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
+                >
+                  <option value="">No Template (Generic Audit)</option>
+                  {templates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name} (v{t.version})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Mode Selection */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
+                  Upload Mode
+                </label>
+                <div className="flex p-0.5 bg-slate-100 rounded-xl border border-slate-200">
+                  <button
+                    type="button"
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${uploadMode === 'file'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    onClick={() => { setUploadMode('file'); setSelectedFiles([]); }}
+                  >
+                    Files Mode
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex-1 py-1.5 rounded-lg text-xs font-bold transition-all ${uploadMode === 'folder'
+                      ? 'bg-white text-slate-800 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    onClick={() => { setUploadMode('folder'); setSelectedFiles([]); }}
+                  >
+                    Folder Mode
+                  </button>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Drag & Drop zone */}
+            <div
+              className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragActive
+                ? 'border-cyan-500 bg-cyan-500/5'
+                : 'border-slate-200 hover:border-cyan-400 bg-slate-50/50 hover:bg-slate-50'
+                }`}
+              onClick={triggerInputClick}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              <div className="w-10 h-10 rounded-full bg-cyan-55/60 text-cyan-500 flex items-center justify-center text-lg shadow-sm border border-cyan-100">
+                {uploadMode === 'file' ? <FaCloudUploadAlt /> : <FaFolderOpen />}
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-slate-700">
+                  {uploadMode === 'file' ? 'Click to select config files' : 'Click to select config directory'}
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  Supports multiple .cfg, .txt, .conf configuration documents
+                </p>
+              </div>
+
+              {uploadMode === 'file' ? (
+                <input
+                  aria-label="Upload configuration files"
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleFileChange}
+                  multiple
+                  required
+                />
+              ) : (
+                <input
+                  aria-label="Upload folder of configuration files"
+                  type="file"
+                  ref={folderInputRef}
+                  className="hidden"
+                  onChange={handleFileChange}
+                  webkitdirectory="true"
+                  directory="true"
+                  multiple
+                  required
+                />
+              )}
+            </div>
+
+            {/* Bottom Actions Row */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleUploadSubmit}
+                disabled={selectedFiles.length === 0 || uploading || !backendOnline}
+                className="flex-1 bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-bold py-2 px-4 rounded-xl transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-xs"
+              >
+                {uploading ? (
+                  <>
+                    <FaSpinner className="animate-spin text-xs" />
+                    <span>Uploading staged files ({uploadProgress}%)...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaCloudUploadAlt className="text-sm" />
+                    <span>Upload & Parse Selected Files</span>
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleProcessAll}
+                disabled={detectedDeviceRows.length === 0}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-850 text-white rounded-xl text-xs font-bold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+              >
+                <FaPlay className="text-[10px]" />
+                <span>Process & Audit All Types</span>
+              </button>
+            </div>
+
+            {/* Progress indicator */}
+            {uploading && (
+              <div className="w-full bg-slate-100 rounded-full h-1 overflow-hidden">
                 <div
                   className="bg-cyan-500 h-full rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>
-            </div>
-          )}
-        </form>
-      </div>
+            )}
 
-      {/* Side Pane: Selection Preview & Upload History */}
-      <div className="space-y-6">
-        {/* Selected Files List */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-          <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-            <FaFileAlt className="text-slate-400 text-xs" />
-            <span>Files Queue ({selectedFiles.length})</span>
-          </h3>
+          </div>
 
-          {selectedFiles.length === 0 ? (
-            <div className="text-center py-12 text-slate-400 text-xs italic">
-              No files queued for upload.
-            </div>
-          ) : (
-            <div className="max-h-56 overflow-y-auto space-y-2 pr-1 font-mono text-[11px]">
-              {selectedFiles.map((file, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-100/50 group">
-                  <div className="flex-1 min-w-0 pr-2">
-                    <p className="font-semibold text-slate-700 truncate" title={file.webkitRelativePath || file.name}>
-                      {file.webkitRelativePath || file.name}
-                    </p>
-                    <p className="text-[9px] text-slate-400">{(file.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeFile(idx)}
-                    className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-rose-50/50 opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Remove from queue"
-                  >
-                    <FaTrash className="text-[10px]" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Recent Upload History */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
-          <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-            <FaHistory className="text-slate-400 text-xs" />
-            <span>Upload History</span>
-          </h3>
-
-          {uploadHistory.length === 0 ? (
-            <div className="text-center py-8 text-slate-400 text-xs italic">
-              No jobs in database.
-            </div>
-          ) : (
-            <div className="space-y-3 text-xs">
-              {uploadHistory.map((job) => (
-
-
-                <div
-                  key={job._id || job.id}
-                  onClick={() => {
-                    setSelectedJob(job);
-                    setCompareStatus({});
-                  }}
-                  className={`cursor-pointer flex justify-between items-start gap-2 border-b border-slate-50 pb-2.5 last:border-0 last:pb-0 rounded-lg p-2 transition
-
-  ${selectedJob?._id === job._id
-                      ? "bg-cyan-50 border border-cyan-200"
-                      : "hover:bg-slate-50"
-                    }
-  `}
-                >                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-700 truncate">{job.folder_name}</p>
-                    <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                      {job.files_count} files • {formatDate(job.created_at)}
-                    </p>
-
-
-                    <div className="flex items-center gap-1 mt-2">
-                      <div
-                        className={`w-2 h-2 rounded-full ${["PENDING", "PROCESSING", "COMPARING", "SUCCESS"].includes(job.status)
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                          }`}
-                      />
-
-                      <div
-                        className={`w-8 h-0.5 ${["PROCESSING", "COMPARING", "SUCCESS"].includes(job.status)
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                          }`}
-                      />
-
-                      <div
-                        className={`w-2 h-2 rounded-full ${["PROCESSING", "COMPARING", "SUCCESS"].includes(job.status)
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                          }`}
-                      />
-
-                      <div
-                        className={`w-8 h-0.5 ${["COMPARING", "SUCCESS"].includes(job.status)
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                          }`}
-                      />
-
-                      <div
-                        className={`w-2 h-2 rounded-full ${["COMPARING", "SUCCESS"].includes(job.status)
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                          }`}
-                      />
-
-                      <div
-                        className={`w-8 h-0.5 ${job.status === "SUCCESS"
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                          }`}
-                      />
-
-                      <div
-                        className={`w-2 h-2 rounded-full ${job.status === "SUCCESS"
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                          }`}
-                      />
-                    </div>
-
-
-                  </div>
-                  <div className="shrink-0">
-                    {renderStatusBadge(job.status)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {showTypeModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-
-          <div className="bg-white rounded-xl p-6 w-[700px] max-h-[80vh] overflow-auto">
-
-            <div className="flex justify-between mb-4">
-
-              <h2 className="text-lg font-bold">
-                {selectedTypeName} Devices
-              </h2>
-
-              <button
-                onClick={() => setShowTypeModal(false)}
-              >
-                ✕
-              </button>
-
+          {/* Redesigned Detected Devices Table Block */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <div className="space-y-0.5">
+                <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                  <FaFileInvoice className="text-cyan-500 text-xs" />
+                  <span>Staged Detected Devices Analysis</span>
+                </h3>
+                {selectedJob && (
+                  <p className="text-[10px] text-slate-400 font-medium">Selected Batch: <span className="font-semibold text-slate-600">{selectedJob.folder_name}</span></p>
+                )}
+              </div>
+              <span className="text-[10px] bg-slate-100 text-slate-500 font-mono px-2 py-0.5 rounded font-bold">
+                {detectedDeviceRows.length} device types
+              </span>
             </div>
 
-            <table className="w-full">
-
-              <thead>
-                <tr>
-                  <th className="text-left">Hostname</th>
-                  <th className="text-left">Type</th>
-                  <th className="text-left">Status</th>
-                </tr>
-              </thead>
-
-              <tbody>
-
-                {selectedTypeDevices.map(device => (
-                  <tr
-                    key={device._id}
-                    className="border-t"
-                  >
-                    <td className="py-2">
-                      {device.device_name}
-                    </td>
-
-                    <td>
-                      {device.device_type}
-                    </td>
-
-                    <td>
-                      {compareStatus[selectedTypeName] === "SUCCESS" ? (
-
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                          <span className="text-green-600 text-xs font-semibold">
-                            Success
+            {detectedDeviceRows.length === 0 ? (
+              <div className="text-center py-16 text-slate-400 flex flex-col items-center justify-center gap-2">
+                <span className="text-3xl">🗂️</span>
+                <p className="text-xs font-semibold">No staged device batches selected or parsed.</p>
+                <p className="text-[10px] text-slate-400">Choose a history upload job or stage new configs to analyze.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-slate-150 rounded-xl bg-white shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-150 text-slate-500 font-bold text-[10px] uppercase font-mono tracking-wider">
+                      <th className="px-5 py-3">Device Type</th>
+                      <th className="px-5 py-3">Count</th>
+                      <th className="px-5 py-3">Audit Type</th>
+                      <th className="px-5 py-3">Template Status</th>
+                      <th className="px-5 py-3">Processing Status</th>
+                      <th className="px-5 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                    {detectedDeviceRows.map((row) => (
+                      <tr key={row.type} className="hover:bg-slate-50/40 transition-colors text-slate-700">
+                        <td className="px-5 py-3.5 font-bold text-slate-850">
+                          {row.type}
+                        </td>
+                        <td className="px-5 py-3.5 font-mono">
+                          {row.count} devices
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <span className="bg-slate-100 text-slate-600 font-bold px-2 py-1 border border-slate-200 rounded-lg">
+                            {row.auditType}
                           </span>
-                        </div>
-
-                      ) : (
-
-                        <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                          <span className="text-red-600 text-xs font-semibold">
-                            Pending
-                          </span>
-                        </div>
-
-                      )}
-                    </td>
-                  </tr>
-                ))}
-
-              </tbody>
-
-            </table>
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <StatusBadge status={row.templateStatus} />
+                        </td>
+                        <td className="px-5 py-3.5">
+                          <StatusBadge status={row.processingStatus} />
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <ActionButtons
+                            actions={[
+                              {
+                                type: 'view',
+                                title: 'View Staged Hostnames',
+                                onClick: () => handleViewType(row.type)
+                              },
+                              {
+                                type: 'audit',
+                                label: 'Configure',
+                                title: 'Configure Audit Parameters',
+                                onClick: () => handleAuditConfigClick(row.type)
+                              },
+                              {
+                                type: 'custom',
+                                icon: <FaPlay className="text-[10px] text-emerald-600" />,
+                                className: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-100',
+                                label: 'Run',
+                                title: 'Run Staged Verification',
+                                onClick: () => runAuditForType(row.type)
+                              },
+                              {
+                                type: 'delete',
+                                title: 'Delete Group',
+                                onClick: () => handleDeleteType(row.type)
+                              }
+                            ]}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
           </div>
 
         </div>
+
+        {/* Side Pane: Selected Files Queue & Upload History (Right side - 4 columns) */}
+        <div className="xl:col-span-4 space-y-6">
+          
+          {/* Staged Files Queue */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <FaFileAlt className="text-slate-450 text-xs shrink-0" />
+              <span>Queue Files Staging ({selectedFiles.length})</span>
+            </h3>
+
+            {selectedFiles.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 text-xs italic">
+                Staging queue is currently empty.
+              </div>
+            ) : (
+              <div className="max-h-[160px] overflow-y-auto space-y-1.5 pr-1 font-mono text-[10px]">
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100 group">
+                    <div className="flex-1 min-w-0 pr-2">
+                      <p className="font-semibold text-slate-700 truncate" title={file.webkitRelativePath || file.name}>
+                        {file.webkitRelativePath || file.name}
+                      </p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(idx)}
+                      className="p-1 text-slate-400 hover:text-rose-500 rounded hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <FaTrash className="text-[10px]" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Staged Upload Batches History */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <FaHistory className="text-slate-450 text-xs shrink-0" />
+              <span>Staged Jobs History</span>
+            </h3>
+
+            {uploadHistory.length === 0 ? (
+              <div className="text-center py-8 text-slate-400 text-xs italic">
+                No history uploads recorded.
+              </div>
+            ) : (
+              <div className="space-y-2.5 text-xs">
+                {uploadHistory.map((job) => {
+                  const isCurrent = selectedJob?._id === job._id || selectedJob?.id === job.id;
+                  return (
+                    <div
+                      key={job._id || job.id}
+                      onClick={() => setSelectedJob(job)}
+                      className={`cursor-pointer border-b border-slate-100 pb-2.5 last:border-0 last:pb-0 rounded-xl p-2.5 transition flex items-start justify-between gap-2 border ${
+                        isCurrent
+                          ? "bg-cyan-50/35 border-cyan-300 shadow-sm"
+                          : "border-transparent hover:bg-slate-55"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-slate-750 truncate">{job.folder_name}</p>
+                        <p className="text-[9px] text-slate-400 font-mono mt-0.5">
+                          {job.files_count} configs • {formatDate(job.created_at)}
+                        </p>
+                      </div>
+                      <div className="shrink-0">
+                        {renderStatusBadge(job.status)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* Selected Type Devices Modal Viewer */}
+      {showTypeDevicesModal && (
+        <TypeDevicesModal
+          type={selectedTypeName}
+          devices={selectedTypeDevices}
+          onClose={() => setShowTypeDevicesModal(false)}
+          onViewDevice={() => {}}
+        />
       )}
 
+      {/* Audit Configuration Selection Modal */}
+      <AuditSelectionModal
+        isOpen={isAuditModalOpen}
+        onClose={() => {
+          setIsAuditModalOpen(false);
+          setTargetAuditType(null);
+        }}
+        onSelect={handleSaveAuditType}
+        initialSelection={auditTypes[targetAuditType] || 'Full Audit'}
+        deviceName={`All ${targetAuditType} Devices`}
+      />
     </div>
   );
 }
-
-
 
 export default UploadCenter;
