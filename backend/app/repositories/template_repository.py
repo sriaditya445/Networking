@@ -37,6 +37,9 @@ class TemplateRepository:
                 }
             )
 
+        if template:
+            template["_id"] = str(template["_id"])
+
         return template
 
     @staticmethod
@@ -57,9 +60,18 @@ class TemplateRepository:
         if model:
             query["model"] = model
 
-        return await TemplateRepository.collection().find(
-            query
-        ).to_list(100)
+        templates = await (
+            TemplateRepository.collection()
+            .find(query)
+            .sort("created_at", -1)
+            .to_list(100)
+        )
+
+        for template in templates:
+            template["id"] = str(template.pop("_id"))
+
+        return templates
+
 
     @staticmethod
     async def create(template_doc: dict):
@@ -68,19 +80,16 @@ class TemplateRepository:
             template_doc
         )
 
-        return str(result.inserted_id)
+        return result
 
     @staticmethod
     async def get_by_id(template_id: str):
-
         template = await TemplateRepository.collection().find_one(
-            {
-                "_id": ObjectId(template_id)
-            }
+            {"_id": ObjectId(template_id)}
         )
 
         if template:
-            template["_id"] = str(template["_id"])
+            template["id"] = str(template.pop("_id"))
 
         return template
 

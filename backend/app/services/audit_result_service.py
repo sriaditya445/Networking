@@ -13,13 +13,16 @@ class AuditResultService:
     @staticmethod
     async def create_result(
         device: dict,
-        audit_result: dict
+        audit_result: dict,
+        audit_mode: str,
+        selected_sections: list[str]
     ):
 
         result_doc = AuditResultModel(
             device_id=str(device["_id"]),
             template_id=device["template_id"],
-            audit_mode=audit_result["audit_mode"],
+            audit_mode=audit_mode,
+            selected_sections=selected_sections,
             overall_score=audit_result["score"],
             category_scores=audit_result["category_scores"],
             passed_rules=audit_result["passed"],

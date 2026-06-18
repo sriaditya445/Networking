@@ -5,6 +5,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class ActionResponse(BaseModel):
+    message: str
+    id: str
+    
 class DeviceType(str, Enum):
     SWITCH = "switch"
     ROUTER = "router"
@@ -90,8 +94,8 @@ class AuditReportResponse(BaseModel):
 
 
 class GoldenTemplateCreate(BaseModel):
-    vendor: str = "Cisco"
-    device_type: str
+    vendor: Vendor = Vendor.CISCO
+    device_type: DeviceType
     model: str | None = None
     template_name: str
     template_type: str = "jinja2"

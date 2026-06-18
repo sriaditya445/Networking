@@ -1,13 +1,45 @@
 # services/template_service.py
 
+from bson import ObjectId
+from fastapi import HTTPException
+
 from app.services.device_service import DeviceService
 from app.repositories.template_repository import (
     TemplateRepository
 )
+from app.services.template_parser import (
+    parse_template_content
+)
 from datetime import datetime
-
+from fastapi import HTTPException
+from pymongo.errors import DuplicateKeyError
+from app.services.template_parser import (
+    parse_template_content
+)
 
 class TemplateService:
+
+    @staticmethod
+    def _normalize_template_fields(
+        vendor: str,
+        device_type: str,
+        model: str | None = None
+    ):
+        return (
+            vendor.strip(),
+            device_type.lower().strip(),
+            model.strip() if model else None
+        )
+
+    @staticmethod
+    def _validate_template_id(
+        template_id: str
+    ):
+        if not ObjectId.is_valid(template_id):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid template id"
+            )
 
     @staticmethod
     async def find_template(
@@ -15,6 +47,13 @@ class TemplateService:
         device_type: str,
         model: str | None = None
     ):
+        vendor, device_type, model = (
+            TemplateService._normalize_template_fields(
+                vendor,
+                device_type,
+                model
+            )
+        )
 
         return await TemplateRepository.find_template(
             vendor=vendor,
@@ -26,6 +65,18 @@ class TemplateService:
     async def create_template(
         template_doc: dict
     ):
+        vendor, device_type, model = (
+            TemplateService._normalize_template_fields(
+                template_doc["vendor"],
+                template_doc["device_type"],
+                template_doc.get("model")
+            )
+        )
+
+        template_doc["vendor"] = vendor
+        template_doc["device_type"] = device_type
+        template_doc["model"] = model
+
         existing = await TemplateRepository.find_template(
             vendor=template_doc["vendor"],
             device_type=template_doc["device_type"],
@@ -36,27 +87,49 @@ class TemplateService:
             raise HTTPException(
                 status_code=409,
                 detail=(
-                    f"Template already exists for "
-                    f"{template_doc['vendor']} "
-                    f"{template_doc['device_type']} "
-                    f"{template_doc.get('model')}"
+                    f"Template already exists."
                 )
             )
 
         try:
-            return await TemplateRepository.create(
+            result =  await TemplateRepository.create(
                 template_doc
             )
+            template_id = str(result.inserted_id)
+            devices = await DeviceService.get_devices(
+                vendor=template_doc["vendor"],
+                device_type=template_doc["device_type"],
+                model=template_doc.get("model"),
+                template_status="TEMPLATE_REQUIRED"
+            )
+            for device in devices:
+                await DeviceService.update_device(
+                    device["_id"],
+                    {
+                        "template_status": "SELECTED",
+                        "template_id": template_id,
+                        "updated_at": datetime.utcnow()
+                    }
+                )
+            upload_ids = {
+                device["upload_id"]
+                for device in devices
+            }
+
+            from app.services.upload_service import UploadService
+            for upload_id in upload_ids:
+                await UploadService.refresh_upload_template_status(
+                    upload_id
+                )
+                
+            return template_id
 
         except DuplicateKeyError:
 
             raise HTTPException(
                 status_code=409,
                 detail=(
-                    f"Template already exists for "
-                    f"vendor={template_doc['vendor']}, "
-                    f"device_type={template_doc['device_type']}, "
-                    f"model={template_doc.get('model')}"
+                    f"Template already exists."
                 )
             )
 
@@ -64,10 +137,22 @@ class TemplateService:
     async def get_template(
         template_id: str
     ):
-
-        return await TemplateRepository.get_by_id(
+        TemplateService._validate_template_id(
             template_id
         )
+
+        template = await TemplateRepository.get_by_id(
+            template_id
+        )
+
+        if not template:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Template not found"
+            )
+
+        return template
 
     @staticmethod
     async def update_template(
@@ -75,9 +160,45 @@ class TemplateService:
         data: dict
     ):
 
-        return await TemplateRepository.update(
+        TemplateService._validate_template_id(
+            template_id
+        )
+        exists = await TemplateRepository.get_by_id(
+            template_id
+        )
+
+        if not exists:
+            raise HTTPException(
+                status_code=404,
+                detail="Template not found"
+            )
+
+        vendor, device_type, model = (
+            TemplateService._normalize_template_fields(
+                data["vendor"],
+                data["device_type"],
+                data.get("model")
+            )
+        )
+
+        data["vendor"] = vendor
+        data["device_type"] = device_type
+        data["model"] = model
+
+        parsed = parse_template_content(
+            data["template_content"]
+        )
+
+        data["sections"] = parsed.sections
+        data["updated_at"] = datetime.utcnow()
+
+        await TemplateRepository.update(
             template_id,
             data
+        )
+
+        return await TemplateRepository.get_by_id(
+            template_id
         )
 
     @staticmethod
@@ -85,9 +206,25 @@ class TemplateService:
         template_id: str
     ):
 
-        return await TemplateRepository.delete(
+        TemplateService._validate_template_id(
             template_id
         )
+
+        deleted = await TemplateRepository.delete(
+            template_id
+        )
+
+        if not deleted:
+
+            raise HTTPException(
+                status_code=404,
+                detail="Template not found"
+            )
+
+        return {
+            "message": "Template deleted successfully",
+            "id": template_id
+        }
 
     @staticmethod
     async def get_templates(

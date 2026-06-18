@@ -8,14 +8,37 @@ class DeviceService:
     async def create_device(device_doc: dict):
         return await DeviceRepository.create(device_doc)
 
+    @staticmethod
+    async def get_device(
+        device_id: str
+    ):
+
+        if not ObjectId.is_valid(device_id):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid device_id"
+            )
+
+        device = await DeviceRepository.get_by_id(
+            device_id
+        )
+
+        if not device:
+            raise HTTPException(
+                status_code=404,
+                detail="Device not found"
+            )
+
+        device["display_status"] = (
+            DeviceService.get_display_status(
+                device
+            )
+        )
+
+        return device
 
     @staticmethod
     async def get_devices(**filters):
-
-        device_id = filters.pop(
-            "device_id",
-            None
-        )
 
         filters = {
             k: v
@@ -23,36 +46,11 @@ class DeviceService:
             if v is not None
         }
 
-        if device_id:
-
-            if not ObjectId.is_valid(device_id):
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid device_id"
-                )
-
-            device = await DeviceRepository.get_by_id(
-                device_id
-            )
-
-            if not device:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Device not found"
-                )
-            device["display_status"] = (
-                DeviceService.get_display_status(
-                    device
-                )
-            )
-
-            return device
-
         devices = await DeviceRepository.get_all(
             filters
         )
-        for device in devices:
 
+        for device in devices:
             device["display_status"] = (
                 DeviceService.get_display_status(
                     device

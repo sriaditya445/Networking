@@ -9,7 +9,9 @@ from app.services.template_service import (TemplateService)
 from fastapi import HTTPException, status
 from app.core.database import logger
 from collections import defaultdict
-
+from app.schemas.upload_schema import (
+    UploadResponse
+)
 
 BASE_DIR = os.path.dirname(
     os.path.dirname(
@@ -20,15 +22,47 @@ BASE_DIR = os.path.dirname(
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+
 class UploadService:
+
+    @staticmethod
+    async def get_upload(
+        upload_id: str
+    ):
+
+        if not ObjectId.is_valid(upload_id):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid upload id"
+            )
+
+        upload = await UploadRepository.get_by_id(
+            upload_id
+        )
+
+        if not upload:
+            raise HTTPException(
+                status_code=404,
+                detail="Upload not found"
+            )
+
+        upload["_id"] = str(upload["_id"])
+
+        return upload
+
+    @staticmethod
+    async def get_uploads():
+
+        uploads = await UploadRepository.get_all()
+
+        for upload in uploads:
+            upload["_id"] = str(upload["_id"])
+
+        return uploads
 
     @staticmethod
     async def create_upload(upload_doc: dict):
         return await UploadRepository.create(upload_doc)
-
-    @staticmethod
-    async def get_uploads():
-        return await UploadRepository.get_all()
     
     @staticmethod
     async def get_uploads_by_status(
@@ -39,30 +73,20 @@ class UploadService:
         )
 
     @staticmethod
-    async def get_upload(upload_id: str):
-        return await UploadRepository.get_by_id(upload_id)
-
-    @staticmethod
     async def update_upload(
         upload_id: str,
         data: dict
     ):
+        await UploadService.get_upload(upload_id)
+
         return await UploadRepository.update(
             upload_id,
             data
         )
 
     @staticmethod
-    async def delete_upload(upload_id: str):
-        return await UploadRepository.delete(upload_id)
-
-    @staticmethod
     async def count_uploads(query: dict):
         return await UploadRepository.count(query)
-
-    @staticmethod
-    async def get_uploads():
-        return await UploadRepository.get_all()
 
     @staticmethod
     async def upload_files(files,folder_name:str):
@@ -93,9 +117,22 @@ class UploadService:
                 "_id": ObjectId(upload_id),
                 "folder_name": folder_name,
                 "status": "NEW",
+
                 "files_count": len(files),
+
+                "total_devices": 0,
+
+                "parsed_success_count": 0,
+                "parsed_failed_count": 0,
+
+                "audit_success_count": 0,
+                "audit_failed_count": 0,
+
+                "audit_selections": [],
+
                 "folder_path": upload_folder,
                 "error_message": None,
+
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             })
@@ -238,15 +275,7 @@ class UploadService:
         upload_id: str
     ):
 
-        upload = await UploadRepository.get_by_id(
-            upload_id
-        )
-
-        if not upload:
-            raise HTTPException(
-                status_code=404,
-                detail="Upload not found"
-            )
+        await UploadService.get_upload(upload_id)
 
         devices = await DeviceService.get_devices(
             upload_id=upload_id
@@ -313,15 +342,7 @@ class UploadService:
         request
     ):
 
-        upload = await UploadRepository.get_by_id(
-            upload_id
-        )
-
-        if not upload:
-            raise HTTPException(
-                status_code=404,
-                detail="Upload not found"
-            )
+        upload = await UploadService.get_upload(upload_id)
 
         if upload["status"] != "WAITING_AUDIT_SELECTION":
             raise HTTPException(
@@ -466,3 +487,93 @@ class UploadService:
             "message": "Audit selection saved successfully",
             "status": "READY_FOR_AUDIT"
         }
+
+    @staticmethod
+    async def refresh_upload_template_status(
+        upload_id: str
+    ):
+
+        upload = await UploadService.get_upload(upload_id)
+
+        total_devices = await DeviceService.count_devices(
+            {
+                "upload_id": upload_id
+            }
+        )
+
+        parsed_success = upload.get(
+            "parsed_success_count",
+            0
+        )
+
+        parsed_failed = upload.get(
+            "parsed_failed_count",
+            0
+        )
+
+        # Parsing still running
+        if total_devices != (
+            parsed_success + parsed_failed
+        ):
+            return upload.get("status")
+
+        missing_groups = (
+            await UploadService.get_missing_template_groups(
+                upload_id
+            )
+        )
+
+        status = (
+            "WAITING_TEMPLATE_CREATION"
+            if missing_groups
+            else "WAITING_AUDIT_SELECTION"
+        )
+
+        await UploadRepository.update(
+            upload_id,
+            {
+                "status": status,
+                "updated_at": datetime.utcnow()
+            }
+        )
+
+        return status
+
+
+    @staticmethod
+    async def get_missing_template_groups(
+        upload_id: str
+    ):
+        await UploadService.get_upload(upload_id)
+
+        devices = await DeviceService.get_devices(
+            upload_id=upload_id,
+            processing_status="SUCCESS",
+            template_status="TEMPLATE_REQUIRED"
+        )
+
+        grouped = {}
+
+        for device in devices:
+
+            key = (
+                device.get("vendor"),
+                device.get("device_type"),
+                device.get("model")
+            )
+
+            grouped[key] = grouped.get(key, 0) + 1
+
+        return [
+            {
+                "vendor": vendor,
+                "device_type": device_type,
+                "model": model,
+                "device_count": count
+            }
+            for (
+                vendor,
+                device_type,
+                model
+            ), count in grouped.items()
+        ]

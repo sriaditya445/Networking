@@ -1,4 +1,4 @@
-from typing import List
+from typing import List,Optional
 
 from fastapi import (
     APIRouter,
@@ -17,7 +17,7 @@ from app.services.upload_service import (
 from app.services.file_service import FileService
 
 from app.schemas.upload_schema import (
-    UploadJobResponse
+    UploadResponse
 )
 
 from app.schemas.audit_selection_schema import (
@@ -25,9 +25,22 @@ from app.schemas.audit_selection_schema import (
 )
 router = APIRouter()
 
-@router.get("/api/uploads",response_model=List[UploadJobResponse])
+@router.get("/api/uploads",response_model=List[UploadResponse])
 async def get_uploads():
     return await UploadService.get_uploads()
+
+@router.get(
+    "/api/uploads/{upload_id}",response_model=UploadResponse
+)
+async def get_upload(upload_id: str):
+    return await UploadService.get_upload(
+        upload_id
+    )
+
+
+# async def get_uploads(upload_id: Optional[str] = None):
+#     return await UploadService.get_uploads(upload_id=upload_id)
+
 
 @router.delete("/api/uploads/{upload_id}")
 async def delete_upload(upload_id: str):
@@ -40,7 +53,7 @@ async def download_upload_folder(upload_id: str, background_tasks: BackgroundTas
         background_tasks
     )
 
-@router.post("/api/upload",status_code=status.HTTP_202_ACCEPTED)
+@router.post("/api/upload")
 async def upload_files(
     folder_name: str = Form(...),
     files: list[UploadFile] = File(...)
@@ -78,4 +91,14 @@ async def save_audit_selection(
     return await UploadService.save_audit_selection(
         upload_id,
         request
+    )
+
+@router.get(
+    "/api/uploads/{upload_id}/missing-templates"
+)
+async def get_missing_templates(
+    upload_id: str
+):
+    return await UploadService.get_missing_template_groups(
+        upload_id
     )
