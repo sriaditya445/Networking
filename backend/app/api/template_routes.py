@@ -7,7 +7,9 @@ from fastapi import (
 
 from app.schemas.common_schema import (
     GoldenTemplateCreate,
-    GoldenTemplateResponse
+    GoldenTemplateResponse,
+    GoldenTemplateListResponse,
+    ActionResponse
 )
 
 from app.services.template_service import (
@@ -15,8 +17,7 @@ from app.services.template_service import (
 )
 
 from app.services.template_parser import (
-    parse_template_content,
-    render_template_preview
+    render_template_preview,parse_template_content
 )
 from fastapi import (
     UploadFile,
@@ -31,76 +32,32 @@ router = APIRouter(
 
 @router.get(
     "",
-    response_model=list[GoldenTemplateResponse]
+    response_model=list[GoldenTemplateListResponse]
 )
 async def get_templates(
     vendor: str = None,
     device_type: str = None,
-    model:str | None = None
+    model: str | None = None
 ):
-
-    templates = await TemplateService.get_templates(
+    return await TemplateService.get_templates(
         vendor=vendor,
         device_type=device_type,
-        model = model
+        model=model
     )
 
-    response = []
-
-    for template in templates:
-
-        response.append(
-            GoldenTemplateResponse(
-                id=str(template["_id"]),
-                vendor=template["vendor"],
-                device_type=template["device_type"],
-                model=template.get("model"),
-                template_name=template["template_name"],
-                template_type=template["template_type"],
-                template_content=template["template_content"],
-                sections=template.get("sections", {}),
-                created_at=template.get("created_at"),
-                updated_at=template.get("updated_at")
-            )
-        )
-
-    return response
-
 @router.get(
-"/{template_id}",
-response_model=GoldenTemplateResponse
+    "/{template_id}",
+    response_model=GoldenTemplateResponse
 )
 async def get_template(
     template_id: str
 ):
-
-    template = await TemplateService.get_template(
+    return await TemplateService.get_template(
         template_id
     )
 
-    if not template:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Template not found"
-        )
-
-    return GoldenTemplateResponse(
-        id=template["_id"],
-        vendor=template["vendor"],
-        device_type=template["device_type"],
-        model=template.get("model"),
-        template_name=template["template_name"],
-        template_type=template["template_type"],
-        template_content=template["template_content"],
-        sections=template.get("sections", {}),
-        created_at=template.get("created_at"),
-        updated_at=template.get("updated_at")
-    )
-
 @router.post(
-    "/upload",
-    response_model=GoldenTemplateResponse
+    "/upload",response_model=ActionResponse
 )
 async def upload_template(
     vendor: str = Form(...),
@@ -112,9 +69,7 @@ async def upload_template(
 
     content = (
         await file.read()
-    ).decode(
-        "utf-8"
-    )
+    ).decode("utf-8")
 
     parsed = parse_template_content(
         content
@@ -123,34 +78,24 @@ async def upload_template(
     if model in ["", "None", "null"]:
         model = None
 
-    doc = {
-        "vendor": vendor,
-        "device_type": device_type,
-        "model": model,
-        "template_name": template_name,
-        "template_type": "jinja2",
-        "template_content": content,
-        "sections": parsed.sections,
-        "created_at": datetime.utcnow(),
-        "updated_at": datetime.utcnow()
-    }
-
-    template_id = (
-        await TemplateService.create_template(
-            doc
-        )
-    )
-
-    created = await TemplateService.get_template(template_id)
-
-    return GoldenTemplateResponse(
-        id=created["_id"],
-        **{
-            k: v
-            for k, v in created.items()
-            if k != "_id"
+    template_id = await TemplateService.create_template(
+        {
+            "vendor": vendor,
+            "device_type": device_type,
+            "model": model,
+            "template_name": template_name,
+            "template_type": "jinja2",
+            "template_content": content,
+            "sections": parsed.sections,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
         }
     )
+
+    return {
+        "message": "Template created successfully",
+        "id": template_id
+    }
 
 @router.put(
     "/{template_id}",
@@ -160,62 +105,18 @@ async def update_template(
     template_id: str,
     template: GoldenTemplateCreate
 ):
-
-    parsed = parse_template_content(
-        template.template_content
-    )
-
-    data = template.model_dump()
-
-    data["sections"] = parsed.sections
-    data["updated_at"] = datetime.utcnow()
-
-    updated = await TemplateService.update_template(
+    return await TemplateService.update_template(
         template_id,
-        data
+        template.model_dump()
     )
 
-    if not updated:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Template not found"
-        )
-
-    template_doc = await TemplateService.get_template(
-        template_id
-    )
-
-    return GoldenTemplateResponse(
-        id=template_doc["_id"],
-        **{
-            k: v
-            for k, v in template_doc.items()
-            if k != "_id"
-        }
-    )
-
-@router.delete(
-    "/{template_id}"
-)
+@router.delete("/{template_id}",response_model=ActionResponse)
 async def delete_template(
     template_id: str
 ):
-
-    deleted = await TemplateService.delete_template(
+    return await TemplateService.delete_template(
         template_id
     )
-
-    if not deleted:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Template not found"
-        )
-
-    return {
-        "message": "Template deleted successfully"
-    }
 
 @router.post(
     "/{template_id}/preview"
@@ -228,13 +129,6 @@ async def preview_template(
     template = await TemplateService.get_template(
         template_id
     )
-
-    if not template:
-
-        raise HTTPException(
-            status_code=404,
-            detail="Template not found"
-        )
 
     rendered = render_template_preview(
         template["template_content"],

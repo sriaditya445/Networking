@@ -2,9 +2,7 @@ from typing import List, Optional
 
 from fastapi import APIRouter
 
-from app.schemas.device_schema import (
-    DeviceResponse
-)
+from app.schemas.device_schema import DeviceResponse
 
 from app.services.device_service import (
     DeviceService
@@ -19,14 +17,26 @@ from app.services.file_service import (
 
 router = APIRouter()
 
-@router.get("/api/devices")
+@router.get(
+    "/api/devices",
+    response_model=List[DeviceResponse]
+)
 async def get_devices(
-    device_id: Optional[str] = None,
     upload_id: Optional[str] = None
 ):
     return await DeviceService.get_devices(
-        device_id=device_id,
         upload_id=upload_id
+    )
+
+@router.get(
+    "/api/devices/{device_id}",
+    response_model=DeviceResponse
+)
+async def get_device(
+    device_id: str
+):
+    return await DeviceService.get_device(
+        device_id
     )
 
 @router.get("/api/devices/{device_id}/download")

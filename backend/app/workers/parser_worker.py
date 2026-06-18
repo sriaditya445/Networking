@@ -30,8 +30,16 @@ class ParserWorker:
             )
 
             if not devices:
-                logger.warning(f"No pending devices found for {upload_id}")
-                raise ValueError("No staged device records found.")
+
+                logger.info(
+                    f"No pending devices for upload {upload_id}"
+                )
+
+                await UploadService.refresh_upload_template_status(
+                    upload_id
+                )
+
+                return
 
             success_count = 0
             failed_count = 0
@@ -75,7 +83,7 @@ class ParserWorker:
                             "configuration": content,
                             "processing_status": "SUCCESS",
                             "parsed_at": datetime.utcnow(),
-                            "template_status": "SELECTED" if template else "FAILED",
+                            "template_status": "SELECTED" if template else "TEMPLATE_REQUIRED",
                             "template_id": (
                                 str(template["_id"]) if template else None)
                         }
@@ -157,15 +165,16 @@ class ParserWorker:
                 "updated_at": datetime.utcnow()
             })
 
+            # Check whether all devices have been processed
             if total_devices == (new_success + new_failed):
-                await UploadService.update_upload(
-                    upload_id,
-                    {
-                        "status": "WAITING_AUDIT_SELECTION",
-                        "updated_at": datetime.utcnow()
-                    }
+                await UploadService.refresh_upload_template_status(
+                    upload_id
                 )
-            
+
+                logger.info(
+                    f"Parsing completed for upload {upload_id}"
+                )
+                
             logger.debug(
                 f"Updated upload counters: {upload_id} "
                 f"(parsed_success: {new_success}, parsed_failed: {new_failed})"

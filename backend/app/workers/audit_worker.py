@@ -77,14 +77,18 @@ class AuditWorker:
                     audit_result_id = (
                         await AuditResultService.create_result(
                             device=device,
-                            audit_result=audit_result
+                            audit_result=audit_result,
+                            audit_mode=selection.get("audit_mode","FULL"),
+                            selected_sections=selection.get("selected_sections",[])
                         )
                     )
 
                     audit_report_id = (
                         await AuditReportService.create_report(
                             device=device,
-                            audit_result=audit_result
+                            audit_result=audit_result,
+                            audit_mode=selection.get("audit_mode","FULL"),
+                            selected_sections=selection.get("selected_sections",[])
                         )
                     )
 

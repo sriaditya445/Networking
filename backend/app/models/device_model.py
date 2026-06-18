@@ -15,7 +15,6 @@ class DeviceModel(BaseModel):
     model: Optional[str] = None
 
     # Raw Config
-    configuration: Optional[str] = None
     configuration_json: Optional[Dict[str, Any]] = None
 
     # Upload File
@@ -27,8 +26,9 @@ class DeviceModel(BaseModel):
     # Template Selection
     template_status: str = "PENDING_TEMPLATE_SELECTION"
     template_id: Optional[str] = None
-    template_name: Optional[str] = None
 
+    configuration: Optional[str] = None
+    template_name: Optional[str] = None
     scope_type: str = "FULL"
     selected_sections: List[str] = []
 
@@ -37,6 +37,7 @@ class DeviceModel(BaseModel):
 
     # Audit Results
     audit_score: Optional[float] = None
+    # audit_result_id: Optional[str] = None
     audit_report_id: Optional[str] = None
 
     # Errors
