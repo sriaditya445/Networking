@@ -15,6 +15,8 @@ import Downloads from './components/Downloads';
 import SettingsTab from './components/SettingsTab';
 import VendorManagement from './components/VendorManagement';
 import DeviceManagement from './components/DeviceManagement';
+import TemplateManagement from './components/TemplateManagement';
+import AuditDashboard from './components/AuditDashboard';
 
 const API_BASE_URL = 'http://localhost:8000';
 
@@ -253,6 +255,10 @@ function App() {
         return <VendorManagement />;
       case 'device_management':
         return <DeviceManagement />;
+      case 'template_management':
+        return <TemplateManagement />;
+      case 'audit_dashboard':
+        return <AuditDashboard devices={devices} />;
       case 'dashboard':
         return (
           <Dashboard

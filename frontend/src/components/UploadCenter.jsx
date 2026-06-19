@@ -141,16 +141,20 @@ function UploadCenter({
 
   // Compute table data based on deviceCounts
   const detectedDeviceRows = Object.entries(deviceCounts).map(([type, count]) => {
-    const isTemplateUploaded = templates.some(t => {
-      // check if template name or details match device type or model
-      return t.name.toLowerCase().includes(type.toLowerCase());
-    }) || templates.length > 0; // fallback if templates are present
+    const typeDevices = filteredDevices.filter(d => d.device_type === type);
+    const hasMatchedTemplate = typeDevices.some(d => {
+      return templates.some(t => 
+        t.vendorName.toLowerCase() === (d.vendor || 'Cisco').toLowerCase() &&
+        t.deviceType.toLowerCase() === (d.device_type || 'L2 Switch').toLowerCase() &&
+        t.modelNumber.toLowerCase() === (d.model_number || 'Unknown').toLowerCase()
+      );
+    });
 
     return {
       type,
       count,
       auditType: auditTypes[type] || 'Full Audit',
-      templateStatus: isTemplateUploaded ? 'Uploaded' : 'Not Uploaded',
+      templateStatus: hasMatchedTemplate ? 'Uploaded' : 'Not Uploaded',
       processingStatus: processingState[type] || 'Pending'
     };
   });
@@ -187,14 +191,19 @@ function UploadCenter({
     // Trigger simulation store run
     const typeDevices = filteredDevices.filter(d => d.device_type === type);
     typeDevices.forEach(d => {
-      runAudit(d._id || d.id, d.device_name, auditTypes[type] || 'Full Audit');
+      const matchedTemplate = templates.find(t => 
+        t.vendorName.toLowerCase() === (d.vendor || 'Cisco').toLowerCase() &&
+        t.deviceType.toLowerCase() === (d.device_type || 'L2 Switch').toLowerCase() &&
+        t.modelNumber.toLowerCase() === (d.model_number || 'Unknown').toLowerCase()
+      ) || null;
+      runAudit(d._id || d.id, d.device_name, auditTypes[type] || 'Full Audit', matchedTemplate);
     });
 
     // Simulate completion
     setTimeout(() => {
       setProcessingState(prev => ({
         ...prev,
-        [type]: Math.random() > 0.15 ? 'Success' : 'Failed'
+        [type]: Math.random() > 0.3 ? 'Success' : 'Failed'
       }));
     }, 1500);
   };
