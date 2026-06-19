@@ -227,14 +227,14 @@ class TemplateService:
         }
 
     @staticmethod
-    async def get_templates(
-        vendor: str = None,
-        device_type: str = None,
-        model: str | None = None
-    ):
+    async def get_templates(**filters):
+
+        filters = {
+            k: v
+            for k, v in filters.items()
+            if v is not None
+        }
 
         return await TemplateRepository.get_all(
-            vendor=vendor,
-            device_type=device_type,
-            model=model
+            filters
         )

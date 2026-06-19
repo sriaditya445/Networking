@@ -43,23 +43,8 @@ class TemplateRepository:
         return template
 
     @staticmethod
-    async def get_all(
-        vendor: str = None,
-        device_type: str = None,
-        model: str | None = None
-    ):
-
-        query = {}
-
-        if vendor:
-            query["vendor"] = vendor
-
-        if device_type:
-            query["device_type"] = device_type
-
-        if model:
-            query["model"] = model
-
+    async def get_all(query: dict = None):
+        query = query or {}
         templates = await (
             TemplateRepository.collection()
             .find(query)
@@ -69,9 +54,7 @@ class TemplateRepository:
 
         for template in templates:
             template["id"] = str(template.pop("_id"))
-
         return templates
-
 
     @staticmethod
     async def create(template_doc: dict):
