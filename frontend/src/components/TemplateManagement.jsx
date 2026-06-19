@@ -1,0 +1,513 @@
+import React, { useState, useRef } from 'react';
+import { FaPlus, FaFileAlt, FaCode, FaCloudUploadAlt, FaEye, FaEdit, FaTrash, FaBuilding } from 'react-icons/fa';
+
+// Import Zustand stores
+import { useVendorStore } from '../store/vendorStore';
+import { useTemplateStore } from '../store/templateStore';
+
+// Import reusable components
+import PageHeader from './common/PageHeader';
+import ReusableTable from './common/ReusableTable';
+import ActionButtons from './common/ActionButtons';
+
+export default function TemplateManagement() {
+  const { vendors } = useVendorStore();
+  const { templates, addTemplate, updateTemplate, deleteTemplate } = useTemplateStore();
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [viewingTemplate, setViewingTemplate] = useState(null);
+
+  // Form Fields State
+  const [vendorId, setVendorId] = useState('');
+  const [deviceType, setDeviceType] = useState('L2 Switch');
+  const [modelNumber, setModelNumber] = useState('');
+  const [templateName, setTemplateName] = useState('');
+  const [version, setVersion] = useState('1.0.0');
+  const [inputMethod, setInputMethod] = useState('paste'); // 'upload' or 'paste'
+  const [pastedContent, setPastedContent] = useState('');
+  const [uploadedFile, setUploadedFile] = useState(null);
+
+  // Drag and drop zone local UI state
+  const [isDragActive, setIsDragActive] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const resetForm = () => {
+    setVendorId('');
+    setDeviceType('L2 Switch');
+    setModelNumber('');
+    setTemplateName('');
+    setVersion('1.0.0');
+    setInputMethod('paste');
+    setPastedContent('');
+    setUploadedFile(null);
+    setEditingTemplate(null);
+  };
+
+  const handleOpenAdd = () => {
+    resetForm();
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (template) => {
+    setEditingTemplate(template);
+    setVendorId(template.vendorId);
+    setDeviceType(template.deviceType);
+    setModelNumber(template.modelNumber);
+    setTemplateName(template.name);
+    setVersion(template.version || '1.0.0');
+    setInputMethod(template.templateType.toLowerCase() === 'upload' ? 'upload' : 'paste');
+    if (template.templateType.toLowerCase() === 'upload') {
+      setUploadedFile({ name: template.fileName || 'uploaded_config_file', content: template.content });
+    } else {
+      setPastedContent(template.content);
+    }
+    setIsModalOpen(true);
+  };
+
+  // Drag & Drop event handlers
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setIsDragActive(true);
+    } else if (e.type === "dragleave") {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      validateFile(file);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      validateFile(e.target.files[0]);
+    }
+  };
+
+  const validateFile = (file) => {
+    const extension = file.name.split('.').pop().toLowerCase();
+    if (!['txt', 'cfg', 'conf', 'j2'].includes(extension)) {
+      alert("Only .txt, .cfg, .conf, and .j2 files are supported.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setUploadedFile({
+        name: file.name,
+        size: file.size,
+        content: event.target.result
+      });
+      if (!templateName) {
+        setTemplateName(file.name.replace(/\.[^/.]+$/, ""));
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!vendorId) {
+      alert("Please select a vendor.");
+      return;
+    }
+
+    const vendor = vendors.find(v => v.id === vendorId);
+    const vendorName = vendor ? vendor.name : 'Unknown';
+
+    let content = '';
+    let fileName = '';
+
+    if (inputMethod === 'upload') {
+      if (!uploadedFile) {
+        alert("Please upload a config file.");
+        return;
+      }
+      content = uploadedFile.content;
+      fileName = uploadedFile.name;
+    } else {
+      if (!pastedContent.trim()) {
+        alert("Please paste the template content.");
+        return;
+      }
+      content = pastedContent;
+    }
+
+    const payload = {
+      name: templateName,
+      vendorId,
+      vendorName,
+      deviceType,
+      modelNumber,
+      templateType: inputMethod === 'upload' ? 'Upload' : 'Paste',
+      version,
+      content,
+      fileName
+    };
+
+    if (editingTemplate) {
+      updateTemplate(editingTemplate.id, payload);
+    } else {
+      addTemplate(payload);
+    }
+
+    setIsModalOpen(false);
+    resetForm();
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const d = new Date(dateString);
+    return d.toLocaleDateString();
+  };
+
+  // Columns for template table
+  const columns = [
+    { key: 'name', label: 'Template Name', render: (val) => (
+      <div className="flex items-center gap-2">
+        <FaFileAlt className="text-cyan-500 text-xs shrink-0" />
+        <span className="font-bold text-slate-800">{val}</span>
+      </div>
+    )},
+    { key: 'vendorName', label: 'Vendor', render: (val) => (
+      <div className="flex items-center gap-1.5">
+        <FaBuilding className="text-slate-400 text-[10px]" />
+        <span className="font-medium text-slate-700">{val}</span>
+      </div>
+    )},
+    { key: 'deviceType', label: 'Device Type', render: (val) => (
+      <span className="inline-block bg-slate-100 text-slate-650 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-150">
+        {val}
+      </span>
+    )},
+    { key: 'modelNumber', label: 'Model', render: (val) => <span className="font-mono text-xs font-semibold text-slate-600">{val || 'All Models'}</span> },
+    { key: 'templateType', label: 'Method', render: (val) => (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
+        val === 'Upload' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-purple-50 text-purple-600 border border-purple-100'
+      }`}>
+        {val === 'Upload' ? <FaCloudUploadAlt className="text-[9px]" /> : <FaCode className="text-[9px]" />}
+        <span>{val}</span>
+      </span>
+    )},
+    { key: 'version', label: 'Version', render: (val) => <span className="font-mono text-xs font-bold text-slate-500">v{val}</span> },
+    { key: 'createdAt', label: 'Created Date', render: (val) => <span className="text-xs text-slate-400">{formatDate(val)}</span> },
+    { key: 'actions', label: 'Actions', className: 'text-right', render: (_, row) => (
+      <ActionButtons
+        actions={[
+          {
+            type: 'view',
+            title: 'View Template Content',
+            onClick: () => setViewingTemplate(row)
+          },
+          {
+            type: 'edit',
+            title: 'Edit Template Specifications',
+            onClick: () => handleOpenEdit(row)
+          },
+          {
+            type: 'delete',
+            title: 'Delete Template',
+            onClick: () => {
+              if (window.confirm(`Delete golden template "${row.name}"?`)) {
+                deleteTemplate(row.id);
+              }
+            }
+          }
+        ]}
+      />
+    )}
+  ];
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-200">
+      
+      {/* Page Header */}
+      <PageHeader 
+        title="Template Management" 
+        subtitle="Upload or compose policy-compliant Golden config files. Associate them directly to Device Types and Models."
+      >
+        <button
+          onClick={handleOpenAdd}
+          className="flex items-center gap-1.5 px-3.5 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+        >
+          <FaPlus />
+          <span>Add Template</span>
+        </button>
+      </PageHeader>
+
+      {/* Main Table Panel */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+          <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+            <FaFileAlt className="text-cyan-500 text-xs" />
+            <span>Golden Template Repository</span>
+          </h3>
+          <span className="text-[10px] bg-slate-100 text-slate-500 font-mono px-2 py-0.5 rounded font-bold">
+            {templates.length} Templates
+          </span>
+        </div>
+
+        <div className="overflow-hidden">
+          <ReusableTable
+            columns={columns}
+            data={templates}
+            emptyMessage="No configuration templates registered. Click 'Add Template' to begin."
+          />
+        </div>
+      </div>
+
+      {/* Viewing Template Content Modal overlay */}
+      {viewingTemplate && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl border border-slate-150 overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="bg-slate-50 border-b border-slate-150 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-slate-800 text-base">{viewingTemplate.name}</h3>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {viewingTemplate.vendorName} • {viewingTemplate.deviceType} • {viewingTemplate.modelNumber || 'All Models'} (v{viewingTemplate.version})
+                </p>
+              </div>
+              <button 
+                onClick={() => setViewingTemplate(null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="text-xs font-bold text-slate-450 uppercase tracking-wider block mb-2">Template Body</label>
+              <pre className="bg-slate-900 text-cyan-400 p-4 rounded-xl font-mono text-xs overflow-auto max-h-[350px] leading-relaxed shadow-inner border border-slate-800">
+                {viewingTemplate.content}
+              </pre>
+            </div>
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end">
+              <button
+                onClick={() => setViewingTemplate(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Template Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl border border-slate-150 overflow-hidden animate-in fade-in zoom-in duration-200">
+            
+            {/* Header */}
+            <div className="bg-slate-50 border-b border-slate-150 px-6 py-4 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-base">
+                {editingTemplate ? 'Modify Golden Template' : 'Add Golden Template'}
+              </h3>
+              <button 
+                onClick={() => { resetForm(); setIsModalOpen(false); }}
+                className="text-slate-400 hover:text-slate-600 transition-colors text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Form body */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+              
+              {/* Relationship settings */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Vendor *</label>
+                  <select
+                    value={vendorId}
+                    onChange={(e) => setVendorId(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
+                    required
+                  >
+                    <option value="">Select Vendor</option>
+                    {vendors.map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Device Type *</label>
+                  <select
+                    value={deviceType}
+                    onChange={(e) => setDeviceType(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
+                    required
+                  >
+                    <option value="L2 Switch">L2 Switch</option>
+                    <option value="L3 Switch">L3 Switch</option>
+                    <option value="Core Switch">Core Switch</option>
+                    <option value="Router">Router</option>
+                    <option value="Firewall">Firewall</option>
+                    <option value="Access Point">Access Point</option>
+                    <option value="WLC">WLC</option>
+                    <option value="Unknown">Unknown</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Model *</label>
+                  <input
+                    type="text"
+                    value={modelNumber}
+                    onChange={(e) => setModelNumber(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
+                    placeholder="e.g. WS-C3650-24TD-S"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Template settings */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-2 space-y-1">
+                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Template Name *</label>
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
+                    placeholder="e.g. Cisco_C3650_Standard"
+                    required
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Version *</label>
+                  <input
+                    type="text"
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
+                    placeholder="e.g. 1.0.0"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Input Method Selector */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Input Method *</label>
+                <div className="flex gap-4 items-center">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                    <input
+                      type="radio"
+                      name="inputMethod"
+                      value="paste"
+                      checked={inputMethod === 'paste'}
+                      onChange={() => setInputMethod('paste')}
+                      className="text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span>Paste Jinja2 Template</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                    <input
+                      type="radio"
+                      name="inputMethod"
+                      value="upload"
+                      checked={inputMethod === 'upload'}
+                      onChange={() => setInputMethod('upload')}
+                      className="text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span>Upload Config File</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Conditional Content Inputs */}
+              {inputMethod === 'paste' ? (
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Jinja2 Template Body *</label>
+                  <textarea
+                    rows={8}
+                    value={pastedContent}
+                    onChange={(e) => setPastedContent(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs font-mono text-slate-800 focus:outline-none focus:border-cyan-500 leading-relaxed shadow-inner"
+                    placeholder={`e.g.\nhostname {{ hostname }}\nip domain-name {{ domain_name }}\nntp server {{ ntp_server }}`}
+                    required
+                  />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Select/Drag File *</label>
+                  <div
+                    className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                      isDragActive ? 'border-cyan-500 bg-cyan-500/5' : 'border-slate-200 hover:border-cyan-400 bg-slate-50'
+                    }`}
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                  >
+                    <FaCloudUploadAlt className="text-slate-450 text-2xl" />
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-slate-700">Click or drag template config here</p>
+                      <p className="text-[10px] text-slate-400">Supports .txt, .cfg, .conf, .j2 files</p>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleFileChange}
+                      accept=".txt,.cfg,.conf,.j2"
+                    />
+                  </div>
+
+                  {/* Uploaded file indicator */}
+                  {uploadedFile && (
+                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-150 font-mono text-[11px]">
+                      <div className="flex items-center gap-2">
+                        <FaFileAlt className="text-cyan-500" />
+                        <span className="font-semibold text-slate-750 truncate max-w-[200px]">{uploadedFile.name}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUploadedFile(null)}
+                        className="text-rose-500 hover:text-rose-600 font-bold"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Submit Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => { resetForm(); setIsModalOpen(false); }}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl text-xs font-semibold transition-all shadow-md"
+                >
+                  Save Template
+                </button>
+              </div>
+
+            </form>
+
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
