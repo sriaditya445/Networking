@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FaPlus, FaFileAlt, FaCode, FaCloudUploadAlt, FaEye, FaEdit, FaTrash, FaBuilding } from 'react-icons/fa';
 
 // Import Zustand stores
 import { useVendorStore } from '../store/vendorStore';
-import { useTemplateStore } from '../store/templateStore';
 
 // Import reusable components
 import PageHeader from './common/PageHeader';
@@ -12,11 +11,58 @@ import ActionButtons from './common/ActionButtons';
 
 export default function TemplateManagement() {
   const { vendors } = useVendorStore();
-  const { templates, addTemplate, updateTemplate, deleteTemplate } = useTemplateStore();
+  const [templates, setTemplates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [viewingTemplate, setViewingTemplate] = useState(null);
+
+  const mapDeviceTypeToBackend = (type) => {
+    const t = type.toLowerCase();
+    if (t.includes('switch')) return 'switch';
+    if (t.includes('router')) return 'router';
+    if (t.includes('firewall')) return 'firewall';
+    if (t.includes('wlc')) return 'wlc';
+    return 'unknown';
+  };
+
+  const fetchTemplates = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("http://localhost:8000/api/templates");
+      if (response.ok) {
+        const data = await response.json();
+        const mapped = data.map(t => ({
+          id: t.id,
+          name: t.template_name,
+          vendorName: t.vendor,
+          vendorId: vendors.find(v => v.name.toLowerCase() === t.vendor.toLowerCase())?.id || 'v1',
+          deviceType: t.device_type,
+          modelNumber: t.model || '',
+          templateType: t.template_type === 'jinja2' ? 'Paste' : 'Upload',
+          version: t.version || '1.0.0',
+          content: t.template_content || '',
+          createdAt: t.created_at,
+          updatedAt: t.updated_at
+        }));
+        setTemplates(mapped);
+      } else {
+        setError("Failed to fetch templates.");
+      }
+    } catch (err) {
+      console.error("Failed to fetch templates", err);
+      setError("Failed to connect to backend server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
 
   // Form Fields State
   const [vendorId, setVendorId] = useState('');
@@ -49,20 +95,73 @@ export default function TemplateManagement() {
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (template) => {
-    setEditingTemplate(template);
-    setVendorId(template.vendorId);
-    setDeviceType(template.deviceType);
-    setModelNumber(template.modelNumber);
-    setTemplateName(template.name);
-    setVersion(template.version || '1.0.0');
-    setInputMethod(template.templateType.toLowerCase() === 'upload' ? 'upload' : 'paste');
-    if (template.templateType.toLowerCase() === 'upload') {
-      setUploadedFile({ name: template.fileName || 'uploaded_config_file', content: template.content });
-    } else {
-      setPastedContent(template.content);
+  const handleOpenView = async (template) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/templates/${template.id}`);
+      if (response.ok) {
+        const detailed = await response.json();
+        setViewingTemplate({
+          ...template,
+          content: detailed.template_content || ''
+        });
+      } else {
+        alert("Failed to fetch template details.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error fetching template details.");
     }
-    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = async (template) => {
+    try {
+      const response = await fetch(`http://localhost:8000/api/templates/${template.id}`);
+      if (response.ok) {
+        const detailed = await response.json();
+        const mapped = {
+          ...template,
+          content: detailed.template_content || ''
+        };
+        setEditingTemplate(mapped);
+        setVendorId(mapped.vendorId);
+        setDeviceType(mapped.deviceType);
+        setModelNumber(mapped.modelNumber);
+        setTemplateName(mapped.name);
+        setVersion(mapped.version || '1.0.0');
+        setInputMethod(mapped.templateType.toLowerCase() === 'upload' ? 'upload' : 'paste');
+        if (mapped.templateType.toLowerCase() === 'upload') {
+          setUploadedFile({ name: mapped.fileName || 'uploaded_config_file', content: mapped.content });
+        } else {
+          setPastedContent(mapped.content);
+        }
+        setIsModalOpen(true);
+      } else {
+        alert("Failed to fetch template details for editing.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error fetching template details.");
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    if (window.confirm(`Delete golden template "${name}"?`)) {
+      try {
+        const response = await fetch(`http://localhost:8000/api/templates/${id}`, {
+          method: 'DELETE'
+        });
+        if (response.ok) {
+          alert("Template deleted successfully!");
+          await fetchTemplates();
+        } else {
+          const err = await response.json();
+          alert(`Failed to delete template: ${err.message || 'Unknown error'}`);
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error deleting template.");
+      }
+    }
   };
 
   // Drag & Drop event handlers
@@ -103,6 +202,7 @@ export default function TemplateManagement() {
     const reader = new FileReader();
     reader.onload = (event) => {
       setUploadedFile({
+        file,
         name: file.name,
         size: file.size,
         content: event.target.result
@@ -114,7 +214,7 @@ export default function TemplateManagement() {
     reader.readAsText(file);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!vendorId) {
       alert("Please select a vendor.");
@@ -140,28 +240,85 @@ export default function TemplateManagement() {
         return;
       }
       content = pastedContent;
+      fileName = `${templateName}.j2`;
     }
 
-    const payload = {
-      name: templateName,
-      vendorId,
-      vendorName,
-      deviceType,
-      modelNumber,
-      templateType: inputMethod === 'upload' ? 'Upload' : 'Paste',
-      version,
-      content,
-      fileName
-    };
+    try {
+      if (editingTemplate) {
+        // PUT /api/templates/:id
+        const updatePayload = {
+          vendor: vendorName,
+          device_type: mapDeviceTypeToBackend(deviceType),
+          model: modelNumber || null,
+          template_name: templateName,
+          template_type: 'jinja2',
+          template_content: content
+        };
 
-    if (editingTemplate) {
-      updateTemplate(editingTemplate.id, payload);
-    } else {
-      addTemplate(payload);
+        const response = await fetch(`http://localhost:8000/api/templates/${editingTemplate.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(updatePayload)
+        });
+
+        if (response.ok) {
+          alert("Template updated successfully!");
+          await fetchTemplates();
+          setIsModalOpen(false);
+          resetForm();
+        } else {
+          const err = await response.json();
+          alert(`Failed to update template: ${err.detail || 'Unknown error'}`);
+        }
+      } else {
+        // POST /api/templates/upload
+        const formData = new FormData();
+        formData.append("vendorId", vendorId);
+        formData.append("vendorName", vendorName);
+        formData.append("deviceType", deviceType);
+        formData.append("modelNumber", modelNumber);
+        formData.append("templateName", templateName);
+        formData.append("version", version);
+
+        formData.append("vendor", vendorName);
+        formData.append("device_type", mapDeviceTypeToBackend(deviceType));
+        formData.append("model", modelNumber || '');
+        formData.append("template_name", templateName);
+
+        if (inputMethod === 'upload') {
+          if (uploadedFile?.file) {
+            formData.append("file", uploadedFile.file);
+          } else {
+            const blob = new Blob([content], { type: 'text/plain' });
+            formData.append("file", blob, fileName);
+          }
+        } else {
+          formData.append("content", content);
+          const blob = new Blob([content], { type: 'text/plain' });
+          formData.append("file", blob, fileName);
+        }
+
+        const response = await fetch("http://localhost:8000/api/templates/upload", {
+          method: "POST",
+          body: formData
+        });
+
+        if (response.ok) {
+          alert("Template uploaded successfully!");
+          await fetchTemplates();
+          setIsModalOpen(false);
+          resetForm();
+        } else {
+          const err = await response.json();
+          alert(`Failed to create template: ${err.detail || 'Unknown error'}`);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to submit template:", error);
+      alert("Error saving template.");
     }
-
-    setIsModalOpen(false);
-    resetForm();
   };
 
   const formatDate = (dateString) => {
@@ -172,67 +329,72 @@ export default function TemplateManagement() {
 
   // Columns for template table
   const columns = [
-    { key: 'name', label: 'Template Name', render: (val) => (
-      <div className="flex items-center gap-2">
-        <FaFileAlt className="text-cyan-500 text-xs shrink-0" />
-        <span className="font-bold text-slate-800">{val}</span>
-      </div>
-    )},
-    { key: 'vendorName', label: 'Vendor', render: (val) => (
-      <div className="flex items-center gap-1.5">
-        <FaBuilding className="text-slate-400 text-[10px]" />
-        <span className="font-medium text-slate-700">{val}</span>
-      </div>
-    )},
-    { key: 'deviceType', label: 'Device Type', render: (val) => (
-      <span className="inline-block bg-slate-100 text-slate-650 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-150">
-        {val}
-      </span>
-    )},
+    {
+      key: 'name', label: 'Template Name', render: (val) => (
+        <div className="flex items-center gap-2">
+          <FaFileAlt className="text-cyan-500 text-xs shrink-0" />
+          <span className="font-bold text-slate-800">{val}</span>
+        </div>
+      )
+    },
+    {
+      key: 'vendorName', label: 'Vendor', render: (val) => (
+        <div className="flex items-center gap-1.5">
+          <FaBuilding className="text-slate-400 text-[10px]" />
+          <span className="font-medium text-slate-700">{val}</span>
+        </div>
+      )
+    },
+    {
+      key: 'deviceType', label: 'Device Type', render: (val) => (
+        <span className="inline-block bg-slate-100 text-slate-650 text-[10px] font-bold px-2 py-0.5 rounded border border-slate-150">
+          {val}
+        </span>
+      )
+    },
     { key: 'modelNumber', label: 'Model', render: (val) => <span className="font-mono text-xs font-semibold text-slate-600">{val || 'All Models'}</span> },
-    { key: 'templateType', label: 'Method', render: (val) => (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
-        val === 'Upload' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-purple-50 text-purple-600 border border-purple-100'
-      }`}>
-        {val === 'Upload' ? <FaCloudUploadAlt className="text-[9px]" /> : <FaCode className="text-[9px]" />}
-        <span>{val}</span>
-      </span>
-    )},
+    {
+      key: 'templateType', label: 'Method', render: (val) => (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${val === 'Upload' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-purple-50 text-purple-600 border border-purple-100'
+          }`}>
+          {val === 'Upload' ? <FaCloudUploadAlt className="text-[9px]" /> : <FaCode className="text-[9px]" />}
+          <span>{val}</span>
+        </span>
+      )
+    },
     { key: 'version', label: 'Version', render: (val) => <span className="font-mono text-xs font-bold text-slate-500">v{val}</span> },
     { key: 'createdAt', label: 'Created Date', render: (val) => <span className="text-xs text-slate-400">{formatDate(val)}</span> },
-    { key: 'actions', label: 'Actions', className: 'text-right', render: (_, row) => (
-      <ActionButtons
-        actions={[
-          {
-            type: 'view',
-            title: 'View Template Content',
-            onClick: () => setViewingTemplate(row)
-          },
-          {
-            type: 'edit',
-            title: 'Edit Template Specifications',
-            onClick: () => handleOpenEdit(row)
-          },
-          {
-            type: 'delete',
-            title: 'Delete Template',
-            onClick: () => {
-              if (window.confirm(`Delete golden template "${row.name}"?`)) {
-                deleteTemplate(row.id);
-              }
+    {
+      key: 'actions', label: 'Actions', className: 'text-right', render: (_, row) => (
+        <ActionButtons
+          actions={[
+            {
+              type: 'view',
+              title: 'View Template Content',
+              onClick: () => handleOpenView(row)
+            },
+            {
+              type: 'edit',
+              title: 'Edit Template Specifications',
+              onClick: () => handleOpenEdit(row)
+            },
+            {
+              type: 'delete',
+              title: 'Delete Template',
+              onClick: () => handleDelete(row.id, row.name)
             }
-          }
-        ]}
-      />
-    )}
+          ]}
+        />
+      )
+    }
   ];
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
-      
+
       {/* Page Header */}
-      <PageHeader 
-        title="Template Management" 
+      <PageHeader
+        title="Template Management"
         subtitle="Upload or compose policy-compliant Golden config files. Associate them directly to Device Types and Models."
       >
         <button
@@ -276,7 +438,7 @@ export default function TemplateManagement() {
                   {viewingTemplate.vendorName} • {viewingTemplate.deviceType} • {viewingTemplate.modelNumber || 'All Models'} (v{viewingTemplate.version})
                 </p>
               </div>
-              <button 
+              <button
                 onClick={() => setViewingTemplate(null)}
                 className="text-slate-400 hover:text-slate-600 transition-colors text-sm font-bold"
               >
@@ -305,13 +467,13 @@ export default function TemplateManagement() {
       {isModalOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl border border-slate-150 overflow-hidden animate-in fade-in zoom-in duration-200">
-            
+
             {/* Header */}
             <div className="bg-slate-50 border-b border-slate-150 px-6 py-4 flex items-center justify-between">
               <h3 className="font-bold text-slate-800 text-base">
                 {editingTemplate ? 'Modify Golden Template' : 'Add Golden Template'}
               </h3>
-              <button 
+              <button
                 onClick={() => { resetForm(); setIsModalOpen(false); }}
                 className="text-slate-400 hover:text-slate-600 transition-colors text-sm"
               >
@@ -321,7 +483,7 @@ export default function TemplateManagement() {
 
             {/* Form body */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
-              
+
               {/* Relationship settings */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
@@ -347,7 +509,7 @@ export default function TemplateManagement() {
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
                     required
                   >
-                    <option value="L2 Switch">L2 Switch</option>
+                    <option value="Switch">Switch</option>
                     <option value="L3 Switch">L3 Switch</option>
                     <option value="Core Switch">Core Switch</option>
                     <option value="Router">Router</option>
@@ -443,9 +605,8 @@ export default function TemplateManagement() {
                 <div className="space-y-2">
                   <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Select/Drag File *</label>
                   <div
-                    className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
-                      isDragActive ? 'border-cyan-500 bg-cyan-500/5' : 'border-slate-200 hover:border-cyan-400 bg-slate-50'
-                    }`}
+                    className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragActive ? 'border-cyan-500 bg-cyan-500/5' : 'border-slate-200 hover:border-cyan-400 bg-slate-50'
+                      }`}
                     onClick={() => fileInputRef.current?.click()}
                     onDragEnter={handleDrag}
                     onDragLeave={handleDrag}

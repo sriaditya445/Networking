@@ -4,7 +4,6 @@ import { FaPlay, FaEye, FaFilter, FaCheckCircle, FaTimesCircle, FaSpinner, FaHis
 // Import stores
 import { useVendorStore } from '../store/vendorStore';
 import { useDeviceStore } from '../store/deviceStore';
-import { useTemplateStore } from '../store/templateStore';
 import { useAuditStore } from '../store/auditStore';
 
 // Import reusable components
@@ -15,8 +14,36 @@ import StatusBadge from './common/StatusBadge';
 export default function AuditDashboard({ devices: stagedDevices = [] }) {
   const { vendors } = useVendorStore();
   const { devices: manualDevices } = useDeviceStore();
-  const { templates } = useTemplateStore();
+  const [templates, setTemplates] = useState([]);
   const { auditResults, runAudit, clearAuditHistory } = useAuditStore();
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/templates");
+        if (response.ok) {
+          const data = await response.json();
+          const mapped = data.map(t => ({
+            id: t.id,
+            name: t.template_name,
+            vendorName: t.vendor,
+            vendorId: vendors.find(v => v.name.toLowerCase() === t.vendor.toLowerCase())?.id || 'v1',
+            deviceType: t.device_type,
+            modelNumber: t.model || '',
+            templateType: t.template_type === 'jinja2' ? 'Paste' : 'Upload',
+            version: t.version || '1.0.0',
+            content: t.template_content || '',
+            createdAt: t.created_at,
+            updatedAt: t.updated_at
+          }));
+          setTemplates(mapped);
+        }
+      } catch (error) {
+        console.error("Failed to fetch templates in AuditDashboard", error);
+      }
+    };
+    fetchTemplates();
+  }, [vendors]);
 
   // Top Section Filters State
   const [vendorFilter, setVendorFilter] = useState('');
@@ -76,19 +103,34 @@ export default function AuditDashboard({ devices: stagedDevices = [] }) {
   };
 
   // Run audit for a single device
-  const handleRunSingle = (device) => {
-    const template = getMatchedTemplate(device);
-    runAudit(device.id, device.hostname, auditTypeFilter, template);
+  const handleRunSingle = async (device) => {
+    const templateSummary = getMatchedTemplate(device);
+    let detailedTemplate = null;
+    if (templateSummary) {
+      try {
+        const response = await fetch(`http://localhost:8000/api/templates/${templateSummary.id}`);
+        if (response.ok) {
+          const detailed = await response.json();
+          detailedTemplate = {
+            ...templateSummary,
+            content: detailed.template_content || ''
+          };
+        }
+      } catch (e) {
+        console.error("Failed to fetch detailed template for audit", e);
+      }
+    }
+    runAudit(device.id, device.hostname, auditTypeFilter, detailedTemplate);
   };
 
   // Run audit for all filtered devices
-  const handleRunAll = () => {
-    filteredDevices.forEach(device => {
+  const handleRunAll = async () => {
+    for (const device of filteredDevices) {
       const latest = getLatestAudit(device.id);
       if (!latest || latest.status !== 'Processing') {
-        handleRunSingle(device);
+        await handleRunSingle(device);
       }
-    });
+    }
   };
 
   // Calculate bottom summary statistics

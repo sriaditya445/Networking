@@ -14,7 +14,7 @@ import {
 } from 'react-icons/fa';
 
 // Import Zustand stores
-import { useTemplateStore } from '../store/templateStore';
+import { useVendorStore } from '../store/vendorStore';
 import { useAuditStore } from '../store/auditStore';
 
 // Import Modals & Reusable Components
@@ -40,8 +40,37 @@ function UploadCenter({
   renderStatusBadge
 }) {
   // Zustand stores
-  const { templates } = useTemplateStore();
+  const { vendors } = useVendorStore();
+  const [templates, setTemplates] = useState([]);
   const { auditResults, runAudit } = useAuditStore();
+
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/templates");
+        if (response.ok) {
+          const data = await response.json();
+          const mapped = data.map(t => ({
+            id: t.id,
+            name: t.template_name,
+            vendorName: t.vendor,
+            vendorId: vendors.find(v => v.name.toLowerCase() === t.vendor.toLowerCase())?.id || 'v1',
+            deviceType: t.device_type,
+            modelNumber: t.model || '',
+            templateType: t.template_type === 'jinja2' ? 'Paste' : 'Upload',
+            version: t.version || '1.0.0',
+            content: t.template_content || '',
+            createdAt: t.created_at,
+            updatedAt: t.updated_at
+          }));
+          setTemplates(mapped);
+        }
+      } catch (error) {
+        console.error("Failed to fetch templates in UploadCenter", error);
+      }
+    };
+    fetchTemplates();
+  }, [vendors]);
 
   // Local UI State
   const [selectedJob, setSelectedJob] = useState(null);
@@ -182,7 +211,7 @@ function UploadCenter({
     }
   };
 
-  const runAuditForType = (type) => {
+  const runAuditForType = async (type) => {
     setProcessingState(prev => ({
       ...prev,
       [type]: 'Processing'
@@ -190,14 +219,30 @@ function UploadCenter({
 
     // Trigger simulation store run
     const typeDevices = filteredDevices.filter(d => d.device_type === type);
-    typeDevices.forEach(d => {
-      const matchedTemplate = templates.find(t => 
+    for (const d of typeDevices) {
+      const templateSummary = templates.find(t =>
         t.vendorName.toLowerCase() === (d.vendor || 'Cisco').toLowerCase() &&
         t.deviceType.toLowerCase() === (d.device_type || 'L2 Switch').toLowerCase() &&
         t.modelNumber.toLowerCase() === (d.model_number || 'Unknown').toLowerCase()
       ) || null;
-      runAudit(d._id || d.id, d.device_name, auditTypes[type] || 'Full Audit', matchedTemplate);
-    });
+
+      let detailedTemplate = null;
+      if (templateSummary) {
+        try {
+          const response = await fetch(`http://localhost:8000/api/templates/${templateSummary.id}`);
+          if (response.ok) {
+            const detailed = await response.json();
+            detailedTemplate = {
+              ...templateSummary,
+              content: detailed.template_content || ''
+            };
+          }
+        } catch (e) {
+          console.error("Failed to fetch detailed template in runAuditForType", e);
+        }
+      }
+      runAudit(d._id || d.id, d.device_name, auditTypes[type] || 'Full Audit', detailedTemplate);
+    }
 
     // Simulate completion
     setTimeout(() => {
@@ -208,10 +253,10 @@ function UploadCenter({
     }, 1500);
   };
 
-  const handleProcessAll = () => {
-    Object.keys(deviceCounts).forEach(type => {
-      runAuditForType(type);
-    });
+  const handleProcessAll = async () => {
+    for (const type of Object.keys(deviceCounts)) {
+      await runAuditForType(type);
+    }
   };
 
   const handleDeleteType = (type) => {
