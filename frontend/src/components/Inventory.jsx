@@ -33,14 +33,17 @@ function Inventory({ devices, jobs, onTypeClick }) {
   }));
 
   // Combine discoverable backend devices and manually-created vendor devices
-  const allDevices = [...devices, ...normalizedVendorDevices];
+  const allDevices =
+    devices.length > 0
+      ? devices
+      : normalizedVendorDevices;
 
   // Filter devices based on selected folder
   const filteredDevices = selectedFolder
     ? allDevices.filter(d => {
-        const deviceJob = jobs.find(j => (j._id || j.id) === d.upload_id);
-        return deviceJob && deviceJob.folder_name === selectedFolder;
-      })
+      const deviceJob = jobs.find(j => (j._id || j.id) === d.upload_id);
+      return deviceJob && deviceJob.folder_name === selectedFolder;
+    })
     : allDevices;
 
   // Use reusable utility function to calculate counts
@@ -50,7 +53,7 @@ function Inventory({ devices, jobs, onTypeClick }) {
   const getDevicesForType = (typeId) => {
     return filteredDevices.filter(device => {
       const type = (device.device_type || 'Unknown').trim();
-      
+
       if (typeId === 'L2 Switch') {
         return type === 'L2 Switch' || type === 'Switch' || type.toLowerCase() === 'switch';
       }

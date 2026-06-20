@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaPlus, FaHdd, FaBuilding, FaFilter, FaHistory, FaSpinner, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 // Import Zustand stores
 import { useVendorStore } from '../store/vendorStore';
 import { useDeviceStore } from '../store/deviceStore';
-import { useTemplateStore } from '../store/templateStore';
 import { useAuditStore } from '../store/auditStore';
 
 // Import reusable components
@@ -21,8 +20,37 @@ import AuditSelectionModal from './modals/AuditSelectionModal';
 export default function DeviceManagement() {
   const { vendors } = useVendorStore();
   const { devices, addDevice, updateDevice, deleteDevice } = useDeviceStore();
-  const { templates, uploadTemplate, deleteTemplateByDevice } = useTemplateStore();
+  const [templates, setTemplates] = useState([]);
   const { auditResults, selectedAuditType, setAuditType, runAudit } = useAuditStore();
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await fetch("http://localhost:8000/api/templates");
+      if (response.ok) {
+        const data = await response.json();
+        const mapped = data.map(t => ({
+          id: t.id,
+          name: t.template_name,
+          vendorName: t.vendor,
+          vendorId: vendors.find(v => v.name.toLowerCase() === t.vendor.toLowerCase())?.id || 'v1',
+          deviceType: t.device_type,
+          modelNumber: t.model || '',
+          templateType: t.template_type === 'jinja2' ? 'Paste' : 'Upload',
+          version: t.version || '1.0.0',
+          content: t.template_content || '',
+          createdAt: t.created_at,
+          updatedAt: t.updated_at
+        }));
+        setTemplates(mapped);
+      }
+    } catch (e) {
+      console.error("Failed to fetch templates", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
 
   const [selectedVendorFilter, setSelectedVendorFilter] = useState('');
   const [editingDevice, setEditingDevice] = useState(null);
@@ -49,13 +77,50 @@ export default function DeviceManagement() {
   };
 
   // Handle Template Upload
-  const handleUploadTemplate = (templateData) => {
+  const handleUploadTemplate = async (templateData) => {
     if (targetTemplateDevice) {
-      uploadTemplate({
-        ...templateData,
-        deviceId: targetTemplateDevice.id,
-        deviceName: targetTemplateDevice.deviceName
-      });
+      try {
+        const formData = new FormData();
+        const mapDeviceTypeToBackend = (type) => {
+          const t = type.toLowerCase();
+          if (t.includes('switch')) return 'switch';
+          if (t.includes('router')) return 'router';
+          if (t.includes('firewall')) return 'firewall';
+          if (t.includes('wlc')) return 'wlc';
+          return 'unknown';
+        };
+
+        formData.append('vendorId', targetTemplateDevice.vendorId);
+        formData.append('vendorName', targetTemplateDevice.vendorName);
+        formData.append('deviceType', targetTemplateDevice.deviceType);
+        formData.append('modelNumber', targetTemplateDevice.modelNumber);
+        formData.append('templateName', templateData.name);
+        formData.append('version', templateData.version || '1.0.0');
+
+        formData.append('vendor', targetTemplateDevice.vendorName);
+        formData.append('device_type', mapDeviceTypeToBackend(targetTemplateDevice.deviceType));
+        formData.append('model', targetTemplateDevice.modelNumber || '');
+        formData.append('template_name', templateData.name);
+
+        const blob = new Blob([templateData.fileContent], { type: 'text/plain' });
+        formData.append('file', blob, templateData.fileName);
+
+        const response = await fetch("http://localhost:8000/api/templates/upload", {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          alert("Template uploaded successfully!");
+          await fetchTemplates();
+        } else {
+          const err = await response.json();
+          alert(`Failed to upload template: ${err.detail || 'Unknown error'}`);
+        }
+      } catch (error) {
+        console.error(error);
+        alert("Error uploading template.");
+      }
 
       // Auto trigger audit configuration immediately for single-screen flow guidance
       const dev = targetTemplateDevice;
@@ -69,10 +134,33 @@ export default function DeviceManagement() {
   };
 
   // Handle Audit Confirmation
-  const handleConfirmAudit = (auditType) => {
+  const handleConfirmAudit = async (auditType) => {
     if (targetAuditDevice) {
       setAuditType(auditType);
-      runAudit(targetAuditDevice.id, targetAuditDevice.deviceName, auditType);
+
+      const templateSummary = templates.find(t =>
+        t.vendorName.toLowerCase() === targetAuditDevice.vendorName.toLowerCase() &&
+        t.deviceType.toLowerCase() === targetAuditDevice.deviceType.toLowerCase() &&
+        t.modelNumber.toLowerCase() === targetAuditDevice.modelNumber.toLowerCase()
+      ) || null;
+
+      let detailedTemplate = null;
+      if (templateSummary) {
+        try {
+          const response = await fetch(`http://localhost:8000/api/templates/${templateSummary.id}`);
+          if (response.ok) {
+            const detailed = await response.json();
+            detailedTemplate = {
+              ...templateSummary,
+              content: detailed.template_content || ''
+            };
+          }
+        } catch (e) {
+          console.error("Failed to fetch detailed template in handleConfirmAudit", e);
+        }
+      }
+
+      runAudit(targetAuditDevice.id, targetAuditDevice.deviceName, auditType, detailedTemplate);
       setTargetAuditDevice(null);
     }
   };
@@ -110,12 +198,16 @@ export default function DeviceManagement() {
     )},
     { key: 'modelNumber', label: 'Model' },
     { key: 'template', label: 'Golden Template', render: (_, row) => {
-      const template = templates.find(t => t.deviceId === row.id);
+      const template = templates.find(t =>
+        t.vendorName.toLowerCase() === row.vendorName.toLowerCase() &&
+        t.deviceType.toLowerCase() === row.deviceType.toLowerCase() &&
+        t.modelNumber.toLowerCase() === row.modelNumber.toLowerCase()
+      );
       if (template) {
         return (
           <div className="flex flex-col gap-0.5 max-w-[130px]">
             <span className="text-xs font-bold text-slate-700 truncate" title={template.name}>{template.name}</span>
-            <span className="text-[9px] text-slate-400 font-mono">v{template.version} • {new Date(template.uploadDate).toLocaleDateString()}</span>
+            <span className="text-[9px] text-slate-400 font-mono">v{template.version} • {new Date(template.createdAt || Date.now()).toLocaleDateString()}</span>
           </div>
         );
       }
@@ -123,7 +215,11 @@ export default function DeviceManagement() {
     }},
     { key: 'status', label: 'Status', render: (val) => <StatusBadge status={val} /> },
     { key: 'actions', label: 'Actions', className: 'text-right', render: (_, row) => {
-      const template = templates.find(t => t.deviceId === row.id);
+      const template = templates.find(t =>
+        t.vendorName.toLowerCase() === row.vendorName.toLowerCase() &&
+        t.deviceType.toLowerCase() === row.deviceType.toLowerCase() &&
+        t.modelNumber.toLowerCase() === row.modelNumber.toLowerCase()
+      );
       return (
         <ActionButtons
           actions={[
@@ -160,7 +256,6 @@ export default function DeviceManagement() {
               onClick: () => {
                 if (window.confirm(`Are you sure you want to delete device "${row.deviceName}"?`)) {
                   deleteDevice(row.id);
-                  deleteTemplateByDevice(row.id); // also clean up templates
                 }
               }
             }
