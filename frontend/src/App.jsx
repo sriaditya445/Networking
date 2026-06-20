@@ -53,6 +53,7 @@ function App() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [selectedUploadId, setSelectedUploadId] = useState(null);
   const [selectedFolderName, setSelectedFolderName] = useState(null);
+  const [onTemplateUploadSuccess, setOnTemplateUploadSuccess] = useState(null);
 
 
   // Fetch all necessary data from FastAPI backend
@@ -256,7 +257,17 @@ function App() {
       case 'device_management':
         return <DeviceManagement />;
       case 'template_management':
-        return <TemplateManagement />;
+        return (
+          <TemplateManagement
+            onSuccess={() => {
+              if (typeof onTemplateUploadSuccess === 'function') {
+                onTemplateUploadSuccess();
+              } else {
+                setActiveTab('queue');
+              }
+            }}
+          />
+        );
       case 'audit_dashboard':
         return <AuditDashboard devices={devices} />;
       case 'dashboard':
@@ -334,6 +345,10 @@ function App() {
             formatDate={formatDate}
             renderStatusBadge={renderStatusBadge}
             apiBaseUrl={API_BASE_URL}
+            setActiveTab={setActiveTab}
+            selectedUploadId={selectedUploadId}
+            setSelectedUploadId={setSelectedUploadId}
+            setOnTemplateUploadSuccess={setOnTemplateUploadSuccess}
           />
         );
       case 'configurations':
