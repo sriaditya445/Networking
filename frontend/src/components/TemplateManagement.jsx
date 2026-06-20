@@ -9,7 +9,7 @@ import PageHeader from './common/PageHeader';
 import ReusableTable from './common/ReusableTable';
 import ActionButtons from './common/ActionButtons';
 
-export default function TemplateManagement() {
+export default function TemplateManagement({ onSuccess }) {
   const { vendors } = useVendorStore();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -268,6 +268,9 @@ export default function TemplateManagement() {
           await fetchTemplates();
           setIsModalOpen(false);
           resetForm();
+          if (typeof onSuccess === 'function') {
+            onSuccess();
+          }
         } else {
           const err = await response.json();
           alert(`Failed to update template: ${err.detail || 'Unknown error'}`);
@@ -310,6 +313,9 @@ export default function TemplateManagement() {
           await fetchTemplates();
           setIsModalOpen(false);
           resetForm();
+          if (typeof onSuccess === 'function') {
+            onSuccess();
+          }
         } else {
           const err = await response.json();
           alert(`Failed to create template: ${err.detail || 'Unknown error'}`);
