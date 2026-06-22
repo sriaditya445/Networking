@@ -37,10 +37,8 @@ async def get_upload(upload_id: str):
         upload_id
     )
 
-
 # async def get_uploads(upload_id: Optional[str] = None):
 #     return await UploadService.get_uploads(upload_id=upload_id)
-
 
 @router.delete("/api/uploads/{upload_id}")
 async def delete_upload(upload_id: str):

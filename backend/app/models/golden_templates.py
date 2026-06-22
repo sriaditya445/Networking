@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 
 
 class GoldenTemplateModel(BaseModel):
-    vendor_id: str
+    vendor: str
     device_type: str
     model: Optional[str] = None
 

@@ -85,7 +85,7 @@ class ParserWorker:
                             "parsed_at": datetime.utcnow(),
                             "template_status": "SELECTED" if template else "TEMPLATE_REQUIRED",
                             "template_id": (
-                                str(template["_id"]) if template else None)
+                                template["id"] if template else None)
                         }
                     )
                     

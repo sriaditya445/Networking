@@ -102,27 +102,22 @@ class ExtractionWorker:
                         "configuration":
                             None,
 
-                        "processing_status":
-                            "PENDING",
+                        "processing_status": "PENDING",
                         "audit_status":"PENDING",
 
-                        "file_path":
-                            file_path,
+                        "file_path": file_path,
 
                         "relative_path":
                             os.path.relpath(
                                 file_path,
                                 folder_path
                             ),
-
-                        "error_message":
-                            None,
-
-                        "parsed_at":
-                            None,
-
-                        "parsed_data":
-                            None
+                        "error_message": None,
+                        "parsed_at": None,
+                        "parsed_data": None,
+                        "upload_id": upload_id,
+                        "created_at": datetime.utcnow(),
+                        "updated_at": datetime.utcnow()
                     }
                 )
 

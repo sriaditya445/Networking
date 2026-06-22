@@ -43,6 +43,16 @@ class DeviceRepository:
         )
 
     @staticmethod
+    async def update_many(
+        query: dict,
+        data: dict
+    ):
+        return await DeviceRepository.collection().update_many(
+            query,
+            {"$set": data}
+        )
+        
+    @staticmethod
     async def delete_by_upload_id(upload_id: str):
         return await DeviceRepository.collection().delete_many(
             {"upload_id": upload_id}
