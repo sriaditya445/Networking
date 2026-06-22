@@ -20,13 +20,17 @@ class AuditResultService:
 
         result_doc = AuditResultModel(
             device_id=str(device["_id"]),
+            device_name=device["device_name"],
+            vendor=device["vendor"],
+            device_type=device["device_type"],
             template_id=device["template_id"],
             audit_mode=audit_mode,
             selected_sections=selected_sections,
             overall_score=audit_result["score"],
             category_scores=audit_result["category_scores"],
-            passed_rules=audit_result["passed"],
-            failed_rules=audit_result["failed"],
+            passed=audit_result["passed"],
+            failed=audit_result["failed"],
+            recommendations=audit_result["recommendations"],
             created_at=datetime.utcnow()
         )
 

@@ -7,11 +7,7 @@ from app.services.device_service import DeviceService
 from app.repositories.template_repository import (
     TemplateRepository
 )
-from app.services.template_parser import (
-    parse_template_content
-)
 from datetime import datetime
-from fastapi import HTTPException
 from pymongo.errors import DuplicateKeyError
 from app.services.template_parser import (
     parse_template_content
@@ -28,7 +24,7 @@ class TemplateService:
         return (
             vendor.strip(),
             device_type.lower().strip(),
-            model.strip() if model else None
+            model.upper().strip() if model else None
         )
 
     @staticmethod
@@ -60,7 +56,7 @@ class TemplateService:
             device_type=device_type,
             model=model
         )
-        
+
     @staticmethod
     async def create_template(
         template_doc: dict
@@ -77,7 +73,7 @@ class TemplateService:
         template_doc["device_type"] = device_type
         template_doc["model"] = model
 
-        existing = await TemplateRepository.find_template(
+        existing = await TemplateRepository.find_exact_template(
             vendor=template_doc["vendor"],
             device_type=template_doc["device_type"],
             model=template_doc.get("model")
@@ -96,21 +92,15 @@ class TemplateService:
                 template_doc
             )
             template_id = str(result.inserted_id)
-            devices = await DeviceService.get_devices(
-                vendor=template_doc["vendor"],
-                device_type=template_doc["device_type"],
-                model=template_doc.get("model"),
-                template_status="TEMPLATE_REQUIRED"
-            )
-            for device in devices:
-                await DeviceService.update_device(
-                    device["_id"],
-                    {
-                        "template_status": "SELECTED",
-                        "template_id": template_id,
-                        "updated_at": datetime.utcnow()
-                    }
-                )
+
+            query = {
+                "vendor": vendor,
+                "device_type": device_type,
+                "model": model
+            }
+
+            devices = await DeviceService.get_devices(**query)
+
             upload_ids = {
                 device["upload_id"]
                 for device in devices
@@ -197,6 +187,27 @@ class TemplateService:
             data
         )
 
+        devices = await DeviceService.get_devices(
+            template_id=template_id
+        )
+
+        await DeviceService.update_devices(
+            {"template_id": template_id},
+            {
+                "audit_status": "PENDING",
+                "audit_report_id": None,
+                "updated_at": datetime.utcnow()
+            }
+        )
+        upload_ids = {
+            device["upload_id"]
+            for device in devices
+        }
+
+        for upload_id in upload_ids:
+            await UploadService.refresh_upload_template_status(
+                upload_id
+            )
         return await TemplateRepository.get_by_id(
             template_id
         )
@@ -221,6 +232,28 @@ class TemplateService:
                 detail="Template not found"
             )
 
+        devices = await DeviceService.get_devices(
+            template_id=template_id
+        )
+        await DeviceService.update_devices(
+            {"template_id": template_id},
+            {
+                "template_status": "TEMPLATE_REQUIRED",
+                "template_id": None,
+                "audit_status": "PENDING",
+                "updated_at": datetime.utcnow()
+            }
+        )
+
+        upload_ids = {
+            device["upload_id"]
+            for device in devices
+        }
+        for upload_id in upload_ids:
+            await UploadService.refresh_upload_template_status(
+                upload_id
+            )
+
         return {
             "message": "Template deleted successfully",
             "id": template_id
@@ -238,3 +271,4 @@ class TemplateService:
         return await TemplateRepository.get_all(
             filters
         )
+        

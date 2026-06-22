@@ -11,24 +11,27 @@ class TemplateRepository:
         return get_db().golden_templates
 
     @staticmethod
+    def _serialize(template):
+        if template:
+            template["id"] = str(template.pop("_id"))
+        return template
+
+    @staticmethod
     async def find_template(
         vendor: str,
         device_type: str,
         model: str | None = None
     ):
 
-        # Exact model match
-        template = await TemplateRepository.collection().find_one(
-            {
-                "vendor": vendor,
-                "device_type": device_type,
-                "model": model
-            }
-        )
-
-        # Fallback to generic template
-        if not template and model is not None:
-
+        if model is not None:
+            template = await TemplateRepository.collection().find_one(
+                {
+                    "vendor": vendor,
+                    "device_type": device_type,
+                    "model": model
+                }
+            )
+        else:
             template = await TemplateRepository.collection().find_one(
                 {
                     "vendor": vendor,
@@ -38,7 +41,7 @@ class TemplateRepository:
             )
 
         if template:
-            template["_id"] = str(template["_id"])
+            template["id"] = str(template.pop("_id"))
 
         return template
 
@@ -105,3 +108,25 @@ class TemplateRepository:
         )
 
         return result.deleted_count > 0
+
+    @staticmethod
+    async def find_exact_template(
+        vendor: str,
+        device_type: str,
+        model: str | None = None
+    ):
+        template = await (
+            TemplateRepository.collection()
+            .find_one(
+                {
+                    "vendor": vendor,
+                    "device_type": device_type,
+                    "model": model
+                }
+            )
+        )
+
+        if template:
+            template["id"] = str(template.pop("_id"))
+
+        return template

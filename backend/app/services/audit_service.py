@@ -34,7 +34,7 @@ class AuditService:
             selected_sections=selected_sections
         )
 
-        recommendations = build_recommendations(
+        enriched_failed = build_recommendations(
             compliance.failed
         )
 
@@ -49,10 +49,10 @@ class AuditService:
             ],
             "failed": [
                 r.model_dump()
-                for r in compliance.failed
+                for r in enriched_failed
             ],
             "recommendations": [
                 r.model_dump()
-                for r in recommendations
+                for r in enriched_failed
             ]
         }

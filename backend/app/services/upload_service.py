@@ -6,6 +6,7 @@ from app.repositories.upload_repository import UploadRepository
 from app.services.device_service import DeviceService
 from app.services.ingestion_service import IngestionService
 from app.services.template_service import (TemplateService)
+from app.repositories.template_repository import TemplateRepository
 from fastapi import HTTPException, status
 from app.core.database import logger
 from collections import defaultdict
@@ -284,14 +285,21 @@ class UploadService:
         grouped = defaultdict(int)
 
         for device in devices:
-            if not device.get("template_id"):
+
+            template = await TemplateService.find_template(
+                vendor=device["vendor"],
+                device_type=device["device_type"],
+                model=device.get("model")
+            )
+
+            if not template:
                 continue
 
             key = (
                 device.get("vendor"),
                 device.get("device_type"),
                 device.get("model"),
-                device.get("template_id"),
+                template["id"]
             )
 
             grouped[key] += 1
@@ -367,7 +375,14 @@ class UploadService:
         detected_groups = set()
 
         for device in devices:
-            if not device.get("template_id"):
+
+            template = await TemplateService.find_template(
+                vendor=device["vendor"],
+                device_type=device["device_type"],
+                model=device.get("model")
+            )
+
+            if not template:
                 continue
 
             detected_groups.add(
@@ -375,7 +390,7 @@ class UploadService:
                     device.get("vendor"),
                     device.get("device_type"),
                     device.get("model"),
-                    device.get("template_id")
+                    template["id"]
                 )
             )
 
@@ -517,6 +532,31 @@ class UploadService:
         ):
             return upload.get("status")
 
+        # Reconcile device template assignments
+        devices = await DeviceService.get_devices(
+            upload_id=upload_id,
+            processing_status="SUCCESS"
+        )
+
+        for device in devices:
+
+            template = await TemplateService.find_template(
+                vendor=device["vendor"],
+                device_type=device["device_type"],
+                model=device.get("model")
+            )
+
+            if template:
+
+                await DeviceService.update_device(
+                    str(device["_id"]),
+                    {
+                        "template_status": "SELECTED",
+                        "template_id": template["id"],
+                        "updated_at": datetime.utcnow()
+                    }
+                )
+
         missing_groups = (
             await UploadService.get_missing_template_groups(
                 upload_id
@@ -539,26 +579,32 @@ class UploadService:
 
         return status
 
-
     @staticmethod
     async def get_missing_template_groups(
         upload_id: str
     ):
-        await UploadService.get_upload(upload_id)
-
         devices = await DeviceService.get_devices(
             upload_id=upload_id,
-            processing_status="SUCCESS",
-            template_status="TEMPLATE_REQUIRED"
+            processing_status="SUCCESS"
         )
 
         grouped = {}
 
         for device in devices:
 
+            template = await TemplateRepository.find_template(
+                vendor=device["vendor"],
+                device_type=device["device_type"],
+                model=device.get("model")
+            )
+
+            # Template found (exact model or generic fallback)
+            if template:
+                continue
+
             key = (
-                device.get("vendor"),
-                device.get("device_type"),
+                device["vendor"],
+                device["device_type"],
                 device.get("model")
             )
 
@@ -577,3 +623,93 @@ class UploadService:
                 model
             ), count in grouped.items()
         ]
+
+    # @staticmethod
+    # async def get_missing_template_groups(
+    #     upload_id: str
+    # ):
+    #     devices = await DeviceService.get_devices(
+    #         upload_id=upload_id,
+    #         processing_status="SUCCESS"
+    #     )
+
+    #     # Reconcile deleted templates
+    #     for device in devices:
+
+    #         template_id = device.get("template_id")
+
+    #         if not template_id:
+    #             continue
+
+    #         template = await TemplateRepository.get_by_id(
+    #             template_id
+    #         )
+
+    #         if not template:
+
+    #             await DeviceService.update_device(
+    #                 str(device["_id"]),
+    #                 {
+    #                     "template_status": "TEMPLATE_REQUIRED",
+    #                     "template_id": None
+    #                 }
+    #             )
+
+    #             device["template_status"] = "TEMPLATE_REQUIRED"
+    #             device["template_id"] = None
+
+    #     grouped = {}
+
+    #     for device in devices:
+
+    #         if device.get("template_status") != "TEMPLATE_REQUIRED":
+    #             continue
+
+    #         key = (
+    #             device.get("vendor"),
+    #             device.get("device_type"),
+    #             device.get("model")
+    #         )
+
+    #         grouped[key] = grouped.get(key, 0) + 1
+
+    #     return [
+    #         {
+    #             "vendor": vendor,
+    #             "device_type": device_type,
+    #             "model": model,
+    #             "device_count": count
+    #         }
+    #         for (
+    #             vendor,
+    #             device_type,
+    #             model
+    #         ), count in grouped.items()
+    #     ]
+        
+# For missing template groups instead of status get missing templates searching every device
+# devices = await DeviceService.get_devices(
+#     upload_id=upload_id,
+#     processing_status="SUCCESS"
+# )
+
+# grouped = {}
+
+# for device in devices:
+
+#     template = await TemplateService.find_template(
+#         vendor=device["vendor"],
+#         device_type=device["device_type"],
+#         model=device.get("model")
+#     )
+
+#     if template:
+#         continue
+
+#     key = (
+#         device["vendor"],
+#         device["device_type"],
+#         device.get("model")
+#     )
+
+#     grouped[key] = grouped.get(key, 0) + 1

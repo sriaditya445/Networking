@@ -63,6 +63,17 @@ class DeviceService:
     async def update_device(device_id: str, data: dict):
         return await DeviceRepository.update(device_id,data)
 
+    # device_service.py
+    @staticmethod
+    async def update_devices(
+        query: dict,
+        data: dict
+    ):
+        return await DeviceRepository.update_many(
+            query,
+            data
+        )
+
     @staticmethod
     async def delete_devices_by_upload_id(upload_id: str):
         return await DeviceRepository.delete_by_upload_id(upload_id)
@@ -98,9 +109,10 @@ class DeviceService:
         # ------------------------
         # Template stage
         # ------------------------
-
-        if template_status == "TEMPLATE_REQUIRED":
+        if not device.get("template_id"):
             return "TEMPLATE_REQUIRED"
+        # if template_status == "TEMPLATE_REQUIRED":
+        #     return "TEMPLATE_REQUIRED"
 
         if template_status == "SELECTED":
             if audit_status == "PENDING":

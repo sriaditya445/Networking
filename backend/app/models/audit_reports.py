@@ -12,7 +12,7 @@ class AuditReportModel(BaseModel):
     template_id: str
 
     audit_mode: str
-    selected_sections: List[str] = []
+    selected_sections: List[str] = Field(default_factory=list)
 
     overall_score: float
     category_scores: Dict[str, float]

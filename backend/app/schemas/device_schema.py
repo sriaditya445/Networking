@@ -7,7 +7,7 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 class DeviceResponse(BaseModel):
     id: PyObjectId = Field(alias="_id")
     upload_id: str
-
+    template_id: str | None = None
     device_name: str
     device_type: str | None = None
     vendor: str | None = None
