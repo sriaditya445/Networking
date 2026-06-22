@@ -108,6 +108,9 @@ class TemplateService:
 
             from app.services.upload_service import UploadService
             for upload_id in upload_ids:
+                await UploadService.rebuild_device_groups(
+                    upload_id
+                )
                 await UploadService.refresh_upload_template_status(
                     upload_id
                 )
@@ -195,7 +198,9 @@ class TemplateService:
             {"template_id": template_id},
             {
                 "audit_status": "PENDING",
+                "audit_score": None,
                 "audit_report_id": None,
+                "audit_selection_done": False,
                 "updated_at": datetime.utcnow()
             }
         )
@@ -205,6 +210,9 @@ class TemplateService:
         }
 
         for upload_id in upload_ids:
+            await UploadService.rebuild_device_groups(
+                upload_id
+            )
             await UploadService.refresh_upload_template_status(
                 upload_id
             )
@@ -241,6 +249,9 @@ class TemplateService:
                 "template_status": "TEMPLATE_REQUIRED",
                 "template_id": None,
                 "audit_status": "PENDING",
+                "audit_score": None,
+                "audit_report_id": None,
+                "audit_selection_done": False,
                 "updated_at": datetime.utcnow()
             }
         )
@@ -250,6 +261,9 @@ class TemplateService:
             for device in devices
         }
         for upload_id in upload_ids:
+            await UploadService.rebuild_device_groups(
+                upload_id
+            )
             await UploadService.refresh_upload_template_status(
                 upload_id
             )

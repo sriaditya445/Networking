@@ -29,8 +29,7 @@ class DeviceModel(BaseModel):
 
     configuration: Optional[str] = None
     template_name: Optional[str] = None
-    scope_type: str = "FULL"
-    selected_sections: List[str] = []
+    audit_selection_done: bool = False
 
     # Audit Status
     audit_status: str = "PENDING"

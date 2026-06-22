@@ -25,7 +25,7 @@ class AuditWorker:
 
         try:
             upload = await UploadService.get_upload(upload_id)
-            audit_selections = upload.get("audit_selections",[])
+            groups = upload.get("device_groups",[])
             
             devices = [
                 d
@@ -48,17 +48,25 @@ class AuditWorker:
                 device_id = str(device["_id"])
 
                 try:
-                    selection = next(
+                    device_group_id = (
+                        f"{device['vendor']}|"
+                        f"{device['device_type']}|"
+                        f"{device.get('model') or 'GENERIC'}"
+                    )
+                    group = next(
                         (
-                            s
-                            for s in audit_selections
-                            if s["template_id"]
-                            == device.get("template_id")
+                            g
+                            for g in groups
+                            if g.get("group_id")
+                            == device_group_id
                         ),
                         None
                     )
-                    if not selection:
-                        raise ValueError("No audit selection found")
+
+                    if not group:
+                        raise ValueError(
+                            "No audit configuration found"
+                        )
 
                     await DeviceService.update_device(
                         device_id,
@@ -70,16 +78,16 @@ class AuditWorker:
 
                     audit_result = await AuditService.audit_device(
                         device,
-                        audit_mode=selection.get("audit_mode","FULL"),
-                        selected_sections=selection.get("selected_sections",[])
+                        audit_mode=group.get("audit_mode","FULL"),
+                        selected_sections=group.get("selected_sections",[])
                     )
 
                     audit_result_id = (
                         await AuditResultService.create_result(
                             device=device,
                             audit_result=audit_result,
-                            audit_mode=selection.get("audit_mode","FULL"),
-                            selected_sections=selection.get("selected_sections",[])
+                            audit_mode=group.get("audit_mode","FULL"),
+                            selected_sections=group.get("selected_sections",[])
                         )
                     )
 
@@ -87,8 +95,8 @@ class AuditWorker:
                         await AuditReportService.create_report(
                             device=device,
                             audit_result=audit_result,
-                            audit_mode=selection.get("audit_mode","FULL"),
-                            selected_sections=selection.get("selected_sections",[])
+                            audit_mode=group.get("audit_mode","FULL"),
+                            selected_sections=group.get("selected_sections",[])
                         )
                     )
 

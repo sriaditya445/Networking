@@ -129,7 +129,7 @@ class UploadService:
                 "audit_success_count": 0,
                 "audit_failed_count": 0,
 
-                "audit_selections": [],
+                "device_groups": [],
 
                 "folder_path": upload_folder,
                 "error_message": None,
@@ -272,85 +272,14 @@ class UploadService:
         )
 
     @staticmethod
-    async def get_audit_options(
-        upload_id: str
-    ):
-
-        await UploadService.get_upload(upload_id)
-
-        devices = await DeviceService.get_devices(
-            upload_id=upload_id
-        )
-
-        grouped = defaultdict(int)
-
-        for device in devices:
-
-            template = await TemplateService.find_template(
-                vendor=device["vendor"],
-                device_type=device["device_type"],
-                model=device.get("model")
-            )
-
-            if not template:
-                continue
-
-            key = (
-                device.get("vendor"),
-                device.get("device_type"),
-                device.get("model"),
-                template["id"]
-            )
-
-            grouped[key] += 1
-
-        response = []
-
-        for (
-            vendor,
-            device_type,
-            model,
-            template_id,
-        ), count in grouped.items():
-
-            template = await TemplateService.get_template(
-                template_id
-            )
-
-            sections = []
-
-            if template:
-                sections = list(
-                    template.get(
-                        "sections",
-                        {}
-                    ).keys()
-                )
-
-            response.append(
-                {
-                    "vendor": vendor,
-                    "device_type": device_type,
-                    "model": model,
-                    "device_count": count,
-                    "template_id": template_id,
-                    "template_name": template.get("template_name"),
-                    "available_sections": sections
-                }
-            )
-
-        return {
-            "upload_id": upload_id,
-            "groups": response
-        }
-
-    @staticmethod
     async def save_audit_selection(
         upload_id: str,
         request
     ):
 
-        upload = await UploadService.get_upload(upload_id)
+        upload = await UploadService.get_upload(
+            upload_id
+        )
 
         if upload["status"] != "WAITING_AUDIT_SELECTION":
             raise HTTPException(
@@ -361,83 +290,67 @@ class UploadService:
                 )
             )
 
-        devices = await DeviceService.get_devices(
-            upload_id=upload_id,
-            processing_status="SUCCESS"
-        )
+        groups = upload.get("device_groups", [])
 
-        if not devices:
+        if not groups:
             raise HTTPException(
                 status_code=400,
-                detail="No analyzed devices found"
+                detail="No device groups found"
             )
 
-        detected_groups = set()
+        groups_map = {
+            group["group_id"]: group
+            for group in groups
+        }
 
-        for device in devices:
+        selected_groups = {
+            selection.group_id
+            for selection in request.selections
+        }
 
-            template = await TemplateService.find_template(
-                vendor=device["vendor"],
-                device_type=device["device_type"],
-                model=device.get("model")
+        detected_groups = {
+            group["group_id"]
+            for group in groups
+            if group.get("template_id")
+        }
+
+        missing_group_ids = (
+            detected_groups - selected_groups
+        )
+
+        if missing_group_ids:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "message":
+                        "Audit selection required for all groups",
+                    "missing_groups": [
+                        group
+                        for group in groups
+                        if group["group_id"] in missing_group_ids
+                    ]
+                }
             )
-
-            if not template:
-                continue
-
-            detected_groups.add(
-                (
-                    device.get("vendor"),
-                    device.get("device_type"),
-                    device.get("model"),
-                    template["id"]
-                )
-            )
-
-        selected_groups = set()
 
         for selection in request.selections:
 
-            selected_groups.add(
-                (
-                    selection.vendor,
-                    selection.device_type,
-                    selection.model,
-                    selection.template_id
-                )
+            group = groups_map.get(
+                selection.group_id
             )
 
-            # ----------------------------
-            # Validate template exists
-            # ----------------------------
-
-            template = await TemplateService.get_template(
-                selection.template_id
-            )
-
-            if not template:
+            if not group:
                 raise HTTPException(
                     status_code=404,
-                    detail=(
-                        f"Template not found: "
-                        f"{selection.template_id}"
-                    )
+                    detail=f"Group not found: {selection.group_id}"
                 )
 
-            # ----------------------------
-            # Validate selected sections
-            # ----------------------------
-
-            if (
-                selection.audit_mode.lower()
-                == "selected_sections"
-            ):
+            if selection.audit_mode.lower() == "selected_sections":
 
                 available_sections = set(
-                    template.get(
-                        "sections",
-                        {}
-                    ).keys()
+                    group.get(
+                        "available_sections",
+                        []
+                    )
                 )
 
                 invalid_sections = (
@@ -446,128 +359,90 @@ class UploadService:
                 )
 
                 if invalid_sections:
-
                     raise HTTPException(
                         status_code=400,
                         detail={
                             "message":
-                            "Invalid sections selected",
-                            "template_id":
-                            selection.template_id,
+                                "Invalid sections selected",
+                            "group_id":
+                                selection.group_id,
                             "invalid_sections":
-                            list(invalid_sections),
+                                list(invalid_sections),
                             "available_sections":
-                            list(available_sections)
+                                list(available_sections)
                         }
                     )
 
-        missing_groups = detected_groups - selected_groups
+            group["audit_mode"] = (
+                selection.audit_mode
+            )
 
-        if missing_groups:
+            group["selected_sections"] = (
+                selection.selected_sections
+            )
 
-            missing = [
+            await DeviceService.update_devices(
                 {
-                    "vendor": vendor,
-                    "device_type": device_type,
-                    "model": model,
-                    "template_id": template_id
-                }
-                for vendor, device_type, model,template_id in missing_groups
-            ]
-
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "message": (
-                        "Audit selection required "
-                        "for all detected device groups"
-                    ),
-                    "missing_groups": missing
+                    "upload_id": upload_id,
+                    "vendor": group["vendor"],
+                    "device_type": group["device_type"],
+                    "model": group["model"]
+                },
+                {
+                    "audit_selection_done": True,
+                    "updated_at": datetime.utcnow()
                 }
             )
 
         await UploadRepository.update(
             upload_id,
             {
-                "audit_selections": [
-                    selection.model_dump()
-                    for selection in request.selections
-                ],
+                "device_groups": groups,
                 "status": "READY_FOR_AUDIT",
                 "updated_at": datetime.utcnow()
             }
         )
 
         return {
-            "message": "Audit selection saved successfully",
-            "status": "READY_FOR_AUDIT"
+            "message":
+                "Audit selection saved successfully",
+            "status":
+                "READY_FOR_AUDIT"
         }
+
 
     @staticmethod
     async def refresh_upload_template_status(
         upload_id: str
     ):
 
-        upload = await UploadService.get_upload(upload_id)
-
-        total_devices = await DeviceService.count_devices(
-            {
-                "upload_id": upload_id
-            }
+        upload = await UploadService.get_upload(
+            upload_id
         )
 
-        parsed_success = upload.get(
-            "parsed_success_count",
-            0
+        groups = upload.get(
+            "device_groups",
+            []
         )
 
-        parsed_failed = upload.get(
-            "parsed_failed_count",
-            0
-        )
-
-        # Parsing still running
-        if total_devices != (
-            parsed_success + parsed_failed
-        ):
+        if not groups:
             return upload.get("status")
 
-        # Reconcile device template assignments
-        devices = await DeviceService.get_devices(
-            upload_id=upload_id,
-            processing_status="SUCCESS"
-        )
+        if any(
+            g["template_status"]
+            == "TEMPLATE_REQUIRED"
+            for g in groups
+        ):
+            status = "WAITING_TEMPLATE_CREATION"
 
-        for device in devices:
+        elif any(
+            not g.get("audit_mode")
+            for g in groups
+        ):
+            status = "WAITING_AUDIT_SELECTION"
 
-            template = await TemplateService.find_template(
-                vendor=device["vendor"],
-                device_type=device["device_type"],
-                model=device.get("model")
-            )
-
-            if template:
-
-                await DeviceService.update_device(
-                    str(device["_id"]),
-                    {
-                        "template_status": "SELECTED",
-                        "template_id": template["id"],
-                        "updated_at": datetime.utcnow()
-                    }
-                )
-
-        missing_groups = (
-            await UploadService.get_missing_template_groups(
-                upload_id
-            )
-        )
-
-        status = (
-            "WAITING_TEMPLATE_CREATION"
-            if missing_groups
-            else "WAITING_AUDIT_SELECTION"
-        )
+        else:
+            status = "READY_FOR_AUDIT"
 
         await UploadRepository.update(
             upload_id,
@@ -579,28 +454,30 @@ class UploadService:
 
         return status
 
+    
     @staticmethod
-    async def get_missing_template_groups(
+    async def rebuild_device_groups(
         upload_id: str
     ):
+        upload = await UploadService.get_upload(
+            upload_id
+        )
+
+        existing_groups = {
+            g["group_id"]: g
+            for g in upload.get(
+                "device_groups",
+                []
+            )
+        }
         devices = await DeviceService.get_devices(
             upload_id=upload_id,
             processing_status="SUCCESS"
         )
 
-        grouped = {}
+        groups = {}
 
         for device in devices:
-
-            template = await TemplateRepository.find_template(
-                vendor=device["vendor"],
-                device_type=device["device_type"],
-                model=device.get("model")
-            )
-
-            # Template found (exact model or generic fallback)
-            if template:
-                continue
 
             key = (
                 device["vendor"],
@@ -608,108 +485,73 @@ class UploadService:
                 device.get("model")
             )
 
-            grouped[key] = grouped.get(key, 0) + 1
+            if key not in groups:
 
-        return [
+                template = await TemplateService.find_template(
+                    vendor=device["vendor"],
+                    device_type=device["device_type"],
+                    model=device.get("model")
+                )
+                group_id = (
+                    f"{device['vendor']}|"
+                    f"{device['device_type']}|"
+                    f"{device.get('model') or 'GENERIC'}"
+                )
+                existing = existing_groups.get(
+                    group_id,
+                    {}
+                )
+                groups[key] = {
+                    "group_id": group_id,
+                    "vendor": device["vendor"],
+                    "device_type": device["device_type"],
+                    "model": device.get("model"),
+
+                    "device_count": 0,
+
+                    "template_id":
+                        template["id"]
+                        if template else None,
+
+                    "template_name":
+                        template.get("template_name")
+                        if template else None,
+
+                    "template_status":
+                        "SELECTED"
+                        if template
+                        else "TEMPLATE_REQUIRED",
+
+                    "available_sections":
+                        list(
+                            template.get(
+                                "sections",
+                                {}
+                            ).keys()
+                        )
+                        if template
+                        else [],
+
+                    "audit_mode":
+                        existing.get(
+                            "audit_mode"
+                        ),
+
+                    "selected_sections":
+                        existing.get(
+                            "selected_sections",
+                            []
+                        )
+                }
+
+            groups[key]["device_count"] += 1
+
+        await UploadRepository.update(
+            upload_id,
             {
-                "vendor": vendor,
-                "device_type": device_type,
-                "model": model,
-                "device_count": count
+                "device_groups": list(groups.values()),
+                "updated_at": datetime.utcnow()
             }
-            for (
-                vendor,
-                device_type,
-                model
-            ), count in grouped.items()
-        ]
+        )
 
-    # @staticmethod
-    # async def get_missing_template_groups(
-    #     upload_id: str
-    # ):
-    #     devices = await DeviceService.get_devices(
-    #         upload_id=upload_id,
-    #         processing_status="SUCCESS"
-    #     )
-
-    #     # Reconcile deleted templates
-    #     for device in devices:
-
-    #         template_id = device.get("template_id")
-
-    #         if not template_id:
-    #             continue
-
-    #         template = await TemplateRepository.get_by_id(
-    #             template_id
-    #         )
-
-    #         if not template:
-
-    #             await DeviceService.update_device(
-    #                 str(device["_id"]),
-    #                 {
-    #                     "template_status": "TEMPLATE_REQUIRED",
-    #                     "template_id": None
-    #                 }
-    #             )
-
-    #             device["template_status"] = "TEMPLATE_REQUIRED"
-    #             device["template_id"] = None
-
-    #     grouped = {}
-
-    #     for device in devices:
-
-    #         if device.get("template_status") != "TEMPLATE_REQUIRED":
-    #             continue
-
-    #         key = (
-    #             device.get("vendor"),
-    #             device.get("device_type"),
-    #             device.get("model")
-    #         )
-
-    #         grouped[key] = grouped.get(key, 0) + 1
-
-    #     return [
-    #         {
-    #             "vendor": vendor,
-    #             "device_type": device_type,
-    #             "model": model,
-    #             "device_count": count
-    #         }
-    #         for (
-    #             vendor,
-    #             device_type,
-    #             model
-    #         ), count in grouped.items()
-    #     ]
-        
-# For missing template groups instead of status get missing templates searching every device
-# devices = await DeviceService.get_devices(
-#     upload_id=upload_id,
-#     processing_status="SUCCESS"
-# )
-
-# grouped = {}
-
-# for device in devices:
-
-#     template = await TemplateService.find_template(
-#         vendor=device["vendor"],
-#         device_type=device["device_type"],
-#         model=device.get("model")
-#     )
-
-#     if template:
-#         continue
-
-#     key = (
-#         device["vendor"],
-#         device["device_type"],
-#         device.get("model")
-#     )
-
-#     grouped[key] = grouped.get(key, 0) + 1
+        return list(groups.values())

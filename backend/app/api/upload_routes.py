@@ -69,15 +69,6 @@ async def upload_files(
     
     return response
 
-@router.get(
-    "/api/uploads/{upload_id}/audit-options"
-)
-async def get_audit_options(
-    upload_id: str
-):
-    return await UploadService.get_audit_options(
-        upload_id
-    )
 
 @router.post(
     "/api/uploads/{upload_id}/audit-selection"
@@ -91,12 +82,22 @@ async def save_audit_selection(
         request
     )
 
+
 @router.get(
-    "/api/uploads/{upload_id}/missing-templates"
+    "/api/uploads/{upload_id}/groups"
 )
-async def get_missing_templates(
+async def get_upload_groups(
     upload_id: str
 ):
-    return await UploadService.get_missing_template_groups(
+
+    upload = await UploadService.get_upload(
         upload_id
     )
+
+    return {
+        "upload_id": upload_id,
+        "groups": upload.get(
+            "device_groups",
+            []
+        )
+    }
