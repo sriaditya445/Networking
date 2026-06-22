@@ -39,6 +39,29 @@ async def get_device(
         device_id
     )
 
+@router.put(
+    "/api/devices/{device_id}",
+    response_model=DeviceResponse
+)
+async def update_device(
+    device_id: str,
+    data: dict
+):
+    from app.services.upload_service import UploadService
+    device = await DeviceService.get_device(device_id)
+    if not device:
+        raise HTTPException(status_code=404, detail="Device not found")
+        
+    update_data = {}
+    if "template_id" in data:
+        update_data["template_id"] = data["template_id"]
+        update_data["template_status"] = "SELECTED" if data["template_id"] else "TEMPLATE_REQUIRED"
+        
+    await DeviceService.update_device(device_id, update_data)
+    await UploadService.refresh_upload_template_status(device["upload_id"])
+    
+    return await DeviceService.get_device(device_id)
+
 @router.get("/api/devices/{device_id}/download")
 async def download_device_config(device_id: str):
     return await FileService.download_device(

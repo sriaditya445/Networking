@@ -32,6 +32,8 @@ function ProcessingQueue({
   const [devices, setDevices] = useState([]);
   const [selectedDevice, setSelectedDevice] = useState(null);
   const [selectedReportType, setSelectedReportType] = useState('full');
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Maps to track states per device
   const [auditStatusMap, setAuditStatusMap] = useState({});
@@ -140,9 +142,8 @@ function ProcessingQueue({
   };
 
   useEffect(() => {
-    if (selectedUploadId) {
-      fetchDevicesAndReports(selectedUploadId);
-    }
+    fetchDevicesAndReports(selectedUploadId);
+    setCurrentPage(1);
   }, [selectedUploadId]);
 
   // Polling helper during audit runs
@@ -222,6 +223,44 @@ function ProcessingQueue({
       t.device_type?.toLowerCase() === devType.toLowerCase() &&
       (t.model || '').toLowerCase() === (device.model || '').toLowerCase()
     );
+  };
+
+  // Sync selectedTemplateId with selectedDevice template_id or auto-match
+  useEffect(() => {
+    if (selectedDevice) {
+      const devTemplateId = selectedDevice.template_id;
+      if (devTemplateId) {
+        setSelectedTemplateId(devTemplateId);
+      } else {
+        const matched = findMatchedTemplate(selectedDevice);
+        setSelectedTemplateId(matched ? (matched._id || matched.id) : '');
+      }
+    } else {
+      setSelectedTemplateId('');
+    }
+  }, [selectedDevice, templates]);
+
+  const handleTemplateChange = async (templateId) => {
+    setSelectedTemplateId(templateId);
+    if (selectedDevice && selectedUploadId) {
+      const devId = selectedDevice._id || selectedDevice.id;
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/devices/${devId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ template_id: templateId || null })
+        });
+        if (res.ok) {
+          const updatedDevice = await res.json();
+          setSelectedDevice(updatedDevice);
+          fetchDevicesAndReports(selectedUploadId);
+        } else {
+          console.error("Failed to update device template ID on the backend");
+        }
+      } catch (err) {
+        console.error("Error updating device template ID:", err);
+      }
+    }
   };
 
   // Redirection to upload template
@@ -338,6 +377,12 @@ function ProcessingQueue({
   // Matched template for top display
   const topMatchedTemplate = selectedDevice ? findMatchedTemplate(selectedDevice) : null;
 
+  const itemsPerPage = 10;
+  const indexOfLastDevice = currentPage * itemsPerPage;
+  const indexOfFirstDevice = indexOfLastDevice - itemsPerPage;
+  const paginatedDevices = devices.slice(indexOfFirstDevice, indexOfLastDevice);
+  const totalPages = Math.ceil(devices.length / itemsPerPage);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
 
@@ -372,41 +417,68 @@ function ProcessingQueue({
             {/* 1. Selected Upload */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Selected Batch / Folder</label>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2.5">
-                <FaServer className="text-slate-400 text-sm shrink-0" />
-                <span className="text-xs font-semibold text-slate-700 truncate">
-                  {selectedJob ? selectedJob.folder_name : 'No Upload Batch Selected'}
-                </span>
-              </div>
+              <select
+                className="w-full bg-white border border-slate-205 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer font-semibold shadow-sm"
+                value={selectedUploadId || ''}
+                onChange={(e) => {
+                  setSelectedUploadId(e.target.value || null);
+                  setSelectedDevice(null);
+                }}
+              >
+                <option value="">Select a batch...</option>
+                {jobs.map((job) => (
+                  <option key={job._id || job.id} value={job._id || job.id}>
+                    {job.folder_name} ({job.total_devices || 0} files)
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* 2. Selected Device Type */}
+            {/* 2. Selected Device */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Selected Device Type</label>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2.5">
-                <FaFileAlt className="text-slate-400 text-sm shrink-0" />
-                <span className="text-xs font-semibold text-slate-700">
-                  {selectedDevice ? `${selectedDevice.device_name} (${selectedDevice.device_type})` : 'Select a device below'}
-                </span>
-              </div>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Selected Device</label>
+              <select
+                className="w-full bg-white border border-slate-205 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer font-semibold shadow-sm"
+                value={selectedDevice ? (selectedDevice._id || selectedDevice.id) : ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const dev = devices.find(d => (d._id || d.id) === val);
+                  setSelectedDevice(dev || null);
+                }}
+                disabled={!selectedUploadId}
+              >
+                <option value="">Select a device...</option>
+                {devices.map((device) => (
+                  <option key={device._id || device.id} value={device._id || device.id}>
+                    {device.device_name || 'Unknown'} ({device.device_type || 'N/A'} - {device.vendor || 'N/A'})
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* 3. Selected Template */}
+            {/* 3. Golden Template */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Matched Golden Template</label>
-              <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2.5">
-                <FaCheckCircle className={`text-sm shrink-0 ${topMatchedTemplate ? 'text-emerald-500' : 'text-slate-400'}`} />
-                <span className="text-xs font-semibold text-slate-700 truncate">
-                  {topMatchedTemplate ? topMatchedTemplate.name : (selectedDevice ? 'No Matching Template Found' : 'Select a device below')}
-                </span>
-              </div>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Golden Template</label>
+              <select
+                className="w-full bg-white border border-slate-205 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer font-semibold shadow-sm"
+                value={selectedTemplateId || ''}
+                onChange={(e) => handleTemplateChange(e.target.value)}
+                disabled={!selectedDevice}
+              >
+                <option value="">Select a template...</option>
+                {templates.map((temp) => (
+                  <option key={temp._id || temp.id} value={temp._id || temp.id}>
+                    {temp.template_name || temp.name} ({temp.vendor} - {temp.device_type})
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* 4. Audit Report Type */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Audit Report Type</label>
               <select
-                className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer font-semibold shadow-sm"
+                className="w-full bg-white border border-slate-202 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer font-semibold shadow-sm"
                 value={selectedReportType}
                 onChange={(e) => setSelectedReportType(e.target.value)}
               >
@@ -423,8 +495,8 @@ function ProcessingQueue({
           <div className="flex justify-end pt-2">
             <button
               onClick={handleGenerateAudit}
-              disabled={!selectedJob || !selectedDevice || !topMatchedTemplate || runningAudit}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold shadow-sm transition-all text-white ${(!selectedJob || !selectedDevice || !topMatchedTemplate || runningAudit)
+              disabled={!selectedJob || !selectedDevice || !selectedTemplateId || runningAudit}
+              className={`flex items-center gap-2 px-5 py-3 rounded-xl text-xs font-bold shadow-sm transition-all text-white ${(!selectedJob || !selectedDevice || !selectedTemplateId || runningAudit)
                 ? 'bg-slate-350 cursor-not-allowed opacity-60'
                 : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-750 hover:shadow-md'
                 }`}
@@ -525,10 +597,10 @@ function ProcessingQueue({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
-                {devices.map((device) => {
+                {paginatedDevices.map((device) => {
                   const devId = device._id || device.id;
                   const isSelected = selectedDevice && (selectedDevice._id || selectedDevice.id) === devId;
-                  const matchedTemp = findMatchedTemplate(device);
+                  const matchedTemp = device.template_id ? templates.find(t => (t._id || t.id) === device.template_id) : findMatchedTemplate(device);
 
                   const auditState = auditStatusMap[devId] || 'Pending';
                   const reportState = reportStatusMap[devId] || 'Pending';
@@ -659,6 +731,43 @@ function ProcessingQueue({
                 })}
               </tbody>
             </table>
+            
+            {totalPages > 1 && (
+              <div className="flex justify-between items-center pt-4 border-t border-slate-100 mt-4">
+                <span className="text-xs text-slate-500">
+                  Showing {indexOfFirstDevice + 1} to {Math.min(indexOfLastDevice, devices.length)} of {devices.length} devices
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-650 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Previous
+                  </button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                        currentPage === page
+                          ? 'bg-cyan-500 border-cyan-500 text-white shadow-sm'
+                          : 'border-slate-200 text-slate-650 hover:bg-slate-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-650 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

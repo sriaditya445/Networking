@@ -18,5 +18,8 @@ class DeviceResponse(BaseModel):
 
     error_message: str | None = None
 
+    template_id: str | None = None
+    template_status: str | None = None
+
     created_at: datetime | None = None
     updated_at: datetime | None = None
