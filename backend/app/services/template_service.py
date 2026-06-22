@@ -92,6 +92,21 @@ class TemplateService:
                 template_doc
             )
             template_id = str(result.inserted_id)
+            await DeviceService.update_devices(
+                {
+                    "vendor": vendor,
+                    "device_type": device_type,
+                    "model": model,
+                    "template_id": None
+                },
+                {
+                    "template_id": template_id,
+                    "template_status": "SELECTED",
+                    "audit_selection_done": False,
+                    "audit_status": "PENDING",
+                    "updated_at": datetime.utcnow()
+                }
+            )
 
             query = {
                 "vendor": vendor,

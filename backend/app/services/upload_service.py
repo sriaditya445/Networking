@@ -253,6 +253,11 @@ class UploadService:
             for d in devices
         ):
             status = "FAILED"
+        # elif all(
+        #     d.get("audit_status") in ["SUCCESS", "FAILED"]
+        #     for d in devices
+        # ):
+        #     status = "AUDIT_COMPLETED"
 
         elif all(
             d.get("audit_status") == "SUCCESS"
@@ -384,9 +389,7 @@ class UploadService:
             await DeviceService.update_devices(
                 {
                     "upload_id": upload_id,
-                    "vendor": group["vendor"],
-                    "device_type": group["device_type"],
-                    "model": group["model"]
+                    "group_id": group["group_id"]
                 },
                 {
                     "audit_selection_done": True,
@@ -492,11 +495,7 @@ class UploadService:
                     device_type=device["device_type"],
                     model=device.get("model")
                 )
-                group_id = (
-                    f"{device['vendor']}|"
-                    f"{device['device_type']}|"
-                    f"{device.get('model') or 'GENERIC'}"
-                )
+                group_id = device["group_id"]
                 existing = existing_groups.get(
                     group_id,
                     {}

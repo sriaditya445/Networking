@@ -22,10 +22,12 @@ router = APIRouter()
     response_model=List[DeviceResponse]
 )
 async def get_devices(
-    upload_id: Optional[str] = None
+    upload_id: Optional[str] = None,
+    group_id: Optional[str] = None
 ):
     return await DeviceService.get_devices(
-        upload_id=upload_id
+        upload_id=upload_id,
+        group_id=group_id
     )
 
 @router.get(

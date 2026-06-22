@@ -99,8 +99,11 @@ async def export_pdf(
             detail="Report not found"
         )
 
+    audit_result = await AuditResultService.get_result(
+        report["audit_result_id"]
+    )
     pdf_bytes = ReportGenerator.export_pdf(
-        report
+        audit_result
     )
 
     return Response(
@@ -108,7 +111,7 @@ async def export_pdf(
         media_type="application/pdf",
         headers={
             "Content-Disposition":
-            f"attachment; filename={report['device_name']}.pdf"
+            f"attachment; filename={audit_result['device_name']}.pdf"
         }
     )
 
@@ -130,8 +133,12 @@ async def export_excel(
             detail="Report not found"
         )
 
+    audit_result = await AuditResultService.get_result(
+        report["audit_result_id"]
+    )
+
     excel_bytes = ReportGenerator.export_excel(
-        report
+        audit_result
     )
 
     return Response(
@@ -142,7 +149,7 @@ async def export_excel(
         ),
         headers={
             "Content-Disposition":
-            f"attachment; filename={report['device_name']}.xlsx"
+            f"attachment; filename={audit_result['device_name']}.xlsx"
         }
     )  
 

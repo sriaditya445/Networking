@@ -6,8 +6,7 @@ from typing import Dict, List, Any
 class AuditResultModel(BaseModel):
     device_id: str
     device_name: str
-    vendor: str
-    device_type: str
+    group_id: str
     template_id: str
 
     audit_mode: str

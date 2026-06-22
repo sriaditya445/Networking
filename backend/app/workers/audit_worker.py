@@ -48,17 +48,12 @@ class AuditWorker:
                 device_id = str(device["_id"])
 
                 try:
-                    device_group_id = (
-                        f"{device['vendor']}|"
-                        f"{device['device_type']}|"
-                        f"{device.get('model') or 'GENERIC'}"
-                    )
+                    device_group_id = device["group_id"]
                     group = next(
                         (
                             g
                             for g in groups
-                            if g.get("group_id")
-                            == device_group_id
+                            if g["group_id"] == device_group_id
                         ),
                         None
                     )
@@ -94,9 +89,7 @@ class AuditWorker:
                     audit_report_id = (
                         await AuditReportService.create_report(
                             device=device,
-                            audit_result=audit_result,
-                            audit_mode=group.get("audit_mode","FULL"),
-                            selected_sections=group.get("selected_sections",[])
+                            audit_result_id=audit_result_id
                         )
                     )
 
