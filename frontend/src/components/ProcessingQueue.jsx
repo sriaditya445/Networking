@@ -436,7 +436,7 @@ function ProcessingQueue({
 
             {/* 2. Selected Device */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Selected Device</label>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Select category</label>
               <select
                 className="w-full bg-white border border-slate-205 rounded-xl p-3 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer font-semibold shadow-sm"
                 value={selectedDevice ? (selectedDevice._id || selectedDevice.id) : ''}

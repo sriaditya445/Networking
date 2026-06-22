@@ -84,8 +84,8 @@ class ParserWorker:
                             "processing_status": "SUCCESS",
                             "parsed_at": datetime.utcnow(),
                             "template_status": "SELECTED" if template else "TEMPLATE_REQUIRED",
-                            "template_id": (
-                                template["id"] if template else None)
+                            "template_id": template["id"] if template else None,
+                            "audit_selection_done": False
                         }
                     )
                     
@@ -167,6 +167,10 @@ class ParserWorker:
 
             # Check whether all devices have been processed
             if total_devices == (new_success + new_failed):
+                await UploadService.rebuild_device_groups(
+                    upload_id
+                )
+
                 await UploadService.refresh_upload_template_status(
                     upload_id
                 )
