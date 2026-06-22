@@ -21,8 +21,7 @@ class AuditResultService:
         result_doc = AuditResultModel(
             device_id=str(device["_id"]),
             device_name=device["device_name"],
-            vendor=device["vendor"],
-            device_type=device["device_type"],
+            group_id=device["group_id"],
             template_id=device["template_id"],
             audit_mode=audit_mode,
             selected_sections=selected_sections,

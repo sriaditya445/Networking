@@ -13,7 +13,7 @@ class DeviceModel(BaseModel):
     vendor: str = "Cisco"
 
     model: Optional[str] = None
-
+    group_id: Optional[str] = None
     # Raw Config
     configuration_json: Optional[Dict[str, Any]] = None
 
@@ -36,8 +36,8 @@ class DeviceModel(BaseModel):
 
     # Audit Results
     audit_score: Optional[float] = None
-    # audit_result_id: Optional[str] = None
     audit_report_id: Optional[str] = None
+    audit_result_id: Optional[str] = None
 
     # Errors
     error_message: Optional[str] = None

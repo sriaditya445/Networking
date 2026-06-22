@@ -83,21 +83,34 @@ async def save_audit_selection(
     )
 
 
-@router.get(
-    "/api/uploads/{upload_id}/groups"
-)
-async def get_upload_groups(
-    upload_id: str
-):
+@router.get("/api/uploads/{upload_id}/groups")
+async def get_upload_groups(upload_id: str):
 
-    upload = await UploadService.get_upload(
-        upload_id
-    )
+    upload = await UploadService.get_upload(upload_id)
+
+    if upload["status"] in [
+        "PENDING_EXTRACTION",
+        "ANALYZING_DEVICES"
+    ]:
+        return {
+            "upload_id": upload_id,
+            "status": upload["status"],
+            "message": (
+                "Device extraction is still in progress. "
+                "Groups will be available after analysis completes."
+            )
+        }
+
+    if upload["status"] == "WAITING_TEMPLATE_CREATION":
+        return {
+            "upload_id": upload_id,
+            "status": upload["status"],
+            "message": "Templates are required for one or more groups.",
+            "groups": upload.get("device_groups", [])
+        }
 
     return {
         "upload_id": upload_id,
-        "groups": upload.get(
-            "device_groups",
-            []
-        )
+        "status": upload["status"],
+        "groups": upload.get("device_groups", [])
     }

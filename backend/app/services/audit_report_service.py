@@ -14,24 +14,12 @@ class AuditReportService:
     @staticmethod
     async def create_report(
         device: dict,
-        audit_result: dict,
-        audit_mode: str,
-        selected_sections: list[str]
+        audit_result_id: str
     ):
 
         report_doc = AuditReportModel(
             device_id=str(device["_id"]),
-            device_name=device["device_name"],
-            vendor=device["vendor"],
-            device_type=device["device_type"],
-            template_id=device["template_id"],
-            audit_mode=audit_mode,
-            selected_sections=selected_sections,
-            overall_score=audit_result["score"],
-            category_scores=audit_result["category_scores"],
-            passed=audit_result["passed"],
-            failed=audit_result["failed"],
-            recommendations=audit_result["recommendations"],
+            audit_result_id=audit_result_id,
             created_at=datetime.utcnow()
         )
 

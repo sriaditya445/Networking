@@ -79,7 +79,7 @@ class CategoryScores(BaseModel):
     high_availability: float = 0
 
 
-class AuditReportResponse(BaseModel):
+class AuditResultResponse(BaseModel):
     id: str | None = None
     device_name: str
     device_type: str
@@ -91,6 +91,12 @@ class AuditReportResponse(BaseModel):
     recommendations: list[RuleResult]
     audit_mode: str = "full"
     created_at: datetime | None = None
+
+class AuditReportResponse(BaseModel):
+    id: str
+    device_id: str
+    audit_result_id: str
+    created_at: datetime
 
 class GoldenTemplateListResponse(BaseModel):
     id: str
@@ -138,6 +144,6 @@ class DashboardStats(BaseModel):
     total_audits: int
     average_compliance: float
     total_templates: int
-    recent_reports: list[AuditReportResponse]
+    recent_reports: list[AuditResultResponse]
     compliance_trends: list[ComplianceTrendPoint]
     device_inventory: list[dict[str, Any]]

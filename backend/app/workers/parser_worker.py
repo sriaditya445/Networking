@@ -69,6 +69,11 @@ class ParserWorker:
                         }
                     )
                     result = (ParserService.parse_device( content, os.path.basename(file_path)))
+                    group_id = (
+                        f"{result['vendor']}|"
+                        f"{result['device_type']}|"
+                        f"{result.get('model') or 'GENERIC'}"
+                    )
 
                     template = await TemplateService.find_template(
                         vendor=result.get("vendor"),
@@ -80,6 +85,7 @@ class ParserWorker:
                         str(device_id),
                         {
                             **result,
+                            "group_id": group_id,
                             "configuration": content,
                             "processing_status": "SUCCESS",
                             "parsed_at": datetime.utcnow(),
