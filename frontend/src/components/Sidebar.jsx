@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState } from "react";
 
 import {
   FaChartPie,
@@ -17,7 +18,9 @@ import {
   FaBuilding,
   FaNetworkWired,
   FaFileCode,
-  FaShieldAlt
+  FaShieldAlt,
+  FaChevronDown,
+  FaChevronRight,
 } from 'react-icons/fa';
 
 function Sidebar({
@@ -28,21 +31,116 @@ function Sidebar({
   setIsCollapsed
 }) {
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: FaChartPie },
-    { id: 'vendor_management', label: 'Vendor Management', icon: FaBuilding },
-    { id: 'device_management', label: 'Device Management', icon: FaNetworkWired },
-    { id: 'template_management', label: 'Template Management', icon: FaFileCode },
-    { id: 'audit_dashboard', label: 'Audit Dashboard', icon: FaShieldAlt },
-    { id: 'inventory', label: 'Inventory', icon: FaServer },
-    { id: 'upload', label: 'Upload Center', icon: FaUpload },
-    { id: 'devices', label: 'Discovered Devices', icon: FaHdd },
-    { id: 'analytics', label: 'Reports & Insights', icon: FaChartLine },
-    { id: 'queue', label: 'Tasks in Progress', icon: FaTasks },
-    { id: 'configurations', label: 'Configurations', icon: FaTerminal },
-    { id: 'downloads', label: 'Downloads', icon: FaDownload },
-    { id: 'settings', label: 'Settings', icon: FaCog },
-  ];
+ const menuSections = [
+  {
+    key: "dashboard",
+    title: "Dashboard",
+    items: [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: FaChartPie
+      }
+    ]
+  },
+
+  {
+    key: "audit",
+    title: "Audit",
+    icon: FaShieldAlt,
+    items: [
+      {
+        id: "inventory",
+        label: "Inventory",
+        icon: FaServer
+      },
+      {
+        id: "upload",
+        label: "Upload Center",
+        icon: FaUpload
+      },
+      {
+        id: "devices",
+        label: "Discovered Devices",
+        icon: FaHdd
+      },
+      {
+        id: "queue",
+        label: "Processing Queue",
+        icon: FaTasks
+      },
+      {
+        id: "audit_dashboard",
+        label: "Audit Dashboard",
+        icon: FaShieldAlt
+      },
+      {
+        id: "analytics",
+        label: "Reports & Insights",
+        icon: FaChartLine
+      }
+    ]
+  },
+
+  {
+    key: "administration",
+    title: "Administration",
+    icon: FaBuilding,
+    items: [
+      {
+        id: "vendor_management",
+        label: "Vendor Management",
+        icon: FaBuilding
+      },
+      {
+        id: "device_management",
+        label: "Device Management",
+        icon: FaNetworkWired
+      },
+      {
+        id: "template_management",
+        label: "Template Management",
+        icon: FaFileCode
+      }
+    ]
+  },
+
+  {
+    key: "system",
+    title: "System",
+    icon: FaCog,
+    items: [
+      {
+        id: "downloads",
+        label: "Downloads",
+        icon: FaDownload
+      },
+      {
+        id: "settings",
+        label: "Settings",
+        icon: FaCog
+      }
+    ]
+  }
+];
+
+
+
+  const [openSections, setOpenSections] = useState({
+    audit: true,
+    administration: true,
+    system: true
+  });
+
+  const toggleSection = (section) => {
+    setOpenSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  };
+
+
+
 
   return (
 
@@ -195,7 +293,50 @@ function Sidebar({
         "
       >
 
-        {menuItems.map((item) => {
+       {menuSections.map((section) => (
+
+  <div key={section.key}>
+
+    {section.key !== "dashboard" && !isCollapsed && (
+
+      <button
+        onClick={() => toggleSection(section.key)}
+        className="
+          w-full
+          flex items-center justify-between
+          px-3 py-2
+          text-xs
+          uppercase
+          font-bold
+          text-slate-500
+          hover:text-slate-300
+        "
+      >
+
+        <div className="flex items-center gap-2">
+
+          <section.icon className="text-xs" />
+
+          <span>{section.title}</span>
+
+        </div>
+
+        {openSections[section.key]
+          ? <FaChevronDown />
+          : <FaChevronRight />
+        }
+
+      </button>
+
+    )}
+
+    {(section.key === "dashboard" ||
+      isCollapsed ||
+      openSections[section.key]) && (
+
+      <div className="space-y-1">
+
+        {section.items.map((item) => {
 
           const Icon = item.icon;
 
@@ -206,6 +347,7 @@ function Sidebar({
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
+              title={isCollapsed ? item.label : ""}
               className={`
                 w-full
                 flex items-center
@@ -216,7 +358,6 @@ function Sidebar({
                 font-medium
                 transition-all duration-200
                 group
-                text-left
 
                 ${isActive
                   ? `
@@ -225,10 +366,8 @@ function Sidebar({
                     to-purple-500/5
                     border border-cyan-500/20
                     text-cyan-400
-                    shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]
                   `
                   : `
-                    border border-transparent
                     text-slate-400
                     hover:text-slate-200
                     hover:bg-slate-800/50
@@ -237,26 +376,21 @@ function Sidebar({
               `}
             >
 
-              {/* ICON */}
               <Icon
                 className={`
                   text-base
-                  transition-transform duration-200
-                  group-hover:scale-110
 
                   ${isActive
                     ? 'text-cyan-400'
-                    : 'text-slate-400 group-hover:text-slate-300'
+                    : 'text-slate-400'
                   }
                 `}
               />
 
-              {/* LABEL */}
               {!isCollapsed && (
                 <span>{item.label}</span>
               )}
 
-              {/* ACTIVE DOT */}
               {!isCollapsed && isActive && (
                 <span
                   className="
@@ -264,7 +398,6 @@ function Sidebar({
                     w-1.5 h-1.5
                     rounded-full
                     bg-cyan-400
-                    shadow-[0_0_6px_rgba(6,182,212,0.8)]
                   "
                 />
               )}
@@ -274,6 +407,14 @@ function Sidebar({
           );
 
         })}
+
+      </div>
+
+    )}
+
+  </div>
+
+))}
 
       </nav>
 
