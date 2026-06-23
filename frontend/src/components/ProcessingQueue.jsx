@@ -31,6 +31,20 @@ const AUDIT_MODE_OPTIONS = [
   { value: 'dns', label: 'Network Services', icon: FaNetworkWired, color: 'teal' },
 ];
 
+
+
+const SECTION_LABELS = {
+  aaa: "AAA",
+  security: "Security",
+  dns: "DNS",
+  ntp: "NTP",
+  snmp: "SNMP",
+  logging: "Logging",
+  layer3: "Layer 3",
+  interfaces: "Interfaces",
+  high_availability: "High Availability"
+};
+
 const COLOR_MAP = {
   cyan: { pill: 'bg-cyan-50 text-cyan-700 border-cyan-200', ring: 'ring-cyan-400', dot: 'bg-cyan-500' },
   rose: { pill: 'bg-rose-50 text-rose-700 border-rose-200', ring: 'ring-rose-400', dot: 'bg-rose-500' },
@@ -124,9 +138,11 @@ export default function ProcessingQueue({
   const [loadingDevices, setLoadingDevices] = useState(false);
   const [deviceDownloadMap, setDeviceDownloadMap] = useState({});
   const [devSearch, setDevSearch] = useState('');
+  const [devGroupFilter, setDevGroupFilter] = useState('');
   const [devStatusFilter, setDevStatusFilter] = useState('');
   const [devCurrentPage, setDevCurrentPage] = useState(1);
   const [devPageSize, setDevPageSize] = useState(10);
+  const [viewTab, setViewTab] = useState("groups");
 
   const fetchDevices = async (uploadId) => {
     if (!uploadId) { setDevices([]); return; }
@@ -237,21 +253,33 @@ export default function ProcessingQueue({
   // Reset page when filters change
   useEffect(() => {
     setDevCurrentPage(1);
-  }, [devSearch, devStatusFilter]);
+  }, [devSearch, devStatusFilter, devGroupFilter]);
 
   // Filtered devices memo
   const filteredDevices = useMemo(() => {
     return devices.filter(d => {
-      const matchesSearch = !devSearch ||
+      const matchesSearch =
+        !devSearch ||
         d.device_name?.toLowerCase().includes(devSearch.toLowerCase()) ||
         d.vendor?.toLowerCase().includes(devSearch.toLowerCase()) ||
         d.model?.toLowerCase().includes(devSearch.toLowerCase());
 
-      const matchesStatus = !devStatusFilter || d.display_status === devStatusFilter;
+      const matchesStatus =
+        !devStatusFilter ||
+        d.display_status === devStatusFilter;
 
-      return matchesSearch && matchesStatus;
+      const matchesGroup =
+        !devGroupFilter ||
+        d.group_id === devGroupFilter;
+
+      return matchesSearch && matchesStatus && matchesGroup;
     });
-  }, [devices, devSearch, devStatusFilter]);
+  }, [
+    devices,
+    devSearch,
+    devStatusFilter,
+    devGroupFilter
+  ]);
 
   // Paginated devices memo
   const paginatedDevices = useMemo(() => {
@@ -531,6 +559,39 @@ export default function ProcessingQueue({
   const completedCount = groups.filter(g => groupAuditStatus[g.group_id] === 'Completed').length;
   const runningCount = groups.filter(g => groupAuditStatus[g.group_id] === 'Running').length;
 
+
+
+
+
+
+
+  const templateMissingCount = groups.filter(
+    g => !getGroupTemplate(g)
+  ).length;
+
+  const templateReadyCount = groups.filter(
+    g => getGroupTemplate(g)
+  ).length;
+
+  const auditCompleted =
+    completedCount === groups.length &&
+    groups.length > 0;
+
+  let workflowStatus = "Upload Completed";
+
+  if (templateMissingCount > 0) {
+    workflowStatus = "Waiting For Template";
+  }
+  else if (runningCount > 0) {
+    workflowStatus = "Audit Running";
+  }
+  else if (auditCompleted) {
+    workflowStatus = "Audit Completed";
+  }
+  else if (templateReadyCount > 0) {
+    workflowStatus = "Ready For Audit";
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
 
@@ -616,305 +677,450 @@ export default function ProcessingQueue({
           </div>
         </div>
 
-        {/* Summary Cards */}
-        <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label: 'Total Groups', value: groups.length, color: 'slate', icon: FaLayerGroup },
-            { label: 'Templates Assigned', value: groups.filter(g => getGroupTemplate(g) !== undefined).length, color: 'emerald', icon: FaCheckCircle },
-            { label: 'Audits Running', value: runningCount, color: 'yellow', icon: FaBolt },
-            {
-              label: 'Reports Ready',
-              value: devices.filter(
-                d => d.audit_report_id
-              ).length,
-              color: 'cyan',
-              icon: FaFilePdf
-            },
-          ].map(card => {
-            const Icon = card.icon;
-            const colorMap = {
-              slate: 'bg-slate-50 text-slate-700 border-slate-200',
-              emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-              yellow: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-              cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-            };
-            return (
-              <div key={card.label} className={`rounded-2xl border p-5 flex flex-col gap-2 ${colorMap[card.color]}`}>
-                <Icon className="text-lg opacity-60" />
-                <span className="text-2xl font-black">{card.value}</span>
-                <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">{card.label}</span>
+        <div className="lg:col-span-2">
+
+          <div className="bg-white border border-slate-200 rounded-3xl p-6">
+
+            <h3 className="font-bold text-slate-800 mb-4">
+              Upload Workflow Status
+            </h3>
+
+            <div className="flex items-center justify-between">
+
+              <div className="text-center">
+                <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                  ✓
+                </div>
+                <p className="text-xs mt-2">Upload</p>
               </div>
-            );
-          })}
+
+              <div className="flex-1 h-1 bg-slate-200 mx-3"></div>
+
+              <div className="text-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${templateMissingCount > 0
+                  ? "bg-yellow-100"
+                  : "bg-green-100"
+                  }`}>
+                  📄
+                </div>
+                <p className="text-xs mt-2">Templates</p>
+              </div>
+
+              <div className="flex-1 h-1 bg-slate-200 mx-3"></div>
+
+              <div className="text-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${runningCount > 0
+                  ? "bg-yellow-100"
+                  : auditCompleted
+                    ? "bg-green-100"
+                    : "bg-slate-100"
+                  }`}>
+                  ▶
+                </div>
+                <p className="text-xs mt-2">Audit</p>
+              </div>
+
+              <div className="flex-1 h-1 bg-slate-200 mx-3"></div>
+
+              <div className="text-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${auditCompleted
+                  ? "bg-green-100"
+                  : "bg-slate-100"
+                  }`}>
+                  📑
+                </div>
+                <p className="text-xs mt-2">Report</p>
+              </div>
+
+            </div>
+
+            <div className="mt-6 flex justify-between items-center">
+
+              <span className="font-semibold text-slate-700">
+                {workflowStatus}
+              </span>
+
+              {templateMissingCount > 0 && (
+                <button
+                  onClick={() => setActiveTab("template_management")}
+                  className="px-4 py-2 rounded-lg bg-rose-500 text-white text-sm"
+                >
+                  Go To Templates
+                </button>
+              )}
+
+              {templateMissingCount === 0 &&
+                runningCount === 0 &&
+                !auditCompleted && (
+                  <button
+                    onClick={handleRunAll}
+                    className="px-4 py-2 rounded-lg bg-cyan-500 text-white text-sm"
+                  >
+                    Run Audit
+                  </button>
+                )}
+
+            </div>
+
+          </div>
+
         </div>
       </div>
 
-      {/* ── Groups Panel ─────────────────────────────────────────────── */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div>
-            <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-              <FaServer className="text-cyan-500 text-xs" />
-              Device Groups
-            </h3>
-            <p className="text-[10px] text-slate-450 mt-0.5">
-              Each group represents a unique Vendor + Type + Model combination discovered in this batch.
-            </p>
-          </div>
 
-          {selectedUploadId && groups.length > 0 && (
-            <button
-              onClick={handleRunAll}
-              disabled={
-                runAllLoading ||
-                runningCount > 0 ||
-                !allReady ||
-                completedCount === groups.length
-              }
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all text-white shadow-sm
-                ${runAllLoading || runningCount > 0 || !allReady
-                  ? 'bg-slate-300 cursor-not-allowed opacity-60'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 hover:shadow-md'
-                }`}
-            >
-              {runAllLoading || runningCount > 0
-                ? <FaSpinner className="animate-spin text-xs" />
-                : <FaBolt className="text-xs" />}
-              {completedCount === groups.length
-                ? 'Audit Completed'
-                : 'Run All Audits'}
-            </button>
-          )}
+
+      <div className="bg-white border border-slate-200 rounded-3xl px-6 pt-4">
+        <div className="flex gap-8 border-b border-slate-200">
+
+          <button
+            onClick={() => setViewTab("groups")}
+            className={`pb-3 text-sm font-semibold border-b-2 ${viewTab === "groups"
+              ? "border-cyan-500 text-cyan-600"
+              : "border-transparent text-slate-500"
+              }`}
+          >
+            Groups ({groups.length})
+          </button>
+
+          <button
+            onClick={() => setViewTab("devices")}
+            className={`pb-3 text-sm font-semibold border-b-2 ${viewTab === "devices"
+              ? "border-cyan-500 text-cyan-600"
+              : "border-transparent text-slate-500"
+              }`}
+          >
+            Devices ({devices.length})
+          </button>
+
+          <button
+            onClick={() => setViewTab("uploads")}
+            className={`pb-3 text-sm font-semibold border-b-2 ${viewTab === "uploads"
+              ? "border-cyan-500 text-cyan-600"
+              : "border-transparent text-slate-500"
+              }`}
+          >
+            Uploads ({jobs.length})
+          </button>
+
         </div>
+      </div>
 
-        {/* Empty/loading states */}
-        {!selectedUploadId ? (
-          <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 flex flex-col items-center gap-2">
-            <FaInfoCircle className="text-3xl text-slate-300" />
-            <p className="text-sm font-medium text-slate-400">Select an upload batch from the left panel.</p>
+
+
+
+
+
+      {/* ── Groups Panel ─────────────────────────────────────────────── */}
+
+
+      {viewTab === "groups" && (
+        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <FaServer className="text-cyan-500 text-xs" />
+                Device Groups
+              </h3>
+              <p className="text-[10px] text-slate-450 mt-0.5">
+                Each group represents a unique Vendor + Type + Model combination discovered in this batch.
+              </p>
+            </div>
+
+            {selectedUploadId && groups.length > 0 && (
+              <button
+                onClick={handleRunAll}
+                disabled={
+                  runAllLoading ||
+                  runningCount > 0 ||
+                  !allReady ||
+                  completedCount === groups.length
+                }
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all text-white shadow-sm
+                ${runAllLoading || runningCount > 0 || !allReady
+                    ? 'bg-slate-300 cursor-not-allowed opacity-60'
+                    : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 hover:shadow-md'
+                  }`}
+              >
+                {runAllLoading || runningCount > 0
+                  ? <FaSpinner className="animate-spin text-xs" />
+                  : <FaBolt className="text-xs" />}
+                {completedCount === groups.length
+                  ? 'Audit Completed'
+                  : 'Run All Audits'}
+              </button>
+            )}
           </div>
-        ) : loadingGroups ? (
-          <div className="text-center py-16 flex flex-col items-center gap-2 text-slate-500">
-            <FaSpinner className="animate-spin text-3xl text-cyan-500" />
-            <p className="text-xs font-medium">Loading device groups...</p>
-          </div>
-        ) : groups.length === 0 ? (
-          <div className="text-center py-16 flex flex-col items-center gap-2 text-slate-400">
-            <span className="text-4xl">🔍</span>
-            <p className="text-sm font-medium">No device groups found in this batch.</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {groups.map(group => {
-              const gid = group.group_id;
-              const expanded = expandedGroups[gid];
-              const auditState = groupAuditStatus[gid] || 'Pending';
-              const reportInfo = groupReportMap[gid];
-              const dlState = groupDownloadMap[gid] || 'Pending';
-              const tmplId = groupTemplateMap[gid] || group.template_id || '';
-              const auditMode = groupAuditModeMap[gid] || group.audit_mode || 'full';
-              const saving = savingTemplate[gid];
-              const running = runningGroups[gid];
-              const tmplStatus = group.template_status;
 
-              // Find matched or selected template
-              const selectedTemplate = getGroupTemplate(group);
-              const effectiveTmplId = selectedTemplate ? (selectedTemplate._id || selectedTemplate.id) : '';
+          {/* Empty/loading states */}
+          {!selectedUploadId ? (
+            <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50 flex flex-col items-center gap-2">
+              <FaInfoCircle className="text-3xl text-slate-300" />
+              <p className="text-sm font-medium text-slate-400">Select an upload batch from the left panel.</p>
+            </div>
+          ) : loadingGroups ? (
+            <div className="text-center py-16 flex flex-col items-center gap-2 text-slate-500">
+              <FaSpinner className="animate-spin text-3xl text-cyan-500" />
+              <p className="text-xs font-medium">Loading device groups...</p>
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="text-center py-16 flex flex-col items-center gap-2 text-slate-400">
+              <span className="text-4xl">🔍</span>
+              <p className="text-sm font-medium">No device groups found in this batch.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {groups.map(group => {
+                const gid = group.group_id;
+                const expanded = expandedGroups[gid];
+                const auditState = groupAuditStatus[gid] || 'Pending';
+                const reportInfo = groupReportMap[gid];
+                const dlState = groupDownloadMap[gid] || 'Pending';
+                const tmplId = groupTemplateMap[gid] || group.template_id || '';
+                const auditMode = groupAuditModeMap[gid] || group.audit_mode || 'full';
+                const saving = savingTemplate[gid];
+                const running = runningGroups[gid];
+                const tmplStatus = group.template_status;
 
-              const activeMode = AUDIT_MODE_OPTIONS.find(o => o.value === auditMode);
-              const ModeIcon = activeMode?.icon || FaClipboardList;
+                // Find matched or selected template
+                const selectedTemplate = getGroupTemplate(group);
+                const effectiveTmplId = selectedTemplate ? (selectedTemplate._id || selectedTemplate.id) : '';
 
-              return (
-                <div
-                  key={gid}
-                  className={`rounded-2xl border transition-all overflow-hidden
-                    ${auditState === 'Completed' ? 'border-emerald-200 bg-emerald-50/30' :
-                      auditState === 'Running' ? 'border-yellow-200 bg-yellow-50/30' :
-                        tmplStatus === 'TEMPLATE_REQUIRED' && !effectiveTmplId ? 'border-rose-200 bg-rose-50/20' :
-                          'border-slate-200 bg-white'
-                    }`}
-                >
-                  {/* Group Row Header */}
+                const activeMode = AUDIT_MODE_OPTIONS.find(o => o.value === auditMode);
+                const ModeIcon = activeMode?.icon || FaClipboardList;
+
+                return (
                   <div
-                    className="flex items-center justify-between px-5 py-4 cursor-pointer"
-                    onClick={() => toggleExpand(gid)}
+                    key={gid}
+                    className={`rounded-2xl border transition-all overflow-hidden
+                    ${auditState === 'Completed' ? 'border-emerald-200 bg-emerald-50/30' :
+                        auditState === 'Running' ? 'border-yellow-200 bg-yellow-50/30' :
+                          tmplStatus === 'TEMPLATE_REQUIRED' && !effectiveTmplId ? 'border-rose-200 bg-rose-50/20' :
+                            'border-slate-200 bg-white'
+                      }`}
                   >
-                    {/* Left: expand + group info */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="text-slate-400 text-xs shrink-0">
-                        {expanded ? <FaChevronDown /> : <FaChevronRight />}
-                      </span>
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-sm text-slate-800">
-                            {group.vendor} {group.device_type?.toUpperCase()}
-                            {group.model ? ` — ${group.model}` : ' — Generic'}
-                          </span>
-                          <span className="text-[10px] font-mono bg-slate-100 border border-slate-200 text-slate-500 px-2 py-0.5 rounded">
-                            {group.device_count} device{group.device_count !== 1 ? 's' : ''}
-                          </span>
-                          <TemplateStatusBadge status={effectiveTmplId ? 'READY' : tmplStatus} />
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
-                          {selectedTemplate && (
-                            <span className="font-medium text-slate-500">
-                              📋 {selectedTemplate.template_name || selectedTemplate.name}
-                            </span>
-                          )}
-                          {auditState !== 'Pending' && (
-                            <span className={`font-semibold flex items-center gap-1
-                              ${auditState === 'Completed' ? 'text-emerald-600' :
-                                auditState === 'Running' ? 'text-yellow-600' : 'text-slate-400'}`}>
-                              {auditState === 'Running' && <FaSpinner className="animate-spin text-[8px]" />}
-                              {auditState}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right: action buttons */}
-                    <div className="flex items-center gap-2 shrink-0 ml-4" onClick={e => e.stopPropagation()}>
-                      {auditState === 'Completed' ? (
-                        <button
-                          onClick={() => handleDownloadPDF(group, reportInfo.id)}
-                          disabled={dlState === 'Downloading'}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm"
-                        >
-                          {dlState === 'Downloading'
-                            ? <FaSpinner className="animate-spin text-xs" />
-                            : <FaFilePdf className="text-xs" />}
-                          {dlState === 'Downloaded' ? 'Re-download' : 'Download PDF'}
-                        </button>
-                      ) : auditState === 'Running' ? (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                          <FaSpinner className="animate-spin text-[9px]" />
-                          Auditing...
+                    {/* Group Row Header */}
+                    <div
+                      className="flex items-center justify-between px-5 py-4 cursor-pointer"
+                      onClick={() => toggleExpand(gid)}
+                    >
+                      {/* Left: expand + group info */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-slate-400 text-xs shrink-0">
+                          {expanded ? <FaChevronDown /> : <FaChevronRight />}
                         </span>
-                      ) : effectiveTmplId ? (
-                        <button
-                          onClick={() => handleRunGroupAudit({ ...group, group_id: gid })}
-                          disabled={running}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm"
-                        >
-                          <FaPlay className="text-[8px]" />
-                          Run Audit
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleUploadTemplate}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm"
-                        >
-                          <FaCloudUploadAlt className="text-xs" />
-                          Upload Template
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Expanded Config Area */}
-                  {expanded && (
-                    <div className="px-5 pb-5 pt-1 border-t border-slate-100 bg-slate-50/60 space-y-5">
-
-                      {/* Template assignment */}
-                      <div className="space-y-2">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                          Golden Template
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <select
-                            className="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 font-semibold shadow-sm"
-                            value={effectiveTmplId}
-                            onChange={e => handleAssignTemplate(gid, e.target.value)}
-                            disabled={saving}
-                          >
-                            <option value="">Select a template...</option>
-                            {templates.map(t => (
-                              <option key={t._id || t.id} value={t._id || t.id}>
-                                {t.template_name || t.name} ({t.vendor} · {t.device_type})
-                              </option>
-                            ))}
-                          </select>
-                          {saving && <FaSpinner className="animate-spin text-cyan-500 text-sm shrink-0" />}
-                          {!templates.length && (
-                            <button
-                              onClick={handleUploadTemplate}
-                              className="text-[10px] font-bold text-rose-600 hover:text-rose-700 underline shrink-0"
-                            >
-                              Upload first →
-                            </button>
-                          )}
-                        </div>
-                        {!effectiveTmplId && (
-                          <p className="text-[10px] text-rose-500 font-medium">
-                            No template matched for {group.vendor} {group.device_type} {group.model || '(generic)'}.
-                            <button
-                              onClick={handleUploadTemplate}
-                              className="ml-1 underline hover:text-rose-700"
-                            >
-                              Upload a template →
-                            </button>
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Audit mode selection — only shown when template assigned */}
-                      {effectiveTmplId && auditState !== 'Completed' && (
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                            Audit Scope
-                          </label>
-                          <GroupAuditModeSelector
-                            groupId={gid}
-                            value={auditMode}
-                            onChange={handleAuditModeChange}
-                          />
-                        </div>
-                      )}
-
-                      {/* Report summary when completed */}
-                      {auditState === 'Completed' && reportInfo && (
-                        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <FaCheckCircle className="text-emerald-600 text-sm" />
-                            <span className="text-xs font-bold text-emerald-800">Audit Complete</span>
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-sm text-slate-800">
+                              {group.vendor} {group.device_type?.toUpperCase()}
+                              {group.model ? ` — ${group.model}` : ' — Generic'}
+                            </span>
+                            <span className="text-[10px] font-mono bg-slate-100 border border-slate-200 text-slate-500 px-2 py-0.5 rounded">
+                              {group.device_count} device{group.device_count !== 1 ? 's' : ''}
+                            </span>
+                            <TemplateStatusBadge status={effectiveTmplId ? 'READY' : tmplStatus} />
                           </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[10px] text-emerald-700">
-                            <div>
-                              <span className="font-bold block">Template Used</span>
-                              <span className="text-emerald-600">{reportInfo.templateName || '—'}</span>
-                            </div>
-                            <div>
-                              <span className="font-bold block">Audit Mode</span>
-                              <span className="text-emerald-600 capitalize">{reportInfo.auditMode || auditMode}</span>
-                            </div>
-                            <div>
-                              <span className="font-bold block">Generated At</span>
-                              <span className="text-emerald-600">
-                                {reportInfo.createdAt ? new Date(reportInfo.createdAt).toLocaleString() : '—'}
+                          <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400">
+                            {selectedTemplate && (
+                              <span className="font-medium text-slate-500">
+                                📋 {selectedTemplate.template_name || selectedTemplate.name}
                               </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            {dlState === 'Downloaded' && (
-                              <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                                <FaCheckCircle className="text-[9px]" /> Downloaded
+                            )}
+                            {auditState !== 'Pending' && (
+                              <span className={`font-semibold flex items-center gap-1
+                              ${auditState === 'Completed' ? 'text-emerald-600' :
+                                  auditState === 'Running' ? 'text-yellow-600' : 'text-slate-400'}`}>
+                                {auditState === 'Running' && <FaSpinner className="animate-spin text-[8px]" />}
+                                {auditState}
                               </span>
                             )}
                           </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Right: action buttons */}
+                      <div className="flex items-center gap-2 shrink-0 ml-4" onClick={e => e.stopPropagation()}>
+                        {auditState === 'Completed' ? (
+                          <button
+                            onClick={() => handleDownloadPDF(group, reportInfo.id)}
+                            disabled={dlState === 'Downloading'}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                          >
+                            {dlState === 'Downloading'
+                              ? <FaSpinner className="animate-spin text-xs" />
+                              : <FaFilePdf className="text-xs" />}
+                            {dlState === 'Downloaded' ? 'Re-download' : 'Download PDF'}
+                          </button>
+                        ) : auditState === 'Running' ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                            <FaSpinner className="animate-spin text-[9px]" />
+                            Auditing...
+                          </span>
+                        ) : effectiveTmplId ? (
+                          <button
+                            onClick={() => handleRunGroupAudit({ ...group, group_id: gid })}
+                            disabled={running}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                          >
+                            <FaPlay className="text-[8px]" />
+                            Run Audit
+                          </button>
+                        ) : (
+                          <button
+                            onClick={handleUploadTemplate}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[10px] font-bold transition-all shadow-sm"
+                          >
+                            <FaCloudUploadAlt className="text-xs" />
+                            Upload Template
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+
+                    {/* Expanded Config Area */}
+                    {expanded && (
+                      <div className="px-5 pb-5 pt-1 border-t border-slate-100 bg-slate-50/60 space-y-5">
+
+                        {/* Template assignment */}
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                            Golden Template
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <select
+                              className="flex-1 bg-white border border-slate-200 rounded-xl p-2.5 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 font-semibold shadow-sm"
+                              value={effectiveTmplId}
+                              onChange={e => handleAssignTemplate(gid, e.target.value)}
+                              disabled={saving}
+                            >
+                              <option value="">Select a template...</option>
+                              {templates.map(t => (
+                                <option key={t._id || t.id} value={t._id || t.id}>
+                                  {t.template_name || t.name} ({t.vendor} · {t.device_type})
+                                </option>
+                              ))}
+                            </select>
+                            {saving && <FaSpinner className="animate-spin text-cyan-500 text-sm shrink-0" />}
+                            {!templates.length && (
+                              <button
+                                onClick={handleUploadTemplate}
+                                className="text-[10px] font-bold text-rose-600 hover:text-rose-700 underline shrink-0"
+                              >
+                                Upload first →
+                              </button>
+                            )}
+                          </div>
+                          {!effectiveTmplId && (
+                            <p className="text-[10px] text-rose-500 font-medium">
+                              No template matched for {group.vendor} {group.device_type} {group.model || '(generic)'}.
+                              <button
+                                onClick={handleUploadTemplate}
+                                className="ml-1 underline hover:text-rose-700"
+                              >
+                                Upload a template →
+                              </button>
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Audit mode selection — only shown when template assigned */}
+                        {/* Audit Scope from API */}
+                        {effectiveTmplId && auditState !== 'Completed' && (
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
+                              Audit Scope
+                            </label>
+
+                            <div className="flex flex-wrap gap-2">
+                              {group.available_sections?.map((section) => (
+                                <span
+                                  key={section}
+                                  className="px-3 py-1 rounded-lg text-xs font-medium border border-cyan-200 bg-cyan-50 text-cyan-700"
+                                >
+                                  {SECTION_LABELS[section] || section}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Report summary when completed */}
+                        {auditState === 'Completed' && reportInfo && (
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <FaCheckCircle className="text-emerald-600 text-sm" />
+                              <span className="text-xs font-bold text-emerald-800">Audit Complete</span>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[10px] text-emerald-700">
+                              <div>
+                                <span className="font-bold block">Template Used</span>
+                                <span className="text-emerald-600">{reportInfo.templateName || '—'}</span>
+                              </div>
+                              <div>
+                                <span className="font-bold block">Audit Mode</span>
+                                <span className="text-emerald-600 capitalize">{reportInfo.auditMode || auditMode}</span>
+                              </div>
+                              <div>
+                                <span className="font-bold block">Generated At</span>
+                                <span className="text-emerald-600">
+                                  {reportInfo.createdAt ? new Date(reportInfo.createdAt).toLocaleString() : '—'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {dlState === 'Downloaded' && (
+                                <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                                  <FaCheckCircle className="text-[9px]" /> Downloaded
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+
+      {viewTab === "uploads" && (
+        <div className="bg-white border border-slate-200 rounded-3xl p-6">
+
+          <h3 className="font-bold text-slate-800 mb-4">
+            Upload History
+          </h3>
+
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <th>Folder</th>
+                <th>Status</th>
+                <th>Devices</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {jobs.map(job => (
+                <tr key={job._id}>
+                  <td>{job.folder_name}</td>
+                  <td>{job.status}</td>
+                  <td>{job.total_devices}</td>
+                </tr>
+              ))}
+            </tbody>
+
+          </table>
+
+        </div>
+      )}
 
       {/* ── Devices List Panel ────────────────────────────────────────── */}
-      {selectedUploadId && (
+
+
+      {viewTab === "devices" && selectedUploadId && (
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 pb-3">
             <div>
@@ -946,7 +1152,22 @@ export default function ProcessingQueue({
               />
               <span className="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
             </div>
+            <select
+              value={devGroupFilter}
+              onChange={(e) => setDevGroupFilter(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-700 font-semibold focus:outline-none focus:border-cyan-500 focus:bg-white cursor-pointer"
+            >
+              <option value="">All Groups</option>
 
+              {groups.map((g) => (
+                <option
+                  key={g.group_id}
+                  value={g.group_id}
+                >
+                  {g.vendor} {g.model || 'GENERIC'}
+                </option>
+              ))}
+            </select>
             {/* Status Filter */}
             <select
               value={devStatusFilter}
@@ -1157,6 +1378,9 @@ export default function ProcessingQueue({
           )}
         </div>
       )}
+
+
+
     </div>
   );
 }
