@@ -1,14 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  FaCloudUploadAlt, 
-  FaFolderOpen, 
-  FaFileAlt, 
-  FaTrash, 
-  FaCheckCircle, 
-  FaSpinner, 
-  FaHistory, 
-  FaEye, 
-  FaPlay, 
+import {
+  FaCloudUploadAlt,
+  FaFolderOpen,
+  FaFileAlt,
+  FaTrash,
+  FaCheckCircle,
+  FaSpinner,
+  FaHistory,
+  FaEye,
+  FaPlay,
   FaFilter,
   FaFileInvoice
 } from 'react-icons/fa';
@@ -37,7 +37,10 @@ function UploadCenter({
   jobs,
   devices,
   formatDate,
-  renderStatusBadge
+  renderStatusBadge,
+  setActiveTab,
+  setSelectedUploadId,
+  setSelectedFolderName,
 }) {
   // Zustand stores
   const { vendors } = useVendorStore();
@@ -172,7 +175,7 @@ function UploadCenter({
   const detectedDeviceRows = Object.entries(deviceCounts).map(([type, count]) => {
     const typeDevices = filteredDevices.filter(d => d.device_type === type);
     const hasMatchedTemplate = typeDevices.some(d => {
-      return templates.some(t => 
+      return templates.some(t =>
         t.vendorName.toLowerCase() === (d.vendor || 'Cisco').toLowerCase() &&
         t.deviceType.toLowerCase() === (d.device_type || 'L2 Switch').toLowerCase() &&
         t.modelNumber.toLowerCase() === (d.model_number || 'Unknown').toLowerCase()
@@ -277,16 +280,16 @@ function UploadCenter({
 
       {/* Main Single Screen Split Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        
+
         {/* Upload Console Panel (Left side - 8 columns) */}
         <div className="xl:col-span-8 space-y-6">
-          
+
           {/* Top Stage Form Block */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-5">
-            
+
             {/* Top configuration options row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
+
               {/* Folder Label */}
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
@@ -470,65 +473,117 @@ function UploadCenter({
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-150 text-slate-500 font-bold text-[10px] uppercase font-mono tracking-wider">
-                      <th className="px-5 py-3">Device Type</th>
+                      {/* <th className="px-5 py-3">Device Type</th>
                       <th className="px-5 py-3">Count</th>
                       <th className="px-5 py-3">Audit Type</th>
                       <th className="px-5 py-3">Template Status</th>
                       <th className="px-5 py-3">Processing Status</th>
+                      <th className="px-5 py-3 text-right">Actions</th> */}
+
+                      <th className="px-5 py-3">Folder Name</th>
+                      <th className="px-5 py-3">Devices</th>
+                      <th className="px-5 py-3">Status</th>
+                      <th className="px-5 py-3">Created</th>
+                      <th className="px-5 py-3">Updated</th>
                       <th className="px-5 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-medium">
-                    {detectedDeviceRows.map((row) => (
-                      <tr key={row.type} className="hover:bg-slate-50/40 transition-colors text-slate-700">
-                        <td className="px-5 py-3.5 font-bold text-slate-850">
-                          {row.type}
+                    {/* {detectedDeviceRows.map((row) => ( */}
+                    {jobs.map((job) => (
+                      // <tr key={row.type} className="hover:bg-slate-50/40 transition-colors text-slate-700">
+                      //   <td className="px-5 py-3.5 font-bold text-slate-850">
+                      //     {row.type}
+                      //   </td>
+                      //   <td className="px-5 py-3.5 font-mono">
+                      //     {row.count} devices
+                      //   </td>
+                      //   <td className="px-5 py-3.5">
+                      //     <span className="bg-slate-100 text-slate-600 font-bold px-2 py-1 border border-slate-200 rounded-lg">
+                      //       {row.auditType}
+                      //     </span>
+                      //   </td>
+                      //   <td className="px-5 py-3.5">
+                      //     <StatusBadge status={row.templateStatus} />
+                      //   </td>
+                      //   <td className="px-5 py-3.5">
+                      //     <StatusBadge status={row.processingStatus} />
+                      //   </td>
+                      //   <td className="px-5 py-3.5 text-right">
+                      //     <ActionButtons
+                      //       actions={[
+                      //         {
+                      //           type: 'view',
+                      //           title: 'View Staged Hostnames',
+                      //           onClick: () => handleViewType(row.type)
+                      //         },
+                      //         {
+                      //           type: 'audit',
+                      //           label: 'Configure',
+                      //           title: 'Configure Audit Parameters',
+                      //           onClick: () => handleAuditConfigClick(row.type)
+                      //         },
+                      //         {
+                      //           type: 'custom',
+                      //           icon: <FaPlay className="text-[10px] text-emerald-600" />,
+                      //           className: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-100',
+                      //           label: 'Run',
+                      //           title: 'Run Staged Verification',
+                      //           onClick: () => runAuditForType(row.type)
+                      //         },
+                      //         {
+                      //           type: 'delete',
+                      //           title: 'Delete Group',
+                      //           onClick: () => handleDeleteType(row.type)
+                      //         }
+                      //       ]}
+                      //     />
+                      //   </td>
+                      // </tr>
+
+
+
+
+                      <tr
+                        key={job._id}
+                        className="hover:bg-slate-50/40 transition-colors text-slate-700"
+                      >
+                        <td className="px-5 py-3.5 font-bold">
+                          {job.folder_name}
                         </td>
-                        <td className="px-5 py-3.5 font-mono">
-                          {row.count} devices
-                        </td>
+
                         <td className="px-5 py-3.5">
-                          <span className="bg-slate-100 text-slate-600 font-bold px-2 py-1 border border-slate-200 rounded-lg">
-                            {row.auditType}
-                          </span>
+                          {job.total_devices}
                         </td>
+
                         <td className="px-5 py-3.5">
-                          <StatusBadge status={row.templateStatus} />
+                          <StatusBadge status={job.status} />
                         </td>
+
                         <td className="px-5 py-3.5">
-                          <StatusBadge status={row.processingStatus} />
+                          {formatDate(job.created_at)}
                         </td>
+
+                        <td className="px-5 py-3.5">
+                          {formatDate(job.updated_at)}
+                        </td>
+
                         <td className="px-5 py-3.5 text-right">
-                          <ActionButtons
-                            actions={[
-                              {
-                                type: 'view',
-                                title: 'View Staged Hostnames',
-                                onClick: () => handleViewType(row.type)
-                              },
-                              {
-                                type: 'audit',
-                                label: 'Configure',
-                                title: 'Configure Audit Parameters',
-                                onClick: () => handleAuditConfigClick(row.type)
-                              },
-                              {
-                                type: 'custom',
-                                icon: <FaPlay className="text-[10px] text-emerald-600" />,
-                                className: 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-100',
-                                label: 'Run',
-                                title: 'Run Staged Verification',
-                                onClick: () => runAuditForType(row.type)
-                              },
-                              {
-                                type: 'delete',
-                                title: 'Delete Group',
-                                onClick: () => handleDeleteType(row.type)
-                              }
-                            ]}
-                          />
+                          <button
+                            onClick={() => {
+                              setSelectedUploadId(job._id);
+                              setSelectedFolderName(job.folder_name);
+                              setActiveTab('queue');
+                            }}
+                            className="px-3 py-1 rounded-lg bg-cyan-50 text-cyan-700"
+                          >
+                            View
+                          </button>
                         </td>
                       </tr>
+
+
+
                     ))}
                   </tbody>
                 </table>
@@ -541,7 +596,7 @@ function UploadCenter({
 
         {/* Side Pane: Selected Files Queue & Upload History (Right side - 4 columns) */}
         <div className="xl:col-span-4 space-y-6">
-          
+
           {/* Staged Files Queue */}
           <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
             <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -595,16 +650,15 @@ function UploadCenter({
                     <div
                       key={job._id || job.id}
                       onClick={() => setSelectedJob(job)}
-                      className={`cursor-pointer border-b border-slate-100 pb-2.5 last:border-0 last:pb-0 rounded-xl p-2.5 transition flex items-start justify-between gap-2 border ${
-                        isCurrent
-                          ? "bg-cyan-50/35 border-cyan-300 shadow-sm"
-                          : "border-transparent hover:bg-slate-55"
-                      }`}
+                      className={`cursor-pointer border-b border-slate-100 pb-2.5 last:border-0 last:pb-0 rounded-xl p-2.5 transition flex items-start justify-between gap-2 border ${isCurrent
+                        ? "bg-cyan-50/35 border-cyan-300 shadow-sm"
+                        : "border-transparent hover:bg-slate-55"
+                        }`}
                     >
                       <div className="min-w-0 flex-1">
                         <p className="font-bold text-slate-750 truncate">{job.folder_name}</p>
                         <p className="text-[9px] text-slate-400 font-mono mt-0.5">
-                          {job.files_count} configs • {formatDate(job.created_at)}
+                          {job.total_devices} devices • {formatDate(job.created_at)}
                         </p>
                       </div>
                       <div className="shrink-0">
@@ -627,7 +681,7 @@ function UploadCenter({
           type={selectedTypeName}
           devices={selectedTypeDevices}
           onClose={() => setShowTypeDevicesModal(false)}
-          onViewDevice={() => {}}
+          onViewDevice={() => { }}
         />
       )}
 

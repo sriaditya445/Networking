@@ -308,6 +308,9 @@ function App() {
             devices={devices}
             formatDate={formatDate}
             renderStatusBadge={renderStatusBadge}
+            setActiveTab={setActiveTab}
+            setSelectedUploadId={setSelectedUploadId}
+            setSelectedFolderName={setSelectedFolderName}
           />
         );
       case 'devices':
