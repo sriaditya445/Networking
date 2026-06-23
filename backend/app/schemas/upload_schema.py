@@ -14,6 +14,8 @@ class UploadResponse(BaseModel):
     folder_name: str
     status: str
     total_devices: int = 0
+    created_by: str | None = None
+    updated_by: str | None = None
     created_at: datetime 
     updated_at: datetime 
     error_message: str | None = None

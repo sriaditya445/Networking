@@ -23,5 +23,8 @@ class UploadModel(BaseModel):
     device_groups: list[dict] = []
     # audit_selections: list[dict] = []
 
+    created_by: str
+    updated_by: str
+
     created_at: datetime
     updated_at: datetime

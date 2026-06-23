@@ -66,3 +66,23 @@ class AuditResultRepository:
                 "_id": ObjectId(result_id)
             }
         )
+
+    @staticmethod
+    async def get_by_device_ids(device_ids: list[str]):
+
+        results = await (
+            AuditResultRepository.collection()
+            .find(
+                {
+                    "device_id": {
+                        "$in": device_ids
+                    }
+                }
+            )
+            .to_list(None)
+        )
+
+        for result in results:
+            result["_id"] = str(result["_id"])
+
+        return results

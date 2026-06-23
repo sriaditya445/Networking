@@ -16,12 +16,10 @@ class DeviceService:
         if not ObjectId.is_valid(device_id):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid device_id"
+                detail="Invalid device."
             )
 
-        device = await DeviceRepository.get_by_id(
-            device_id
-        )
+        device = await DeviceRepository.get_by_id(device_id)
 
         if not device:
             raise HTTPException(
@@ -30,9 +28,7 @@ class DeviceService:
             )
 
         device["display_status"] = (
-            DeviceService.get_display_status(
-                device
-            )
+            DeviceService.get_display_status(device)
         )
 
         return device

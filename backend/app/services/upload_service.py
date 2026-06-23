@@ -6,6 +6,7 @@ from app.repositories.upload_repository import UploadRepository
 from app.services.device_service import DeviceService
 from app.services.ingestion_service import IngestionService
 from app.services.template_service import (TemplateService)
+from app.services.user_service import UserService
 from app.repositories.template_repository import TemplateRepository
 from fastapi import HTTPException, status
 from app.core.database import logger
@@ -13,7 +14,6 @@ from collections import defaultdict
 from app.schemas.upload_schema import (
     UploadResponse
 )
-
 BASE_DIR = os.path.dirname(
     os.path.dirname(
         os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +49,18 @@ class UploadService:
 
         upload["_id"] = str(upload["_id"])
 
+        upload["created_by"] = (
+            await UserService.get_username(
+                upload.get("created_by")
+            )
+        )
+
+        upload["updated_by"] = (
+            await UserService.get_username(
+                upload.get("updated_by")
+            )
+        )
+
         return upload
 
     @staticmethod
@@ -56,8 +68,27 @@ class UploadService:
 
         uploads = await UploadRepository.get_all()
 
+        user_ids = set()
+        for upload in uploads:
+            if upload.get("created_by"):
+                user_ids.add(upload["created_by"])
+
+            if upload.get("updated_by"):
+                user_ids.add(upload["updated_by"])
+
+        users_map = await UserService.get_users_map(
+            list(user_ids)
+        )
+        
         for upload in uploads:
             upload["_id"] = str(upload["_id"])
+            upload["created_by"] = users_map.get(
+                upload.get("created_by")
+            )
+
+            upload["updated_by"] = users_map.get(
+                upload.get("updated_by")
+            )
 
         return uploads
 
@@ -76,9 +107,15 @@ class UploadService:
     @staticmethod
     async def update_upload(
         upload_id: str,
-        data: dict
+        data: dict,
+        user_id: str | None = None
     ):
-        await UploadService.get_upload(upload_id)
+
+        if not user_id:
+            user_id = await UserService.get_system_user_id()
+
+        data["updated_at"] = datetime.utcnow()
+        data["updated_by"] = user_id
 
         return await UploadRepository.update(
             upload_id,
@@ -112,7 +149,7 @@ class UploadService:
                 status_code=400,
                 detail="No files uploaded"
             )
-
+        system_user_id = await UserService.get_system_user_id()
         try:
             await UploadRepository.create({
                 "_id": ObjectId(upload_id),
@@ -133,6 +170,9 @@ class UploadService:
 
                 "folder_path": upload_folder,
                 "error_message": None,
+
+                "created_by": system_user_id,
+                "updated_by": system_user_id,
 
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
@@ -164,11 +204,10 @@ class UploadService:
                 else:
                     saved_files.append(result)
 
-            await UploadRepository.update(
+            await UploadService.update_upload(
                 upload_id,
                 {   "status": "PENDING_EXTRACTION",
-                    "files_count": len(saved_files),
-                    "updated_at": datetime.utcnow()
+                    "files_count": len(saved_files)
                 }
             )
 
@@ -177,9 +216,12 @@ class UploadService:
             if os.path.exists(upload_folder):
                 shutil.rmtree(upload_folder)
 
-            await UploadRepository.update(
+            await UploadService.update_upload(
                     upload_id,
-                    {"status": "FAILED", "error_message": f"Staging failed: {e}", "updated_at": datetime.utcnow()}
+                    {
+                        "status": "FAILED",
+                        "error_message": f"Staging failed: {e}"
+                     }
                 )
 
             await DeviceService.delete_devices_by_upload_id(upload_id)
@@ -268,11 +310,10 @@ class UploadService:
         else:
             return
 
-        await UploadRepository.update(
+        await UploadService.update_upload(
             upload_id,
             {
-                "status": status,
-                "updated_at": datetime.utcnow()
+                "status": status
             }
         )
 
@@ -397,12 +438,11 @@ class UploadService:
                 }
             )
 
-        await UploadRepository.update(
+        await UploadService.update_upload(
             upload_id,
             {
                 "device_groups": groups,
-                "status": "READY_FOR_AUDIT",
-                "updated_at": datetime.utcnow()
+                "status": "READY_FOR_AUDIT"
             }
         )
 
@@ -447,11 +487,10 @@ class UploadService:
         else:
             status = "READY_FOR_AUDIT"
 
-        await UploadRepository.update(
+        await UploadService.update_upload(
             upload_id,
             {
-                "status": status,
-                "updated_at": datetime.utcnow()
+                "status": status
             }
         )
 
@@ -545,11 +584,10 @@ class UploadService:
 
             groups[key]["device_count"] += 1
 
-        await UploadRepository.update(
+        await UploadService.update_upload(
             upload_id,
             {
-                "device_groups": list(groups.values()),
-                "updated_at": datetime.utcnow()
+                "device_groups": list(groups.values())
             }
         )
 

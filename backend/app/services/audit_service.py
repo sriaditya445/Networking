@@ -3,7 +3,7 @@ from app.services.template_parser import parse_template_content
 from app.services.config_parser import parse_config_content
 from app.services.compliance_engine import run_compliance_audit
 from app.services.recommendation_engine import build_recommendations
-
+import os
 
 class AuditService:
 
@@ -23,10 +23,19 @@ class AuditService:
             template["template_content"]
         )
 
-        parsed_config = parse_config_content(
-            device["configuration"]
-        )
+        file_path = device.get("file_path")
 
+        if not file_path or not os.path.exists(file_path):
+            raise ValueError(
+                f"Configuration file not found for {device['device_name']}"
+            )
+
+        with open(file_path,"r",encoding="utf-8",errors="ignore") as f:
+            config_content = f.read()
+
+        parsed_config = parse_config_content(
+            config_content
+        )
         compliance = run_compliance_audit(
             template=parsed_template,
             config=parsed_config,
@@ -48,10 +57,6 @@ class AuditService:
                 for r in compliance.passed
             ],
             "failed": [
-                r.model_dump()
-                for r in enriched_failed
-            ],
-            "recommendations": [
                 r.model_dump()
                 for r in enriched_failed
             ]

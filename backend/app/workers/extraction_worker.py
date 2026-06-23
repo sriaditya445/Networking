@@ -9,9 +9,7 @@ from app.services.device_service import (
     DeviceService
 )
 
-from app.repositories.upload_repository import (
-    UploadRepository
-)
+from app.services.upload_service import UploadService
 
 
 class ExtractionWorker:
@@ -25,12 +23,11 @@ class ExtractionWorker:
 
         folder_path = upload["folder_path"]
 
-        await UploadRepository.update(
+        await UploadService.update_upload(
+
             upload_id,
             {
-                "status": "EXTRACTING",
-                "updated_at":
-                    datetime.utcnow()
+                "status": "EXTRACTING"
             }
         )
 
@@ -98,10 +95,6 @@ class ExtractionWorker:
 
                         "device_type":
                             "Pending Analysis",
-
-                        "configuration":
-                            None,
-
                         "processing_status": "PENDING",
                         "audit_status":"PENDING",
 
@@ -123,15 +116,11 @@ class ExtractionWorker:
 
                 device_count += 1
 
-        await UploadRepository.update(
+        await UploadService.update_upload(
+
             upload_id,
             {
                 "status": "ANALYZING_DEVICES",
-
-                "files_count":
-                    device_count,
-
-                "updated_at":
-                    datetime.utcnow()
+                "files_count": device_count
             }
         )

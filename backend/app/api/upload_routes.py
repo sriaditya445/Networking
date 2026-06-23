@@ -15,15 +15,25 @@ from app.services.upload_service import (
 )
 
 from app.services.file_service import FileService
-
+from app.services.device_service import DeviceService
 from app.schemas.upload_schema import (
     UploadResponse
 )
-
 from app.schemas.audit_selection_schema import (
     AuditSelectionRequest
 )
+
 router = APIRouter()
+
+
+# GET    /api/uploads
+# GET    /api/uploads/{upload_id}
+# GET    /api/uploads/{upload_id}/groups
+# GET    /api/uploads/{upload_id}/files
+# GET    /api/uploads/{upload_id}/download
+# DELETE /api/uploads/{upload_id}
+# POST   /api/upload
+# POST   /api/uploads/{upload_id}/audit-selection
 
 @router.get("/api/uploads",response_model=List[UploadResponse])
 async def get_uploads():
@@ -50,6 +60,30 @@ async def download_upload_folder(upload_id: str, background_tasks: BackgroundTas
         upload_id,
         background_tasks
     )
+
+@router.get(
+    "/api/uploads/{upload_id}/files"
+)
+async def get_upload_files(
+    upload_id: str
+):
+    devices = await DeviceService.get_devices(
+        upload_id=upload_id
+    )
+
+    return {
+        "upload_id": upload_id,
+        "files": [
+            {
+                "device_id": str(device["_id"]),
+                "device_name": device["device_name"],
+                "relative_path": device.get(
+                    "relative_path"
+                )
+            }
+            for device in devices
+        ]
+    }
 
 @router.post("/api/upload")
 async def upload_files(
@@ -114,3 +148,4 @@ async def get_upload_groups(upload_id: str):
         "status": upload["status"],
         "groups": upload.get("device_groups", [])
     }
+

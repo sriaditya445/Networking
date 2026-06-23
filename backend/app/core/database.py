@@ -32,10 +32,15 @@ async def _ensure_indexes():
     await db.devices.create_index("processing_status")
     await db.devices.create_index("audit_status")
     await db.devices.create_index("template_status")
-
     await db.audit_results.create_index("device_id")
     await db.audit_reports.create_index("device_id")
-
+    await db.users.create_index(
+        [
+            ("username", 1),
+            ("email", 1)
+        ],
+        unique=True
+    )
     await db.golden_templates.create_index(
         [
             ("vendor", 1),
@@ -44,7 +49,15 @@ async def _ensure_indexes():
         ],
         unique=True
     )
+    await db.vendors.create_index(
+        "vendor_name",
+        unique=True
+    )
 
+    await db.vendors.create_index(
+        "vendor_code",
+        unique=True
+    )
     logger.info("MongoDB indexes created")
 
 
@@ -102,3 +115,4 @@ async def check_db_connection():
 
         logger.error(f"MongoDB connection failed: {e}")
         return False
+
