@@ -59,26 +59,26 @@ function Sidebar({
         label: "Upload Center",
         icon: FaUpload
       },
-      {
-        id: "devices",
-        label: "Discovered Devices",
-        icon: FaHdd
-      },
+      // {
+      //   id: "devices",
+      //   label: "Discovered Devices",
+      //   icon: FaHdd
+      // },
       {
         id: "queue",
         label: "Processing Queue",
         icon: FaTasks
       },
-      {
-        id: "audit_dashboard",
-        label: "Audit Dashboard",
-        icon: FaShieldAlt
-      },
-      {
-        id: "analytics",
-        label: "Reports & Insights",
-        icon: FaChartLine
-      }
+      // {
+      //   id: "audit_dashboard",
+      //   label: "Audit Dashboard",
+      //   icon: FaShieldAlt
+      // },
+      // {
+      //   id: "analytics",
+      //   label: "Reports & Insights",
+      //   icon: FaChartLine
+      // }
     ]
   },
 
