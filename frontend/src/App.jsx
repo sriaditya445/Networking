@@ -352,6 +352,7 @@ function App() {
             selectedUploadId={selectedUploadId}
             setSelectedUploadId={setSelectedUploadId}
             setOnTemplateUploadSuccess={setOnTemplateUploadSuccess}
+            onViewDevice={setSelectedDevice}
           />
         );
       case 'configurations':
