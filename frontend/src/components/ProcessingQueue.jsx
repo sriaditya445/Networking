@@ -20,6 +20,8 @@ import {
   FaWifi,
   FaKey,
   FaNetworkWired,
+  FaDownload,
+  FaEye
 } from 'react-icons/fa';
 
 const AUDIT_MODE_OPTIONS = [
@@ -30,6 +32,8 @@ const AUDIT_MODE_OPTIONS = [
   { value: 'aaa', label: 'AAA', icon: FaKey, color: 'orange' },
   { value: 'dns', label: 'Network Services', icon: FaNetworkWired, color: 'teal' },
 ];
+
+
 
 
 
@@ -114,6 +118,7 @@ export default function ProcessingQueue({
   selectedUploadId,
   setSelectedUploadId,
   setOnTemplateUploadSuccess,
+  onViewDevice
 }) {
   const [groups, setGroups] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -144,6 +149,16 @@ export default function ProcessingQueue({
   const [devPageSize, setDevPageSize] = useState(10);
   const [viewTab, setViewTab] = useState("groups");
 
+  useEffect(() => {
+    if (!selectedUploadId && jobs.length > 0) {
+      const latestUpload = jobs[0];
+
+      setSelectedUploadId(
+        latestUpload._id || latestUpload.id
+      );
+    }
+  }, [jobs, selectedUploadId]);
+
   const fetchDevices = async (uploadId) => {
     if (!uploadId) { setDevices([]); return; }
     setLoadingDevices(true);
@@ -166,6 +181,7 @@ export default function ProcessingQueue({
     setDevStatusFilter('');
     setDevCurrentPage(1);
   }, [selectedUploadId]);
+
 
   useEffect(() => {
     let devPoll = null;
@@ -603,6 +619,17 @@ export default function ProcessingQueue({
               <FaShieldAlt className="text-cyan-400" />
               Audit Workflow Center
             </h2>
+            {selectedJob && (
+              <div className="mt-2 flex items-center gap-2">
+                <span className="px-3 py-1 rounded-lg bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 text-xs font-semibold">
+                  Batch: {selectedJob.folder_name}
+                </span>
+
+                <span className="px-3 py-1 rounded-lg bg-slate-800 text-slate-300 text-xs">
+                  {selectedJob.total_devices} Devices
+                </span>
+              </div>
+            )}
             <p className="text-xs text-slate-400 mt-1 max-w-xl">
               Assign golden templates per device group, configure audit scope, and generate compliance reports.
             </p>
@@ -639,45 +666,10 @@ export default function ProcessingQueue({
       </div>
 
       {/* ── Two-col layout: Batch selector + Summary ────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
 
-        {/* Batch Selector */}
-        <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-          <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <FaFilter className="text-cyan-500 text-xs" />
-            Upload Batches
-          </h3>
-          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-            {jobs.map(job => {
-              const jid = job._id || job.id;
-              const selected = jid === selectedUploadId;
-              return (
-                <button
-                  key={jid}
-                  onClick={() => setSelectedUploadId(jid)}
-                  className={`w-full text-left p-3 rounded-xl border text-xs font-medium transition-all
-                    ${selected
-                      ? 'bg-cyan-50 border-cyan-300 text-cyan-800 font-semibold'
-                      : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
-                    }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-bold">{job.folder_name}</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-white border border-slate-200 font-mono text-slate-500 shrink-0">
-                      {job.total_devices} files
-                    </span>
-                  </div>
-                  <div className="mt-1">{renderStatusBadge(job.status)}</div>
-                </button>
-              );
-            })}
-            {!jobs.length && (
-              <p className="text-xs text-slate-400 text-center py-8">No batches uploaded yet.</p>
-            )}
-          </div>
-        </div>
 
-        <div className="lg:col-span-2">
+        <div>
 
           <div className="bg-white border border-slate-200 rounded-3xl p-6">
 
@@ -799,7 +791,7 @@ export default function ProcessingQueue({
               : "border-transparent text-slate-500"
               }`}
           >
-            Uploads ({jobs.length})
+            Uploads
           </button>
 
         </div>
@@ -981,7 +973,7 @@ export default function ProcessingQueue({
                       <div className="px-5 pb-5 pt-1 border-t border-slate-100 bg-slate-50/60 space-y-5">
 
                         {/* Template assignment */}
-                        <div className="space-y-2">
+                        {/* <div className="space-y-2">
                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                             Golden Template
                           </label>
@@ -1020,7 +1012,7 @@ export default function ProcessingQueue({
                               </button>
                             </p>
                           )}
-                        </div>
+                        </div> */}
 
                         {/* Audit mode selection — only shown when template assigned */}
                         {/* Audit Scope from API */}
@@ -1053,11 +1045,15 @@ export default function ProcessingQueue({
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[10px] text-emerald-700">
                               <div>
                                 <span className="font-bold block">Template Used</span>
-                                <span className="text-emerald-600">{reportInfo.templateName || '—'}</span>
+                                <span className="text-emerald-600">
+                                  {reportInfo.templateName || group.template_name || '—'}
+                                </span>
                               </div>
                               <div>
                                 <span className="font-bold block">Audit Mode</span>
-                                <span className="text-emerald-600 capitalize">{reportInfo.auditMode || auditMode}</span>
+                                <span className="text-emerald-600 capitalize">
+                                  {reportInfo.auditMode || group.audit_mode || auditMode}
+                                </span>
                               </div>
                               <div>
                                 <span className="font-bold block">Generated At</span>
@@ -1088,35 +1084,47 @@ export default function ProcessingQueue({
 
       {viewTab === "uploads" && (
         <div className="bg-white border border-slate-200 rounded-3xl p-6">
-
           <h3 className="font-bold text-slate-800 mb-4">
             Upload History
           </h3>
 
-          <table className="w-full text-sm">
+          <table className="w-full table-fixed text-sm">
             <thead>
-              <tr>
-                <th>Folder</th>
-                <th>Status</th>
-                <th>Devices</th>
+              <tr className="border-b border-slate-200 text-left">
+                <th className="py-3 px-4">Folder</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4">Devices</th>
+                <th className="py-3 px-4 text-center">Download</th>
               </tr>
             </thead>
 
             <tbody>
-              {jobs.map(job => (
-                <tr key={job._id}>
-                  <td>{job.folder_name}</td>
-                  <td>{job.status}</td>
-                  <td>{job.total_devices}</td>
-                </tr>
-              ))}
+              <tr className="border-b border-slate-100">
+                <td className="py-3 px-4">{selectedJob.folder_name}</td>
+                <td className="py-3 px-4">
+                  <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs">
+                    {selectedJob.status}
+                  </span>
+                </td>
+                <td className="py-3 px-4">{selectedJob.total_devices}</td>
+                <td className="py-3 px-4 text-center">
+                  <button
+                    onClick={() =>
+                      window.open(
+                        `${apiBaseUrl}/api/uploads/${selectedJob._id}/download`,
+                        "_blank"
+                      )
+                    }
+                    className="p-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600"
+                  >
+                    <FaDownload />
+                  </button>
+                </td>
+              </tr>
             </tbody>
-
           </table>
-
         </div>
       )}
-
       {/* ── Devices List Panel ────────────────────────────────────────── */}
 
 
@@ -1281,29 +1289,44 @@ export default function ProcessingQueue({
                         <td className="py-3 px-4 font-semibold text-slate-605">{d.model || '—'}</td>
                         <td className="py-3 px-4">{scoreBadge}</td>
                         <td className="py-3 px-4">{statusBadge}</td>
+
                         <td className="py-3 px-4 text-right">
-                          {d.display_status === 'COMPLETED' && d.audit_report_id ? (
+                          <div className="flex justify-end gap-2">
+
+                            {/* VIEW BUTTON */}
                             <button
-                              onClick={() => handleDownloadDevicePDF(d)}
-                              disabled={dlState === 'Downloading'}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-[10px] font-bold transition-all shadow-sm active:scale-95"
+                              onClick={() => onViewDevice(d)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-bold"
                             >
-                              {dlState === 'Downloading' ? (
-                                <FaSpinner className="animate-spin text-[9px]" />
-                              ) : (
+                              <FaEye className="text-[9px]" />
+                              <span>View</span>
+                            </button>
+
+                            {/* DOWNLOAD BUTTON */}
+                            {d.display_status === 'COMPLETED' && d.audit_report_id ? (
+                              <button
+                                onClick={() => handleDownloadDevicePDF(d)}
+                                disabled={dlState === 'Downloading'}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-500 hover:bg-cyan-600 text-white rounded-lg text-[10px] font-bold"
+                              >
+                                {dlState === 'Downloading'
+                                  ? <FaSpinner className="animate-spin text-[9px]" />
+                                  : <FaFilePdf className="text-[9px]" />
+                                }
+
+                                <span>Download PDF</span>
+                              </button>
+                            ) : (
+                              <button
+                                disabled
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-400 rounded-lg text-[10px] font-bold"
+                              >
                                 <FaFilePdf className="text-[9px]" />
-                              )}
-                              <span>Download PDF</span>
-                            </button>
-                          ) : (
-                            <button
-                              disabled
-                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-100 text-slate-400 rounded-lg text-[10px] font-bold cursor-not-allowed border border-slate-200"
-                            >
-                              <FaFilePdf className="text-[9px]" />
-                              <span>No Report</span>
-                            </button>
-                          )}
+                                <span>No Report</span>
+                              </button>
+                            )}
+
+                          </div>
                         </td>
                       </tr>
                     );
