@@ -27,7 +27,7 @@ class DeviceModel(BaseModel):
     template_status: str = "PENDING_TEMPLATE_SELECTION"
     template_id: Optional[str] = None
 
-    configuration: Optional[str] = None
+    # configuration: Optional[str] = None
     template_name: Optional[str] = None
     audit_selection_done: bool = False
 

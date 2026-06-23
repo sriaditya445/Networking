@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 
 from fastapi import APIRouter
@@ -16,6 +17,12 @@ from app.services.file_service import (
 )
 
 router = APIRouter()
+
+# GET /api/devices
+# GET /api/devices/{device_id}
+
+# GET /api/devices/{device_id}/configuration
+# GET /api/devices/{device_id}/download
 
 @router.get(
     "/api/devices",
@@ -66,6 +73,39 @@ async def update_device(
 
 @router.get("/api/devices/{device_id}/download")
 async def download_device_config(device_id: str):
+    device = await DeviceService.get_device(device_id)
+    if device["processing_status"] != "SUCCESS":
+        raise HTTPException(
+            status_code=409,
+            detail="Device analysis is still in progress"
+        )
     return await FileService.download_device(
         device_id
     )
+
+@router.get(
+    "/api/devices/{device_id}/configuration"
+)
+async def view_configuration(device_id: str):
+    device = await DeviceService.get_device(device_id)
+    if device["processing_status"] != "SUCCESS":
+        raise HTTPException(
+            status_code=409,
+            detail="Device analysis is still in progress"
+        )
+    file_path = device["file_path"]
+
+    if not os.path.exists(file_path):
+        raise HTTPException(
+            status_code=404,
+            detail="Configuration file not found"
+        )
+
+    with open(file_path,"r",encoding="utf-8",errors="ignore") as f:
+        content = f.read()
+
+    return {
+        "device_id": device_id,
+        "device_name": device["device_name"],
+        "configuration": content
+    }

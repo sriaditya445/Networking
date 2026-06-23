@@ -2,8 +2,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
-
+from pydantic import BaseModel, Field,ConfigDict, BeforeValidator
+from typing import Annotated
+PyObjectId = Annotated[str, BeforeValidator(str)]
 
 class ActionResponse(BaseModel):
     message: str
@@ -88,7 +89,7 @@ class AuditResultResponse(BaseModel):
     category_scores: dict[str, float]
     passed: list[RuleResult]
     failed: list[RuleResult]
-    recommendations: list[RuleResult]
+    # recommendations: list[RuleResult]
     audit_mode: str = "full"
     created_at: datetime | None = None
 
@@ -147,3 +148,50 @@ class DashboardStats(BaseModel):
     recent_reports: list[AuditResultResponse]
     compliance_trends: list[ComplianceTrendPoint]
     device_inventory: list[dict[str, Any]]
+
+class VendorCreate(BaseModel):
+
+    vendor_name: str
+    vendor_code: str
+
+    contact_person: str
+
+    email: str
+    phone: str
+
+
+class VendorResponse(VendorCreate):
+
+    model_config = ConfigDict(
+        populate_by_name=True
+    )
+
+    id: PyObjectId = Field(alias="_id")
+
+    status: str
+
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class VendorListResponse(BaseModel):
+
+    model_config = ConfigDict(
+        populate_by_name=True
+    )
+
+    id: PyObjectId = Field(alias="_id")
+
+    vendor_name: str
+    vendor_code: str
+
+    status: str
+
+class VendorNameResponse(BaseModel):
+
+    model_config = ConfigDict(
+        populate_by_name=True
+    )
+
+    id: PyObjectId = Field(alias="_id")
+    vendor_name: str

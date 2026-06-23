@@ -12,6 +12,7 @@ from pymongo.errors import DuplicateKeyError
 from app.services.template_parser import (
     parse_template_content
 )
+from app.services.vendor_service import VendorService
 
 class TemplateService:
 
@@ -72,6 +73,19 @@ class TemplateService:
         template_doc["vendor"] = vendor
         template_doc["device_type"] = device_type
         template_doc["model"] = model
+
+        vendors = await VendorService.get_vendors(
+            vendor_name=template_doc["vendor"]
+        )
+
+        if not vendors:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Vendor '{template_doc['vendor']}' "
+                    "does not exist. Create vendor first."
+                )
+            )
 
         existing = await TemplateRepository.find_exact_template(
             vendor=template_doc["vendor"],

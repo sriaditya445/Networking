@@ -86,7 +86,6 @@ class ParserWorker:
                         {
                             **result,
                             "group_id": group_id,
-                            "configuration": content,
                             "processing_status": "SUCCESS",
                             "parsed_at": datetime.utcnow(),
                             "template_status": "SELECTED" if template else "TEMPLATE_REQUIRED",
