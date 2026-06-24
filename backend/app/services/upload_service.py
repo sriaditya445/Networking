@@ -67,6 +67,11 @@ class UploadService:
     async def get_uploads():
 
         uploads = await UploadRepository.get_all()
+        if not uploads:
+            raise HTTPException(
+                status_code=404,
+                detail="Upload not found"
+            )
 
         user_ids = set()
         for upload in uploads:

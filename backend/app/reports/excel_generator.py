@@ -68,12 +68,13 @@ def generate_excel_report(report: dict) -> bytes:
     for cell in ws_recs[1]:
         cell.fill = header_fill
         cell.font = header_font
-    for rec in report.get("recommendations", []):
-        ws_recs.append([
-            rec.get("rule", ""),
-            rec.get("recommendation", ""),
-            rec.get("remediation", ""),
-        ])
+    for rec in report.get("failed", []):
+        if rec.get("recommendation"):
+            ws_recs.append([
+                rec.get("rule", ""),
+                rec.get("recommendation", ""),
+                rec.get("remediation", "")
+            ])
     ws_recs.column_dimensions["A"].width = 40
     ws_recs.column_dimensions["B"].width = 50
     ws_recs.column_dimensions["C"].width = 50

@@ -75,7 +75,11 @@ def generate_pdf_report(report: dict) -> bytes:
         elements.append(fail_table)
         elements.append(Spacer(1, 0.3 * inch))
 
-    recommendations = report.get("recommendations", [])
+    recommendations = [
+        rule
+        for rule in report.get("failed", [])
+        if rule.get("recommendation")
+    ]
     if recommendations:
         elements.append(Paragraph(f"Recommendations ({len(recommendations)})", heading_style))
         for rec in recommendations[:30]:
