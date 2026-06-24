@@ -12,7 +12,6 @@ class DeviceService:
     async def get_device(
         device_id: str
     ):
-
         if not ObjectId.is_valid(device_id):
             raise HTTPException(
                 status_code=400,
@@ -35,6 +34,11 @@ class DeviceService:
 
     @staticmethod
     async def get_devices(**filters):
+        from app.services.upload_service import UploadService
+        upload_id = filters.get("upload_id")
+
+        if upload_id:
+            await UploadService.get_upload(upload_id)
 
         filters = {
             k: v
@@ -42,9 +46,13 @@ class DeviceService:
             if v is not None
         }
 
-        devices = await DeviceRepository.get_all(
-            filters
-        )
+        devices = await DeviceRepository.get_all(filters)
+
+        if upload_id and not devices:
+            raise HTTPException(
+                status_code=404,
+                detail="No devices found for upload"
+            )
 
         for device in devices:
             device["display_status"] = (
