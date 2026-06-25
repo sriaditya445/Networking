@@ -17,7 +17,4 @@ class AuditResultModel(BaseModel):
 
     passed: List[Dict[str, Any]]
     failed: List[Dict[str, Any]]
-
-    # recommendations: List[Dict[str, Any]]
-
     created_at: datetime

@@ -3,6 +3,7 @@
 from bson import ObjectId
 
 from app.core.database import get_db
+from datetime import datetime
 
 
 class VendorRepository:
@@ -12,9 +13,20 @@ class VendorRepository:
         return get_db().vendors
 
     @staticmethod
-    async def create(
-        vendor_doc: dict
-    ):
+    async def create(vendor_doc: dict):
+
+        now = datetime.utcnow()
+
+        vendor_doc.setdefault(
+            "created_at",
+            now
+        )
+
+        vendor_doc.setdefault(
+            "updated_at",
+            now
+        )
+
         return await VendorRepository.collection().insert_one(
             vendor_doc
         )
@@ -63,16 +75,15 @@ class VendorRepository:
         data: dict
     ):
 
-        return await (
-            VendorRepository.collection()
-            .update_one(
-                {
-                    "_id": ObjectId(vendor_id)
-                },
-                {
-                    "$set": data
-                }
-            )
+        data["updated_at"] = datetime.utcnow()
+
+        return await VendorRepository.collection().update_one(
+            {
+                "_id": ObjectId(vendor_id)
+            },
+            {
+                "$set": data
+            }
         )
 
     @staticmethod

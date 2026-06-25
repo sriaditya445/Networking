@@ -21,7 +21,6 @@ class UploadModel(BaseModel):
     audit_success_count: int = 0
     audit_failed_count: int = 0
     device_groups: list[dict] = []
-    # audit_selections: list[dict] = []
 
     created_by: str
     updated_by: str

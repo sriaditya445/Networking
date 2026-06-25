@@ -12,13 +12,6 @@ from app.services.report_generator import (
     ReportGenerator
 )
 
-# GET /api/audit/results
-# GET /api/audit/results/{result_id}
-# GET /api/audit/results/device/{device_id}
-
-# GET /api/audit/results/{result_id}/pdf
-# GET /api/audit/results/{result_id}/excel
-
 router = APIRouter(
     prefix="/api/audit",
     tags=["Audit"]
@@ -65,18 +58,6 @@ async def get_upload_results(
     return await AuditResultService.get_upload_results(
         upload_id
     )
-
-
-# @router.get(
-#     "/uploads/{upload_id}/summary"
-# )
-# async def get_upload_summary(
-#     upload_id: str
-# ):
-#     return await AuditResultService.get_upload_summary(
-#         upload_id
-#     )
-
 
 @router.get("/reports")
 async def get_all_reports():

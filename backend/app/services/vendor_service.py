@@ -25,31 +25,24 @@ class VendorService:
             )
 
     @staticmethod
-    async def create_vendor(
-        vendor_doc: dict
-    ):
+    async def create_vendor(vendor_doc: dict):
 
         existing = await VendorRepository.get_all(
-            {
-                "vendor_name":
-                vendor_doc["vendor_name"]
-            }
+            {"vendor_name": vendor_doc["vendor_name"]}
         )
 
         if existing:
-
             raise HTTPException(
                 status_code=409,
                 detail="Vendor already exists"
             )
 
-        result = await VendorRepository.create(
-            vendor_doc
-        )
+        result = await VendorRepository.create(vendor_doc)
 
-        return str(
-            result.inserted_id
-        )
+        return {
+            "message": "Vendor created successfully",
+            "id": str(result.inserted_id)
+        }
 
     @staticmethod
     async def get_vendor(
@@ -114,25 +107,23 @@ class VendorService:
         data: dict
     ):
 
-        VendorService.validate_vendor_id(
-            vendor_id
-        )
+        VendorService.validate_vendor_id(vendor_id)
 
         result = await VendorRepository.update(
             vendor_id,
             data
         )
 
-        if result.modified_count == 0:
-
+        if result.matched_count == 0:
             raise HTTPException(
                 status_code=404,
                 detail="Vendor not found"
             )
 
-        return await VendorRepository.get_by_id(
-            vendor_id
-        )
+        return {
+            "message": "Vendor updated successfully",
+            "id": vendor_id
+        }
 
     @staticmethod
     async def delete_vendor(
@@ -166,23 +157,39 @@ class VendorService:
         default_vendors = [
             {
                 "vendor_name": "Cisco",
-                "vendor_code": "CISCO"
+                "vendor_code": "CISCO",
+                "contact_person": "John Smith",
+                "email": "john.smith@cisco.com",
+                "phone": "+1-408-555-0100"
+
             },
             {
                 "vendor_name": "Juniper",
-                "vendor_code": "JUNIPER"
+                "vendor_code": "JUNIPER",
+                "contact_person": "Sarah Jenkins",
+                "email": "sjenkins@juniper.net",
+                "phone": "+1-408-555-0200"
             },
             {
                 "vendor_name": "Arista",
-                "vendor_code": "ARISTA"
+                "vendor_code": "ARISTA",
+                "contact_person": "Michael Chang",
+                "email": "mchang@arista.com",
+                "phone": "+1-408-555-0200"
             },
             {
                 "vendor_name": "Palo Alto",
-                "vendor_code": "PALOALTO"
+                "vendor_code": "PALOALTO",
+                "contact_person": "David Miller",
+                "email": "dmiller@paloaltonetworks.com",
+                "phone": "+1-408-555-0200"
             },
             {
                 "vendor_name": "Fortinet",
-                "vendor_code": "FORTINET"
+                "vendor_code": "FORTINET",
+                "contact_person": "Emma Watson",
+                "email": "ewatson@fortinet.com",
+                "phone": "+1-866-320-3224"
             }
         ]
 
@@ -200,11 +207,6 @@ class VendorService:
             await VendorRepository.create(
                 {
                     **vendor,
-                    "contact_person": "System",
-                    "email": "system@localhost",
-                    "phone": "N/A",
-                    "status": "ACTIVE",
-                    "created_at": datetime.utcnow(),
-                    "updated_at": datetime.utcnow()
+                    "status":"ACTIVE"
                 }
             )
