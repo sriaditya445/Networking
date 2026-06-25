@@ -86,43 +86,73 @@ MODEL_PATTERNS = {
 }
 
 
-def detect_device_type(config_content: str) -> DetectionResult:
-    """Score config against patterns and return best device type match."""
-    scores: dict[str, float] = {}
-    matched: dict[str, list[str]] = {}
+def detect_device(content: str) -> dict:
 
-    for device_type, patterns in DEVICE_PATTERNS.items():
-        score = 0.0
-        matches: list[str] = []
-        for pattern, weight in patterns:
-            if re.search(pattern, config_content, re.MULTILINE | re.IGNORECASE):
-                score += weight
-                matches.append(pattern)
-        scores[device_type] = score
-        matched[device_type] = matches
+    model = None
 
-    best_type = max(scores, key=lambda k: scores[k])
-    best_score = scores[best_type]
-
-    if best_score < 0.5:
-        return DetectionResult(
-            device_type="unknown",
-            vendor=_detect_vendor(config_content),
-            model=_detect_model(config_content),
-            confidence=0.0,
-            matched_patterns=[],
-        )
-
-    max_possible = sum(w for _, w in DEVICE_PATTERNS[best_type])
-    confidence = min(best_score / max(max_possible, 1.0), 1.0)
-
-    return DetectionResult(
-        device_type=best_type,
-        vendor=_detect_vendor(config_content),
-        model=_detect_model(config_content),
-        confidence=round(confidence, 2),
-        matched_patterns=matched[best_type],
+    match = re.search(
+        r"C9\d{3}",
+        content,
+        re.I
     )
+
+    if match:
+        model = match.group(0).upper()
+
+    role = None
+
+    if "router ospf" in content.lower():
+        role = "distribution"
+
+    elif "switchport access" in content.lower():
+        role = "access"
+
+    return {
+        "vendor_id" : "Cisco",
+        "model":model,
+        "role":role,
+        # "device_type":"switch"
+    }
+
+    # Later you can add Juniper.
+
+# def detect_device_type(config_content: str) -> DetectionResult:
+#     """Score config against patterns and return best device type match."""
+#     scores: dict[str, float] = {}
+#     matched: dict[str, list[str]] = {}
+
+#     for device_type, patterns in DEVICE_PATTERNS.items():
+#         score = 0.0
+#         matches: list[str] = []
+#         for pattern, weight in patterns:
+#             if re.search(pattern, config_content, re.MULTILINE | re.IGNORECASE):
+#                 score += weight
+#                 matches.append(pattern)
+#         scores[device_type] = score
+#         matched[device_type] = matches
+
+#     best_type = max(scores, key=lambda k: scores[k])
+#     best_score = scores[best_type]
+
+#     if best_score < 0.5:
+#         return DetectionResult(
+#             device_type="unknown",
+#             vendor=_detect_vendor(config_content),
+#             model=_detect_model(config_content),
+#             confidence=0.0,
+#             matched_patterns=[],
+#         )
+
+#     max_possible = sum(w for _, w in DEVICE_PATTERNS[best_type])
+#     confidence = min(best_score / max(max_possible, 1.0), 1.0)
+
+#     return DetectionResult(
+#         device_type=best_type,
+#         vendor=_detect_vendor(config_content),
+#         model=_detect_model(config_content),
+#         confidence=round(confidence, 2),
+#         matched_patterns=matched[best_type],
+#     )
 
 
 def _detect_vendor(config_content: str) -> str:

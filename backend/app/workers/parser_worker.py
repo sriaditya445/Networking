@@ -68,17 +68,43 @@ class ParserWorker:
                             "processing_status":"PROCESSING"
                         }
                     )
-                    result = (ParserService.parse_device( content, os.path.basename(file_path)))
-                    group_id = (
-                        f"{result['vendor']}|"
-                        f"{result['device_type']}|"
-                        f"{result.get('model') or 'GENERIC'}"
+                    detection = detect_device(content)
+
+                    catalog = await DeviceCatalogRepository.find_match(
+                        detection["vendor_id"],
+                        detection["model"]
                     )
+                    result = {
+                        # "device_name": hostname,
+
+                        "vendor_id": catalog["vendor_id"],
+
+                        "family": catalog["family"],
+
+                        "model": catalog["model"],
+
+                        "role": catalog["role"],
+
+                        "device_type": catalog["device_type"],
+
+                        "os": catalog["os"],
+                        "version": catalog["version"],
+
+                        # "configuration_json": config_json
+                    }
+                    parsed = (ParserService.parse_device( content, os.path.basename(file_path)))
+                    # group_id = (
+                    #     f"{result['vendor_id']}|"
+                    #     f"{result['family']}|"
+                    #     f"{result['model']}|"
+                    #     f"{result['role']}"
+                    # )
 
                     template = await TemplateService.find_template(
-                        vendor=result.get("vendor"),
-                        device_type=result.get("device_type"),
-                        model=result.get("model")
+                        vendor_id=result["vendor_id"],
+                        family=result["family"],
+                        model=result["model"],
+                        role=result["role"]
                     )
 
                     await DeviceService.update_device(

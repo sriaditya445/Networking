@@ -527,17 +527,19 @@ class UploadService:
         for device in devices:
 
             key = (
-                device["vendor"],
-                device["device_type"],
-                device.get("model")
+                device["vendor_id"],
+                device["family"],
+                device["model"],
+                device["role"]
             )
 
             if key not in groups:
 
                 template = await TemplateService.find_template(
-                    vendor=device["vendor"],
-                    device_type=device["device_type"],
-                    model=device.get("model")
+                    vendor_id=device["vendor_id"],
+                    family=device["family"],
+                    model=device["model"],
+                    role=device["role"]
                 )
                 group_id = device["group_id"]
                 existing = existing_groups.get(
@@ -546,10 +548,14 @@ class UploadService:
                 )
                 groups[key] = {
                     "group_id": group_id,
-                    "vendor": device["vendor"],
+                    "vendor_id": device["vendor_id"],
+                    "family": device["family"],
+                    "model": device["model"],
+                    "role": device["role"],
                     "device_type": device["device_type"],
-                    "model": device.get("model"),
-
+                    "template_family":
+                        template.get("template_family")
+                        if template else None,
                     "device_count": 0,
 
                     "template_id":

@@ -18,6 +18,6 @@ class AuditResultModel(BaseModel):
     passed: List[Dict[str, Any]]
     failed: List[Dict[str, Any]]
 
-    # recommendations: List[Dict[str, Any]]
+    severity_summary: Dict[str, int]
 
     created_at: datetime

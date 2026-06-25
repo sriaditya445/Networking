@@ -4,10 +4,15 @@ from typing import Dict, List, Optional
 
 
 class GoldenTemplateModel(BaseModel):
-    vendor: str
+    # vendor_id
+    vendor_id: str
     device_type: str
-    model: Optional[str] = None
+    family: str | None = None
 
+    model: str | None = None
+
+    role: str | None = None
+    template_family: str | None = None
     template_name: str
     template_type: str = "jinja2"
     template_content: str
@@ -17,3 +22,22 @@ class GoldenTemplateModel(BaseModel):
     created_at: datetime
 
     updated_at: datetime
+
+# class GoldenTemplateModel(BaseModel):
+
+#     vendor: str
+
+#     family: str | None = None
+
+#     model: str | None = None
+
+#     role: str | None = None
+
+#     template_name: str
+
+#     template_content: str
+
+#     sections: dict[str, list[str]]
+
+#     created_at: datetime
+#     updated_at: datetime

@@ -1,17 +1,17 @@
 from app.parsers.cisco_parser import CiscoParser
-from app.services.device_detector import detect_device_type
+from app.services.device_detector import detect_device
 
 class ParserFactory:
 
     @staticmethod
     def get_parser(content):
 
-        detection = detect_device_type(content)
+        detection = detect_device(content)
 
-        if detection.vendor == "Cisco":
+        if detection["vendor_id"] == "Cisco":
             return CiscoParser()
 
-        if detection.vendor == "Juniper":
+        if detection["vendor_id"] == "Juniper":
             return JuniperParser()
 
         return CiscoParser()

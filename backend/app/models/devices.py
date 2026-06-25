@@ -3,16 +3,20 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
-
 class DeviceModel(BaseModel):
     upload_id: str
-
+    # extracted_variables
     # Device Identification
     device_name: str
     device_type: str
-    vendor: str = "Cisco"
-
+    vendor_id: str
+    family: str | None = None
     model: Optional[str] = None
+    role: str | None = None
+
+    os: str | None = None
+
+    version: str | None = None
     group_id: Optional[str] = None
     # Raw Config
     configuration_json: Optional[Dict[str, Any]] = None
@@ -45,3 +49,40 @@ class DeviceModel(BaseModel):
     # Timestamps
     created_at: datetime
     updated_at: datetime
+
+    # class DeviceModel(BaseModel):
+
+    # upload_id: str
+
+    # device_name: str
+
+    # vendor: str
+
+    # family: str
+
+    # model: str
+
+    # device_type: str
+
+    # role: str
+
+    # group_id: str | None = None
+
+    # configuration_json: dict | None = None
+
+    # file_path: str
+
+    # processing_status: str = "PENDING"
+
+    # template_id: str | None = None
+
+    # template_status: str = "PENDING"
+
+    # audit_status: str = "PENDING"
+
+    # audit_result_id: str | None = None
+
+    # audit_report_id: str | None = None
+
+    # created_at: datetime
+    # updated_at: datetime

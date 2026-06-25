@@ -10,11 +10,7 @@ class ParserService:
         filename
     ):
 
-        parser = (
-            ParserFactory.get_parser(
-                content
-            )
-        )
+        parser = ParserFactory.get_parser(content)
 
         return parser.parse(
             content,

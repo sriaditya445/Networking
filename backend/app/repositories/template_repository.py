@@ -18,9 +18,10 @@ class TemplateRepository:
 
     @staticmethod
     async def find_template(
-        vendor: str,
-        device_type: str,
-        model: str | None = None
+        vendor_id: str,
+        family: str | None,
+        model: str | None,
+        role: str | None
     ):
 
         if model is not None:

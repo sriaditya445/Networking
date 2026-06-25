@@ -1,17 +1,17 @@
 from datetime import datetime
-from typing import Optional
-
 from pydantic import BaseModel
+
 
 class VendorModel(BaseModel):
 
     vendor_name: str
-
     vendor_code: str
 
-    description: Optional[str] = None
+    contact_person: str
+    email: str
+    phone: str
 
-    is_active: bool = True
+    status: str = "ACTIVE"
 
     created_at: datetime
     updated_at: datetime

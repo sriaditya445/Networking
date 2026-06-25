@@ -37,18 +37,20 @@ class TemplateService:
                 status_code=400,
                 detail="Invalid template id"
             )
-
+#need to correct this
     @staticmethod
     async def find_template(
-        vendor: str,
-        device_type: str,
-        model: str | None = None
+        vendor_id: str,
+        family: str | None,
+        model: str | None,
+        role: str | None
     ):
         vendor, device_type, model = (
             TemplateService._normalize_template_fields(
-                vendor,
-                device_type,
-                model
+                vendor_id,
+                family,
+                model,
+                role
             )
         )
 
@@ -88,9 +90,10 @@ class TemplateService:
             )
 
         existing = await TemplateRepository.find_exact_template(
-            vendor=template_doc["vendor"],
-            device_type=template_doc["device_type"],
-            model=template_doc.get("model")
+            vendor_id=template_doc["vendor_id"],
+            family=template_doc.get("family"),
+            model=template_doc.get("model"),
+            role=template_doc.get("role")
         )
 
         if existing:
