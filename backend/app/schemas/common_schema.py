@@ -174,19 +174,6 @@ class VendorResponse(VendorCreate):
     updated_at: datetime | None = None
 
 
-class VendorListResponse(BaseModel):
-
-    model_config = ConfigDict(
-        populate_by_name=True
-    )
-
-    id: PyObjectId = Field(alias="_id")
-
-    vendor_name: str
-    vendor_code: str
-
-    status: str
-
 class VendorNameResponse(BaseModel):
 
     model_config = ConfigDict(

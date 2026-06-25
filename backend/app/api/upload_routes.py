@@ -25,16 +25,6 @@ from app.schemas.audit_selection_schema import (
 
 router = APIRouter()
 
-
-# GET    /api/uploads
-# GET    /api/uploads/{upload_id}
-# GET    /api/uploads/{upload_id}/groups
-# GET    /api/uploads/{upload_id}/files
-# GET    /api/uploads/{upload_id}/download
-# DELETE /api/uploads/{upload_id}
-# POST   /api/upload
-# POST   /api/uploads/{upload_id}/audit-selection
-
 @router.get("/api/uploads",response_model=List[UploadResponse])
 async def get_uploads():
     return await UploadService.get_uploads()
@@ -46,9 +36,6 @@ async def get_upload(upload_id: str):
     return await UploadService.get_upload(
         upload_id
     )
-
-# async def get_uploads(upload_id: Optional[str] = None):
-#     return await UploadService.get_uploads(upload_id=upload_id)
 
 @router.delete("/api/uploads/{upload_id}")
 async def delete_upload(upload_id: str):

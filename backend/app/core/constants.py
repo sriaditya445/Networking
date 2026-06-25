@@ -1,3 +1,0 @@
-# app/core/constants.py
-
-SYSTEM_USER_ID = "000000000000000000000001"

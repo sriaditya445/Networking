@@ -5,7 +5,6 @@ from fastapi import APIRouter
 from app.schemas.common_schema import (
     VendorCreate,
     VendorResponse,
-    VendorListResponse,
     VendorNameResponse,
     ActionResponse
 )
@@ -22,7 +21,7 @@ router = APIRouter(
 
 @router.get(
     "",
-    response_model=list[VendorListResponse]
+    response_model=list[VendorResponse]
 )
 async def get_vendors(
     vendor_name: str = None,
@@ -70,20 +69,14 @@ async def get_vendor_name(
 async def create_vendor(
     vendor: VendorCreate
 ):
-
     return await VendorService.create_vendor(
-        {
-            **vendor.model_dump(),
-            "status": "ACTIVE",
-            "created_at": datetime.utcnow(),
-            "updated_at": datetime.utcnow()
-        }
+        vendor.model_dump()
     )
 
 
 @router.put(
     "/{vendor_id}",
-    response_model=VendorResponse
+    response_model=ActionResponse
 )
 async def update_vendor(
     vendor_id: str,
@@ -107,25 +100,3 @@ async def delete_vendor(
     return await VendorService.delete_vendor(
         vendor_id
     )
-
-
-# async def create_vendor(
-#     vendor: VendorCreate
-# ):
-
-#     vendor_id = await (
-#         VendorService.create_vendor(
-#             {
-#                 **vendor.model_dump(),
-#                 "status": "ACTIVE",
-#                 "created_at": datetime.utcnow(),
-#                 "updated_at": datetime.utcnow()
-#             }
-#         )
-#     )
-
-#     return {
-#         "message":
-#         "Vendor created successfully",
-#         "id": vendor_id
-#     }

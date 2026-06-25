@@ -7,9 +7,7 @@ from app.api.stats_routes import router as stats_router
 from app.api.health_routes import router as health_router
 from app.api.audit_routes import router as audit_router
 from app.api.template_routes import router as template_router
-from app.api.detect_routes import router as detect_router
 from app.api.vendor_routes import router as vendor_router
-# from app.api.user_router import router as user_router
 from app.services.user_service import UserService
 from app.services.vendor_service import (
     VendorService
@@ -35,18 +33,6 @@ async def shutdown():
     scheduler.shutdown()
     await close_db()
 
-# @app.on_event("startup")
-# async def startup():
-
-#     result = await check_db_connection()
-
-#     print(f"MongoDB Connected: {result}")
-
-#     print("\nREGISTERED ROUTES:")
-
-#     for route in app.routes:
-#         print(route.path)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -61,6 +47,5 @@ app.include_router(stats_router)
 app.include_router(health_router)
 app.include_router(audit_router)
 app.include_router(template_router)
-app.include_router(detect_router)
 app.include_router(vendor_router)
 

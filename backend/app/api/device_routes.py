@@ -18,12 +18,6 @@ from app.services.file_service import (
 
 router = APIRouter()
 
-# GET /api/devices
-# GET /api/devices/{device_id}
-
-# GET /api/devices/{device_id}/configuration
-# GET /api/devices/{device_id}/download
-
 @router.get(
     "/api/devices",
     response_model=List[DeviceResponse]

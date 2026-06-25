@@ -1,0 +1,288 @@
+{# ========================================================== #}
+{# Cisco Catalyst 9800 WLC Golden Template #}
+{# ========================================================== #}
+
+version {{ ios_version }}
+
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service password-encryption
+
+hostname {{ hostname }}
+
+! ==========================================================
+! AAA
+! ==========================================================
+
+aaa new-model
+
+aaa group server tacacs+ {{ tacacs_group }}
+{% for server in tacacs_servers %}
+server name {{ server }}
+{% endfor %}
+
+aaa group server radius {{ radius_group }}
+{% for server in radius_servers %}
+server name {{ server }}
+{% endfor %}
+
+aaa authentication login default group {{ tacacs_group }} local
+aaa authentication dot1x default group {{ radius_group }}
+
+aaa authorization exec default group {{ tacacs_group }} local
+aaa authorization network default group {{ radius_group }}
+
+aaa accounting identity default start-stop group {{ radius_group }}
+
+! ==========================================================
+! LOGIN SECURITY
+! ==========================================================
+
+no ip domain-lookup
+
+login block-for 120 attempts 5 within 60
+login on-failure log
+login on-success log
+
+! ==========================================================
+! DNS
+! ==========================================================
+
+ip domain name {{ domain_name }}
+
+{% for dns in dns_servers %}
+ip name-server {{ dns }}
+{% endfor %}
+
+! ==========================================================
+! NTP
+! ==========================================================
+
+clock timezone {{ timezone_name }} {{ timezone_offset_hours }} {{ timezone_offset_minutes }}
+
+{% for ntp in ntp_servers %}
+ntp server {{ ntp }}
+{% endfor %}
+
+! ==========================================================
+! SYSLOG
+! ==========================================================
+
+logging buffered 1000000
+
+{% for syslog in syslog_servers %}
+logging host {{ syslog }}
+{% endfor %}
+
+logging trap informational
+
+! ==========================================================
+! SNMP
+! ==========================================================
+
+snmp-server community {{ snmp_community }} RO ACL_SNMP
+snmp-server location {{ site_name }}
+snmp-server contact {{ contact_email }}
+snmp-server enable traps
+
+! ==========================================================
+! SSH / HTTPS
+! ==========================================================
+
+no ip http server
+
+ip http secure-server
+ip http tls-version TLSv1.2
+
+ip ssh version 2
+
+ip ssh source-interface {{ management_vlan }}
+
+ip scp server enable
+
+! ==========================================================
+! TACACS
+! ==========================================================
+
+{% for tacacs in tacacs_servers_config %}
+tacacs server {{ tacacs.name }}
+address ipv4 {{ tacacs.ip }}
+key {{ tacacs.key }}
+{% endfor %}
+
+! ==========================================================
+! RADIUS
+! ==========================================================
+
+{% for radius in radius_servers_config %}
+radius server {{ radius.name }}
+address ipv4 {{ radius.ip }} auth-port 1812 acct-port 1813
+key {{ radius.key }}
+{% endfor %}
+
+! ==========================================================
+! CERTIFICATES
+! ==========================================================
+
+crypto pki trustpoint {{ trustpoint_name }}
+enrollment terminal
+revocation-check crl
+hash sha512
+
+! ==========================================================
+! AVC
+! ==========================================================
+
+flow exporter wireless-local-exporter
+destination local wlc
+
+flow monitor wireless-avc-basic
+exporter wireless-local-exporter
+cache timeout active 60
+record wireless avc basic
+
+! ==========================================================
+! VLANS
+! ==========================================================
+
+{% for vlan in vlans %}
+vlan {{ vlan.id }}
+name {{ vlan.name }}
+!
+{% endfor %}
+
+! ==========================================================
+! INTERFACES
+! ==========================================================
+
+{% for svi in interfaces %}
+interface Vlan{{ svi.vlan }}
+description {{ svi.description }}
+ip address {{ svi.ip }} {{ svi.mask }}
+
+{% for helper in svi.helpers %}
+ip helper-address {{ helper }}
+{% endfor %}
+
+no ip proxy-arp
+!
+{% endfor %}
+
+! ==========================================================
+! PORT CHANNELS
+! ==========================================================
+
+{% for po in port_channels %}
+interface Port-channel{{ po.id }}
+description {{ po.description }}
+switchport mode trunk
+switchport trunk allowed vlan {{ po.allowed_vlans }}
+!
+{% endfor %}
+
+! ==========================================================
+! WLAN POLICY PROFILES
+! ==========================================================
+
+{% for profile in policy_profiles %}
+wireless profile policy {{ profile.name }}
+vlan {{ profile.vlan }}
+no shutdown
+!
+{% endfor %}
+
+! ==========================================================
+! WLANS
+! ==========================================================
+
+{% for wlan in wlans %}
+wlan {{ wlan.id }} {{ wlan.name }}
+
+ssid {{ wlan.ssid }}
+
+{% if wlan.security == "dot1x" %}
+security dot1x authentication-list DOT1X_AUTH
+{% endif %}
+
+{% if wlan.security == "psk" %}
+security wpa psk aes
+{% endif %}
+
+no shutdown
+!
+{% endfor %}
+
+! ==========================================================
+! RF PROFILES
+! ==========================================================
+
+ap dot11 24ghz rf-profile LOW-DENSITY
+channel auto
+tx-power auto
+!
+
+ap dot11 5ghz rf-profile HIGH-DENSITY
+channel auto
+tx-power auto
+!
+
+! ==========================================================
+! AP JOIN ACL
+! ==========================================================
+
+ip access-list extended APCAP
+
+{% for subnet in ap_subnets %}
+permit udp {{ subnet.network }} {{ subnet.wildcard }} host {{ wlc_ip }}
+permit udp host {{ wlc_ip }} {{ subnet.network }} {{ subnet.wildcard }}
+{% endfor %}
+
+! ==========================================================
+! SNMP ACL
+! ==========================================================
+
+ip access-list standard ACL_SNMP
+
+{% for ip in snmp_allowed_hosts %}
+permit {{ ip }}
+{% endfor %}
+
+! ==========================================================
+! WEB ACCESS ACL
+! ==========================================================
+
+ip access-list standard WEB_ACCESS
+
+{% for ip in web_access_hosts %}
+permit {{ ip }}
+{% endfor %}
+
+! ==========================================================
+! VTY ACCESS
+! ==========================================================
+
+ip access-list standard VTY_ACCESS
+
+{% for ip in vty_hosts %}
+permit {{ ip }}
+{% endfor %}
+
+! ==========================================================
+! HIGH AVAILABILITY
+! ==========================================================
+
+redundancy
+mode sso
+
+main-cpu
+standby console enable
+
+! ==========================================================
+! DEFAULT ROUTE
+! ==========================================================
+
+ip route 0.0.0.0 0.0.0.0 {{ default_gateway }}
+
+! ==========================================================
+! END
+! ==========================================================
