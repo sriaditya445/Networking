@@ -2,26 +2,9 @@
 
 from dataclasses import dataclass, field
 
-from app.schemas.common_schema import AuditCategory, AuditMode, RuleResult
+from app.schemas.common_schema import AuditCategory, RuleResult
 from app.services.config_parser import ParsedConfig, config_has_control
 from app.services.template_parser import ParsedTemplate
-
-ALL_CATEGORIES = [c.value for c in AuditCategory]
-
-MODE_TO_CATEGORIES: dict[str, list[str]] = {
-    AuditMode.FULL.value: ALL_CATEGORIES,
-    AuditMode.AAA.value: ["aaa"],
-    AuditMode.SECURITY.value: ["security"],
-    AuditMode.SNMP.value: ["snmp"],
-    AuditMode.NTP.value: ["ntp"],
-    AuditMode.DNS.value: ["dns"],
-    AuditMode.LOGGING.value: ["logging"],
-    AuditMode.LAYER2.value: ["layer2"],
-    AuditMode.LAYER3.value: ["layer3"],
-    AuditMode.WIRELESS.value: ["wireless"],
-    AuditMode.PERFORMANCE.value: ["performance"],
-    AuditMode.INTERFACES.value: ["interfaces"],
-}
 
 
 @dataclass
@@ -43,19 +26,12 @@ def _calculate_score(passed: int, total: int) -> float:
 def run_compliance_audit(
     template: ParsedTemplate,
     config: ParsedConfig,
-    audit_mode: str = "full",
-    selected_sections: list[str] | None = None
+    sections_to_audit: list[str]
 ) -> ComplianceResult:
 
     """Compare template controls against config and produce PASS/FAIL results."""
-    categories = (
-        selected_sections
-        if selected_sections
-        else MODE_TO_CATEGORIES.get(
-            audit_mode,
-            ALL_CATEGORIES
-        )
-    )
+
+    categories = sections_to_audit
     result = ComplianceResult()
     category_stats: dict[str, dict[str, int]] = {}
 
@@ -87,9 +63,5 @@ def run_compliance_audit(
 
     for category, stats in category_stats.items():
         result.category_scores[category] = _calculate_score(stats["pass"], stats["total"])
-
-    for cat in ALL_CATEGORIES:
-        if cat not in result.category_scores:
-            result.category_scores[cat] = 100.0 if cat not in categories else 0.0
 
     return result
