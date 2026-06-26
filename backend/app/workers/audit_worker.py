@@ -70,20 +70,26 @@ class AuditWorker:
                             "updated_at": datetime.utcnow()
                         }
                     )
+                    audit_mode = group["audit_mode"]
+                    available_sections = group["available_sections"]
+                    selected_sections = group.get("selected_sections", [])
+
+                    if audit_mode == "full":
+                        sections_to_audit = available_sections
+                    else:
+                        sections_to_audit = selected_sections
 
                     audit_result = await AuditService.audit_device(
-                        device,
-                        audit_mode=group.get("audit_mode","FULL"),
-                        selected_sections=group.get("selected_sections",[])
+                        device=device,
+                        audit_mode=audit_mode,
+                        selected_sections=sections_to_audit
                     )
 
-                    audit_result_id = (
-                        await AuditResultService.create_result(
-                            device=device,
-                            audit_result=audit_result,
-                            audit_mode=group.get("audit_mode","FULL"),
-                            selected_sections=group.get("selected_sections",[])
-                        )
+                    audit_result_id = await AuditResultService.create_result(
+                        device=device,
+                        audit_result=audit_result,
+                        audit_mode=audit_mode,
+                        selected_sections=sections_to_audit
                     )
 
                     audit_report_id = (

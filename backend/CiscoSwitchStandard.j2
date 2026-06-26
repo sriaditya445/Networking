@@ -1,6 +1,10 @@
 {# ========================================================== #}
-{# Cisco Catalyst 9800 WLC Golden Template #}
-{# ========================================================== #}
+{# Cisco Catalyst Switch Golden Template #}
+{# Supports:
+#   C3650
+#   C3850
+#   C9300
+# ========================================================== #}
 
 version {{ ios_version }}
 
@@ -10,6 +14,7 @@ service password-encryption
 
 hostname {{ hostname }}
 
+!
 ! ==========================================================
 ! AAA
 ! ==========================================================
@@ -18,12 +23,12 @@ aaa new-model
 
 aaa group server tacacs+ {{ tacacs_group }}
 {% for server in tacacs_servers %}
-server name {{ server }}
+ server name {{ server }}
 {% endfor %}
 
 aaa group server radius {{ radius_group }}
 {% for server in radius_servers %}
-server name {{ server }}
+ server name {{ server }}
 {% endfor %}
 
 aaa authentication login default group {{ tacacs_group }} local
@@ -32,8 +37,9 @@ aaa authentication dot1x default group {{ radius_group }}
 aaa authorization exec default group {{ tacacs_group }} local
 aaa authorization network default group {{ radius_group }}
 
-aaa accounting identity default start-stop group {{ radius_group }}
+aaa accounting exec default start-stop group {{ tacacs_group }}
 
+!
 ! ==========================================================
 ! LOGIN SECURITY
 ! ==========================================================
@@ -44,6 +50,7 @@ login block-for 120 attempts 5 within 60
 login on-failure log
 login on-success log
 
+!
 ! ==========================================================
 ! DNS
 ! ==========================================================
@@ -54,6 +61,7 @@ ip domain name {{ domain_name }}
 ip name-server {{ dns }}
 {% endfor %}
 
+!
 ! ==========================================================
 ! NTP
 ! ==========================================================
@@ -64,8 +72,9 @@ clock timezone {{ timezone_name }} {{ timezone_offset_hours }} {{ timezone_offse
 ntp server {{ ntp }}
 {% endfor %}
 
+!
 ! ==========================================================
-! SYSLOG
+! LOGGING
 ! ==========================================================
 
 logging buffered 1000000
@@ -76,6 +85,7 @@ logging host {{ syslog }}
 
 logging trap informational
 
+!
 ! ==========================================================
 ! SNMP
 ! ==========================================================
@@ -85,79 +95,64 @@ snmp-server location {{ site_name }}
 snmp-server contact {{ contact_email }}
 snmp-server enable traps
 
+!
 ! ==========================================================
-! SSH / HTTPS
+! SSH
 ! ==========================================================
-
-no ip http server
-
-ip http secure-server
-ip http tls-version TLSv1.2
 
 ip ssh version 2
-
-ip ssh source-interface {{ management_vlan }}
+ip ssh source-interface Vlan{{ management_vlan }}
 
 ip scp server enable
 
+no ip http server
+ip http secure-server
+
+!
 ! ==========================================================
-! TACACS
+! TACACS SERVERS
 ! ==========================================================
 
 {% for tacacs in tacacs_servers_config %}
 tacacs server {{ tacacs.name }}
-address ipv4 {{ tacacs.ip }}
-key {{ tacacs.key }}
+ address ipv4 {{ tacacs.ip }}
+ key {{ tacacs.key }}
+!
 {% endfor %}
 
+!
 ! ==========================================================
-! RADIUS
+! RADIUS SERVERS
 ! ==========================================================
 
 {% for radius in radius_servers_config %}
 radius server {{ radius.name }}
-address ipv4 {{ radius.ip }} auth-port 1812 acct-port 1813
-key {{ radius.key }}
+ address ipv4 {{ radius.ip }}
+ key {{ radius.key }}
+!
 {% endfor %}
 
-! ==========================================================
-! CERTIFICATES
-! ==========================================================
-
-crypto pki trustpoint {{ trustpoint_name }}
-enrollment terminal
-revocation-check crl
-hash sha512
-
-! ==========================================================
-! AVC
-! ==========================================================
-
-flow exporter wireless-local-exporter
-destination local wlc
-
-flow monitor wireless-avc-basic
-exporter wireless-local-exporter
-cache timeout active 60
-record wireless avc basic
-
+!
 ! ==========================================================
 ! VLANS
 ! ==========================================================
 
 {% for vlan in vlans %}
 vlan {{ vlan.id }}
-name {{ vlan.name }}
+ name {{ vlan.name }}
 !
 {% endfor %}
 
+!
 ! ==========================================================
-! INTERFACES
+! SVIs
 ! ==========================================================
 
 {% for svi in interfaces %}
 interface Vlan{{ svi.vlan }}
+
 description {{ svi.description }}
+
 ip address {{ svi.ip }} {{ svi.mask }}
 
 {% for helper in svi.helpers %}
@@ -168,77 +163,135 @@ no ip proxy-arp
 !
 {% endfor %}
 
+!
+! ==========================================================
+! ACCESS PORTS
+! ==========================================================
+
+{% for access in access_ports %}
+interface {{ access.name }}
+
+description {{ access.description }}
+
+switchport mode access
+switchport access vlan {{ access.vlan }}
+
+spanning-tree portfast
+spanning-tree bpduguard enable
+
+switchport port-security
+switchport port-security maximum 2
+switchport port-security violation restrict
+
+storm-control broadcast level 5.00
+
+no shutdown
+!
+{% endfor %}
+
+!
+! ==========================================================
+! TRUNK PORTS
+! ==========================================================
+
+{% for trunk in trunk_ports %}
+interface {{ trunk.name }}
+
+description {{ trunk.description }}
+
+switchport mode trunk
+switchport trunk allowed vlan {{ trunk.allowed_vlans }}
+
+no shutdown
+!
+{% endfor %}
+
+!
 ! ==========================================================
 ! PORT CHANNELS
 ! ==========================================================
 
 {% for po in port_channels %}
 interface Port-channel{{ po.id }}
+
 description {{ po.description }}
+
 switchport mode trunk
+
 switchport trunk allowed vlan {{ po.allowed_vlans }}
+
 !
 {% endfor %}
 
+!
 ! ==========================================================
-! WLAN POLICY PROFILES
+! SPANNING TREE
 ! ==========================================================
 
-{% for profile in policy_profiles %}
-wireless profile policy {{ profile.name }}
-vlan {{ profile.vlan }}
-no shutdown
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+spanning-tree portfast default
+spanning-tree portfast bpduguard default
+spanning-tree loopguard default
+
 !
+! ==========================================================
+! DHCP SNOOPING
+! ==========================================================
+
+ip dhcp snooping
+ip dhcp snooping vlan {{ dhcp_snooping_vlans }}
+
+!
+! ==========================================================
+! DAI
+! ==========================================================
+
+ip arp inspection vlan {{ dai_vlans }}
+
+!
+! ==========================================================
+! IP ROUTING
+! ==========================================================
+
+ip routing
+
+{% for route in static_routes %}
+ip route {{ route.destination }} {{ route.mask }} {{ route.next_hop }}
 {% endfor %}
 
+!
 ! ==========================================================
-! WLANS
+! OSPF
 ! ==========================================================
 
-{% for wlan in wlans %}
-wlan {{ wlan.id }} {{ wlan.name }}
+router ospf {{ ospf.process }}
 
-ssid {{ wlan.ssid }}
+router-id {{ ospf.router_id }}
 
-{% if wlan.security == "dot1x" %}
-security dot1x authentication-list DOT1X_AUTH
+{% for network in ospf.networks %}
+network {{ network.ip }} {{ network.wildcard }} area {{ network.area }}
+{% endfor %}
+
+!
+! ==========================================================
+! BGP
+! ==========================================================
+
+{% if bgp %}
+router bgp {{ bgp.asn }}
+
+bgp log-neighbor-changes
+
+{% for neighbor in bgp.neighbors %}
+neighbor {{ neighbor.ip }} remote-as {{ neighbor.remote_as }}
+{% endfor %}
+
 {% endif %}
 
-{% if wlan.security == "psk" %}
-security wpa psk aes
-{% endif %}
-
-no shutdown
 !
-{% endfor %}
-
 ! ==========================================================
-! RF PROFILES
-! ==========================================================
-
-ap dot11 24ghz rf-profile LOW-DENSITY
-channel auto
-tx-power auto
-!
-
-ap dot11 5ghz rf-profile HIGH-DENSITY
-channel auto
-tx-power auto
-!
-
-! ==========================================================
-! AP JOIN ACL
-! ==========================================================
-
-ip access-list extended APCAP
-
-{% for subnet in ap_subnets %}
-permit udp {{ subnet.network }} {{ subnet.wildcard }} host {{ wlc_ip }}
-permit udp host {{ wlc_ip }} {{ subnet.network }} {{ subnet.wildcard }}
-{% endfor %}
-
-! ==========================================================
-! SNMP ACL
+! ACLS
 ! ==========================================================
 
 ip access-list standard ACL_SNMP
@@ -247,19 +300,7 @@ ip access-list standard ACL_SNMP
 permit {{ ip }}
 {% endfor %}
 
-! ==========================================================
-! WEB ACCESS ACL
-! ==========================================================
-
-ip access-list standard WEB_ACCESS
-
-{% for ip in web_access_hosts %}
-permit {{ ip }}
-{% endfor %}
-
-! ==========================================================
-! VTY ACCESS
-! ==========================================================
+!
 
 ip access-list standard VTY_ACCESS
 
@@ -267,22 +308,20 @@ ip access-list standard VTY_ACCESS
 permit {{ ip }}
 {% endfor %}
 
+!
 ! ==========================================================
-! HIGH AVAILABILITY
-! ==========================================================
-
-redundancy
-mode sso
-
-main-cpu
-standby console enable
-
-! ==========================================================
-! DEFAULT ROUTE
+! VTY
 ! ==========================================================
 
-ip route 0.0.0.0 0.0.0.0 {{ default_gateway }}
+line vty 0 15
 
+transport input ssh
+
+access-class VTY_ACCESS in
+
+login authentication default
+
+!
 ! ==========================================================
 ! END
 ! ==========================================================

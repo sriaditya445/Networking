@@ -44,6 +44,7 @@ class AuditCategory(str, Enum):
 
 class AuditMode(str, Enum):
     FULL = "full"
+    SELECTED = "selected"
     AAA = "aaa"
     SECURITY = "security"
     SNMP = "snmp"

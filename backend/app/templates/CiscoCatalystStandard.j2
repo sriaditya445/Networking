@@ -1,0 +1,390 @@
+{# ========================================================== #}
+{# Cisco Catalyst Switch Enterprise Standard Golden Template #}
+{# Supports: Catalyst 3650 / 3850 / 9300                 #}
+{# ========================================================== #}
+
+version {{ ios_version }}
+
+service timestamps debug datetime msec localtime show-timezone
+service timestamps log datetime msec localtime show-timezone
+service sequence-numbers
+service password-encryption
+
+hostname {{ hostname }}
+
+! ==========================================================
+! AAA
+! ==========================================================
+
+aaa new-model
+
+aaa group server tacacs+ {{ tacacs_group }}
+{% for server in tacacs_servers %}
+ server name {{ server }}
+{% endfor %}
+
+aaa group server radius {{ radius_group }}
+{% for server in radius_servers %}
+ server name {{ server }}
+{% endfor %}
+
+aaa authentication login default group {{ tacacs_group }} local
+aaa authentication dot1x default group {{ radius_group }}
+aaa authorization exec default group {{ tacacs_group }} local
+aaa authorization network default group {{ radius_group }}
+aaa accounting identity default start-stop group {{ radius_group }}
+
+! ==========================================================
+! LOCAL ADMIN
+! ==========================================================
+
+username {{ admin_user }} privilege 15 secret {{ admin_password }}
+enable secret {{ enable_secret }}
+
+security passwords min-length 12
+
+! ==========================================================
+! CONFIGURATION ARCHIVE
+! ==========================================================
+
+archive
+ log config
+  logging enable
+  notify syslog
+
+! ==========================================================
+! LOGIN SECURITY
+! ==========================================================
+
+no ip domain-lookup
+login block-for 120 attempts 5 within 60
+login on-failure log
+login on-success log
+
+! ==========================================================
+! DNS
+! ==========================================================
+
+ip domain name {{ domain_name }}
+{% for dns in dns_servers %}
+ip name-server {{ dns }}
+{% endfor %}
+
+! ==========================================================
+! NTP
+! ==========================================================
+
+clock timezone {{ timezone_name }} {{ timezone_offset_hours }} {{ timezone_offset_minutes }}
+{% for ntp in ntp_servers %}
+ntp server {{ ntp }}
+{% endfor %}
+
+ntp authenticate
+ntp authentication-key 1 md5 {{ ntp_key }}
+ntp trusted-key 1
+
+ntp source Vlan{{ management_vlan }}
+
+! ==========================================================
+! LOGGING
+! ==========================================================
+
+logging buffered 1000000 informational
+logging source-interface Vlan{{ management_vlan }}
+{% for syslog in syslog_servers %}
+logging host {{ syslog }}
+{% endfor %}
+logging trap informational
+
+! ==========================================================
+! SNMP
+! ==========================================================
+
+snmp-server community {{ snmp_community }} RO ACL_SNMP
+snmp-server location {{ site_name }}
+snmp-server contact {{ contact_email }}
+snmp-server enable traps
+
+snmp-server group NMS v3 priv
+
+snmp-server user {{ snmp_user }} NMS v3 auth sha {{ snmp_auth_password }} priv aes 128 {{ snmp_priv_password }}
+
+! ==========================================================
+! SSH / HTTPS
+! ==========================================================
+
+ip ssh version 2
+ip ssh authentication-retries 3
+ip ssh time-out 60
+ip ssh source-interface Vlan{{ management_vlan }}
+
+ip scp server enable
+no ip http server
+ip http secure-server
+ip http tls-version TLSv1.2
+
+! ==========================================================
+! DISCOVERY
+! ==========================================================
+
+cdp run
+lldp run
+
+! ==========================================================
+! UDLD
+! ==========================================================
+
+udld aggressive
+
+! ==========================================================
+! ERRDISABLE RECOVERY
+! ==========================================================
+
+errdisable recovery cause bpduguard
+errdisable recovery cause security-violation
+errdisable recovery interval 300
+
+! ==========================================================
+! TACACS
+! ==========================================================
+
+ip tacacs source-interface Vlan{{ management_vlan }}
+{% for tacacs in tacacs_servers_config %}
+tacacs server {{ tacacs.name }}
+ address ipv4 {{ tacacs.ip }}
+ key {{ tacacs.key }}
+!
+{% endfor %}
+
+! ==========================================================
+! RADIUS
+! ==========================================================
+
+ip radius source-interface Vlan{{ management_vlan }}
+{% for radius in radius_servers_config %}
+radius server {{ radius.name }}
+ address ipv4 {{ radius.ip }}
+ auth-port 1812 acct-port 1813
+ key {{ radius.key }}
+!
+{% endfor %}
+
+! ==========================================================
+! PKI
+! ==========================================================
+
+crypto pki trustpoint {{ trustpoint }}
+ enrollment terminal
+ revocation-check crl
+ hash sha512
+rsakeypair {{ trustpoint }}
+
+! ==========================================================
+! MANAGEMENT VLAN
+! ==========================================================
+
+interface Vlan{{ management_vlan }}
+ description Management
+ ip address {{ management_ip }} {{ management_mask }}
+
+ no ip redirects
+ no ip proxy-arp
+ no ip unreachables
+ no ip directed-broadcast
+ no shutdown
+
+! ==========================================================
+! USER VLANS
+! ==========================================================
+
+{% for vlan in vlans %}
+vlan {{ vlan.id }}
+ name {{ vlan.name }}
+!
+{% endfor %}
+
+! ==========================================================
+! SVIs
+! ==========================================================
+
+{% for svi in interfaces %}
+interface Vlan{{ svi.vlan }}
+ description {{ svi.description }}
+ ip address {{ svi.ip }} {{ svi.mask }}
+{% for helper in svi.helpers %}
+ ip helper-address {{ helper }}
+{% endfor %}
+ no ip proxy-arp
+ no shutdown
+!
+{% endfor %}
+
+! ==========================================================
+! ACCESS PORTS
+! ==========================================================
+
+{% for access in access_ports %}
+interface {{ access.name }}
+ description {{ access.description }}
+ switchport mode access
+ switchport access vlan {{ access.vlan }}
+ switchport nonegotiate
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ storm-control broadcast level 5.00
+ no shutdown
+!
+{% endfor %}
+
+! ==========================================================
+! TRUNK PORTS
+! ==========================================================
+
+{% for trunk in trunk_ports %}
+interface {{ trunk.name }}
+ description {{ trunk.description }}
+ switchport mode trunk
+ switchport trunk allowed vlan {{ trunk.allowed_vlans }}
+ switchport nonegotiate
+ spanning-tree guard root
+ no shutdown
+!
+{% endfor %}
+
+! ==========================================================
+! PORT CHANNELS
+! ==========================================================
+
+{% for po in port_channels %}
+interface Port-channel{{ po.id }}
+ description {{ po.description }}
+ switchport mode trunk
+ switchport trunk allowed vlan {{ po.allowed_vlans }}
+ spanning-tree guard root
+ no shutdown
+!
+{% endfor %}
+
+! ==========================================================
+! SPANNING TREE
+! ==========================================================
+
+spanning-tree mode rapid-pvst
+spanning-tree extend system-id
+spanning-tree portfast default
+spanning-tree portfast bpduguard default
+spanning-tree loopguard default
+
+! ==========================================================
+! DHCP SNOOPING
+! ==========================================================
+
+ip dhcp snooping
+ip dhcp snooping vlan {{ dhcp_snooping_vlans }}
+no ip dhcp snooping information option
+
+! ==========================================================
+! DYNAMIC ARP INSPECTION
+! ==========================================================
+
+ip arp inspection vlan {{ dai_vlans }}
+ip arp inspection validate src-mac dst-mac ip
+
+! ==========================================================
+! QoS
+! ==========================================================
+
+mls qos
+
+! ==========================================================
+! IP ROUTING
+! ==========================================================
+
+ip routing
+
+{% for route in static_routes %}
+ip route {{ route.destination }} {{ route.mask }} {{ route.next_hop }}
+{% endfor %}
+
+! ==========================================================
+! OSPF
+! ==========================================================
+
+router ospf {{ ospf.process }}
+ router-id {{ ospf.router_id }}
+ passive-interface default
+{% for iface in ospf.no_passive %}
+ no passive-interface {{ iface }}
+{% endfor %}
+{% for network in ospf.networks %}
+ network {{ network.ip }} {{ network.wildcard }} area {{ network.area }}
+{% endfor %}
+
+! ==========================================================
+! BGP
+! ==========================================================
+
+{% if bgp %}
+router bgp {{ bgp.asn }}
+ bgp log-neighbor-changes
+ maximum-paths 4
+{% for neighbor in bgp.neighbors %}
+ neighbor {{ neighbor.ip }} remote-as {{ neighbor.remote_as }}
+{% endfor %}
+{% endif %}
+
+! ==========================================================
+! ACLS
+! ==========================================================
+
+ip access-list standard ACL_SNMP
+{% for ip in snmp_allowed_hosts %}
+ permit {{ ip }}
+{% endfor %}
+
+ip access-list standard VTY_ACCESS
+{% for ip in vty_hosts %}
+ permit {{ ip }}
+{% endfor %}
+
+! ==========================================================
+! VTY
+! ==========================================================
+
+line vty 0 15
+ transport input ssh
+ access-class VTY_ACCESS in
+ login authentication default
+ exec-timeout 15 0
+ session-timeout 30
+ logging synchronous
+ transport preferred none
+
+! ==========================================================
+! STACKWISE
+! ==========================================================
+
+{% if stackwise %}
+switch 1 priority 15
+switch 2 priority 10
+{% endif %}
+
+! ==========================================================
+! BANNER
+! ==========================================================
+
+banner motd ^
+***********************************************************
+* WARNING                                                     *
+* Authorized access only.                                     *
+* This system is monitored and recorded.                      *
+* Disconnect immediately if you are not an authorized user.   *
+************************************************************
+^
+
+! ==========================================================
+! END
+! ==========================================================

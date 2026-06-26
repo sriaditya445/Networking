@@ -39,8 +39,7 @@ class AuditService:
         compliance = run_compliance_audit(
             template=parsed_template,
             config=parsed_config,
-            audit_mode=audit_mode,
-            selected_sections=selected_sections
+            sections_to_audit=selected_sections
         )
 
         enriched_failed = build_recommendations(
