@@ -489,8 +489,12 @@ export default function ProcessingQueue({
         a.download = `${device.device_name}_audit_report.pdf`;
         document.body.appendChild(a);
         a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 1000);
+        
         setDeviceDlMap(prev => ({ ...prev, [devId]: 'done' }));
       } else {
         alert("Failed to download PDF report.");
@@ -505,28 +509,26 @@ export default function ProcessingQueue({
 
   // Download PDF Report for a whole Group
   const handleDownloadGroupReport = async (group) => {
-    // Find device in this group with a completed audit report
-    const match = devices.find(d => d.group_id === group.group_id && d.audit_report_id);
-    if (!match) {
-      alert("No report generated yet.");
-      return;
-    }
-
     const gId = group.group_id;
     setGroupDlMap(prev => ({ ...prev, [gId]: 'downloading' }));
 
     try {
-      const res = await fetch(`${apiBaseUrl}/api/audit/reports/${match.audit_report_id}/pdf`);
+      const encodedGroupId = encodeURIComponent(gId);
+      const res = await fetch(`${apiBaseUrl}/api/groups/${encodedGroupId}/report/pdf?upload_id=${selectedUploadId}`);
       if (res.ok) {
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${group.vendor}_${group.device_type}_${group.model || 'GENERIC'}_audit_report.pdf`;
+        a.download = `${group.vendor}_${group.device_type}_${group.model || 'GENERIC'}_group_report.pdf`;
         document.body.appendChild(a);
         a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 1000);
+
         setGroupDlMap(prev => ({ ...prev, [gId]: 'done' }));
       } else {
         alert("Failed to download Group PDF.");
@@ -552,8 +554,11 @@ export default function ProcessingQueue({
         a.download = `${device.device_name}_audit_report.xlsx`;
         document.body.appendChild(a);
         a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 1000);
       } else {
         alert("Failed to download Excel report.");
       }
@@ -565,12 +570,84 @@ export default function ProcessingQueue({
 
   // Download Excel Report for a whole Group
   const handleDownloadGroupExcelReport = async (group) => {
-    const match = devices.find(d => d.group_id === group.group_id && d.audit_report_id);
-    if (!match) {
-      alert("No report generated yet.");
-      return;
+    const gId = group.group_id;
+    try {
+      const encodedGroupId = encodeURIComponent(gId);
+      const res = await fetch(`${apiBaseUrl}/api/groups/${encodedGroupId}/report/excel?upload_id=${selectedUploadId}`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${group.vendor}_${group.device_type}_${group.model || 'GENERIC'}_group_report.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 1000);
+      } else {
+        alert("Failed to download Group Excel.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error downloading Group Excel.");
     }
-    await handleDownloadDeviceExcelReport(match);
+  };
+
+  // Download Complete Upload PDF Report
+  const handleDownloadUploadPDFReport = async () => {
+    if (!selectedUploadId) return;
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/uploads/${selectedUploadId}/report/pdf`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${jobInfo?.folder_name || 'upload'}_complete_audit_report.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 1000);
+      } else {
+        alert("Failed to download Complete Upload PDF Report.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error downloading report.");
+    }
+  };
+
+  // Download Complete Upload Excel Report
+  const handleDownloadUploadExcelReport = async () => {
+    if (!selectedUploadId) return;
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/uploads/${selectedUploadId}/report/excel`);
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${jobInfo?.folder_name || 'upload'}_complete_audit_report.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 1000);
+      } else {
+        alert("Failed to download Complete Upload Excel Report.");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Error downloading report.");
+    }
   };
 
   // Download ZIP file of all uploaded configurations
@@ -586,8 +663,11 @@ export default function ProcessingQueue({
         a.download = `${jobInfo?.folder_name || 'upload'}_configurations.zip`;
         document.body.appendChild(a);
         a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
+        
+        setTimeout(() => {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 1000);
       } else {
         alert("Failed to download ZIP file.");
       }
@@ -780,66 +860,28 @@ export default function ProcessingQueue({
 
                 {showTopReportsDropdown && (
                   <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-150 rounded-2xl shadow-xl z-35 p-4 space-y-4 text-left font-semibold text-slate-700">
-                    {/* Groups Section */}
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Group Reports</span>
-                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                        {groups.map(g => (
-                          <div key={g.group_id} className="flex justify-between items-center bg-slate-50 hover:bg-slate-100/70 p-2 rounded-xl border border-slate-200 transition-colors">
-                            <span className="text-[11px] truncate max-w-[140px] capitalize text-slate-700">
-                              {g.vendor} {g.device_type}
-                            </span>
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => handleDownloadGroupReport(g)}
-                                className="px-2 py-1 bg-white border border-slate-205 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-205 rounded text-[9px] font-bold transition flex items-center gap-0.5"
-                                title="Download PDF"
-                              >
-                                PDF
-                              </button>
-                              <button
-                                onClick={() => handleDownloadGroupExcelReport(g)}
-                                className="px-2 py-1 bg-white border border-slate-205 text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-205 rounded text-[9px] font-bold transition flex items-center gap-0.5"
-                                title="Download Excel"
-                              >
-                                XLSX
-                              </button>
-                            </div>
-                          </div>
-                        ))}
+                    {/* Complete Upload Report Section */}
+                    <div className="space-y-2 border-b border-slate-100 pb-3">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Complete Upload Report</span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleDownloadUploadPDFReport}
+                          className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-center text-[10px] font-bold transition flex justify-center items-center gap-1.5"
+                          title="Download PDF"
+                        >
+                          <FaFilePdf /> PDF
+                        </button>
+                        <button
+                          onClick={handleDownloadUploadExcelReport}
+                          className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center text-[10px] font-bold transition flex justify-center items-center gap-1.5"
+                          title="Download Excel"
+                        >
+                          <FaFileAlt /> Excel
+                        </button>
                       </div>
                     </div>
 
-                    {/* Devices Section */}
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Device Reports</span>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                        {devices.filter(d => d.audit_report_id).map(d => (
-                          <div key={d.id || d._id} className="flex justify-between items-center bg-slate-50 hover:bg-slate-100/70 p-2 rounded-xl border border-slate-200 transition-colors">
-                            <span className="text-[11px] truncate max-w-[140px] text-slate-700">
-                              {d.device_name}
-                            </span>
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => handleDownloadDeviceReport(d)}
-                                className="px-2 py-1 bg-white border border-slate-205 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-250 rounded text-[9px] font-bold transition flex items-center gap-0.5"
-                                title="Download PDF"
-                              >
-                                PDF
-                              </button>
-
-                              <button
-                                onClick={() => handleDownloadDeviceExcelReport(d)}
-                                className="px-2 py-1 bg-white border border-slate-205 text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-250 rounded text-[9px] font-bold transition flex items-center gap-0.5"
-                                title="Download Excel"
-                              >
-                                XLSX
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    
                   </div>
                 )}
               </div>
@@ -850,7 +892,7 @@ export default function ProcessingQueue({
               title="Download Upload Folder ZIP"
             >
               <FaCloudDownloadAlt className="text-slate-500" />
-              <span>Download ZIP</span>
+              <span>Download</span>
             </button>
             <button
               onClick={() => {
@@ -1166,79 +1208,7 @@ export default function ProcessingQueue({
                 <span>Audit processing is completed. Compliance reports are ready.</span>
               </div>
 
-              <div className="relative">
-                <button
-                  onClick={() => setShowReportsDropdown(!showReportsDropdown)}
-                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs transition-all shadow-md flex items-center gap-2"
-                >
-                  <span>View Reports</span>
-                  <FaChevronDown className={`text-[10px] transition-transform ${showReportsDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showReportsDropdown && (
-                  <div className="absolute right-0 bottom-full mb-2 w-80 bg-white border border-slate-150 rounded-2xl shadow-xl z-30 p-4 space-y-4 text-left font-semibold text-slate-700">
-                    {/* Groups Section */}
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Group Reports</span>
-                      <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                        {groups.map(g => (
-                          <div key={g.group_id} className="flex justify-between items-center bg-slate-50 hover:bg-slate-100/70 p-2 rounded-xl border border-slate-200 transition-colors">
-                            <span className="text-[11px] truncate max-w-[140px] capitalize text-slate-700">
-                              {g.vendor} {g.device_type}
-                            </span>
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => handleDownloadGroupReport(g)}
-                                className="px-2 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 rounded text-[9px] font-bold transition flex items-center gap-0.5"
-                                title="Download PDF"
-                              >
-                                PDF
-                              </button>
-                              <button
-                                onClick={() => handleDownloadGroupExcelReport(g)}
-                                className="px-2 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-205 rounded text-[9px] font-bold transition flex items-center gap-0.5"
-                                title="Download Excel"
-                              >
-                                XLSX
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Devices Section */}
-                    <div className="space-y-2">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Device Reports</span>
-                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                        {devices.filter(d => d.audit_report_id).map(d => (
-                          <div key={d.id || d._id} className="flex justify-between items-center bg-slate-50 hover:bg-slate-100/70 p-2 rounded-xl border border-slate-200 transition-colors">
-                            <span className="text-[11px] truncate max-w-[140px] text-slate-700">
-                              {d.device_name}
-                            </span>
-                            <div className="flex gap-1">
-                              <button
-                                onClick={() => handleDownloadDeviceReport(d)}
-                                className="px-2 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 rounded text-[9px] font-bold transition flex items-center gap-0.5"
-                                title="Download PDF"
-                              >
-                                PDF
-                              </button>
-                              <button
-                                onClick={() => handleDownloadDeviceExcelReport(d)}
-                                className="px-2 py-1 bg-white border border-slate-200 text-slate-700 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-205 rounded text-[9px] font-bold transition flex items-center gap-0.5"
-                                title="Download Excel"
-                              >
-                                XLSX
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              
             </div>
           )}
         </div>

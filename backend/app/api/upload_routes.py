@@ -7,7 +7,8 @@ from fastapi import (
     BackgroundTasks,
     Form,
     HTTPException,
-    status
+    status,
+    Response
 )
 
 from app.services.upload_service import (
@@ -135,4 +136,215 @@ async def get_upload_groups(upload_id: str):
         "status": upload["status"],
         "groups": upload.get("device_groups", [])
     }
+
+
+@router.get("/api/groups/{group_id}/report/pdf")
+async def export_group_pdf(
+    group_id: str,
+    upload_id: str
+):
+    from app.repositories.audit_result_repository import AuditResultRepository
+    from app.services.report_generator import ReportGenerator
+
+    upload = await UploadService.get_upload(upload_id)
+    
+    group_info = None
+    for g in upload.get("device_groups", []):
+        if g["group_id"] == group_id:
+            group_info = g
+            break
+            
+    if not group_info:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Group {group_id} not found in upload {upload_id}"
+        )
+        
+    devices = await DeviceService.get_devices(
+        upload_id=upload_id,
+        group_id=group_id,
+        processing_status="SUCCESS"
+    )
+    
+    if not devices:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No audited devices found in group {group_id}"
+        )
+        
+    device_ids = [str(d["_id"]) for d in devices]
+    audit_results = await AuditResultRepository.get_by_device_ids(device_ids)
+    
+    pdf_bytes = ReportGenerator.export_group_pdf(
+        group_info,
+        devices,
+        audit_results
+    )
+    
+    filename = f"{group_info.get('vendor')}_{group_info.get('model') or 'group'}_Report.pdf".replace(" ", "_")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.get("/api/groups/{group_id}/report/excel")
+async def export_group_excel(
+    group_id: str,
+    upload_id: str
+):
+    from app.repositories.audit_result_repository import AuditResultRepository
+    from app.services.report_generator import ReportGenerator
+
+    upload = await UploadService.get_upload(upload_id)
+    
+    group_info = None
+    for g in upload.get("device_groups", []):
+        if g["group_id"] == group_id:
+            group_info = g
+            break
+            
+    if not group_info:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Group {group_id} not found in upload {upload_id}"
+        )
+        
+    devices = await DeviceService.get_devices(
+        upload_id=upload_id,
+        group_id=group_id,
+        processing_status="SUCCESS"
+    )
+    
+    if not devices:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No audited devices found in group {group_id}"
+        )
+        
+    device_ids = [str(d["_id"]) for d in devices]
+    audit_results = await AuditResultRepository.get_by_device_ids(device_ids)
+    
+    excel_bytes = ReportGenerator.export_group_excel(
+        group_info,
+        devices,
+        audit_results
+    )
+    
+    filename = f"{group_info.get('vendor')}_{group_info.get('model') or 'group'}_Report.xlsx".replace(" ", "_")
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.get("/api/uploads/{upload_id}/report/pdf")
+async def export_upload_pdf(
+    upload_id: str
+):
+    from app.repositories.audit_result_repository import AuditResultRepository
+    from app.services.report_generator import ReportGenerator
+
+    upload = await UploadService.get_upload(upload_id)
+    
+    devices = await DeviceService.get_devices(
+        upload_id=upload_id,
+        processing_status="SUCCESS"
+    )
+    
+    if not devices:
+        raise HTTPException(
+            status_code=404,
+            detail="No audited devices found in this upload"
+        )
+        
+    device_ids = [str(d["_id"]) for d in devices]
+    audit_results = await AuditResultRepository.get_by_device_ids(device_ids)
+    
+    devices_by_group = {}
+    audit_results_by_device = {r["device_id"]: r for r in audit_results if r}
+    
+    for d in devices:
+        g_id = d.get("group_id")
+        if g_id:
+            if g_id not in devices_by_group:
+                devices_by_group[g_id] = []
+            devices_by_group[g_id].append(d)
+            
+    groups = [g for g in upload.get("device_groups", []) if g["group_id"] in devices_by_group]
+    
+    pdf_bytes = ReportGenerator.export_upload_pdf(
+        upload,
+        groups,
+        devices_by_group,
+        audit_results_by_device
+    )
+    
+    filename = f"{upload.get('folder_name', 'upload')}_Audit_Report.pdf".replace(" ", "_")
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.get("/api/uploads/{upload_id}/report/excel")
+async def export_upload_excel(
+    upload_id: str
+):
+    from app.repositories.audit_result_repository import AuditResultRepository
+    from app.services.report_generator import ReportGenerator
+
+    upload = await UploadService.get_upload(upload_id)
+    
+    devices = await DeviceService.get_devices(
+        upload_id=upload_id,
+        processing_status="SUCCESS"
+    )
+    
+    if not devices:
+        raise HTTPException(
+            status_code=404,
+            detail="No audited devices found in this upload"
+        )
+        
+    device_ids = [str(d["_id"]) for d in devices]
+    audit_results = await AuditResultRepository.get_by_device_ids(device_ids)
+    
+    devices_by_group = {}
+    audit_results_by_device = {r["device_id"]: r for r in audit_results if r}
+    
+    for d in devices:
+        g_id = d.get("group_id")
+        if g_id:
+            if g_id not in devices_by_group:
+                devices_by_group[g_id] = []
+            devices_by_group[g_id].append(d)
+            
+    groups = [g for g in upload.get("device_groups", []) if g["group_id"] in devices_by_group]
+    
+    excel_bytes = ReportGenerator.export_upload_excel(
+        upload,
+        groups,
+        devices_by_group,
+        audit_results_by_device
+    )
+    
+    filename = f"{upload.get('folder_name', 'upload')}_Audit_Report.xlsx".replace(" ", "_")
+    return Response(
+        content=excel_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
 

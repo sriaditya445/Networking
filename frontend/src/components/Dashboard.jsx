@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FaCloudUploadAlt, FaLaptopCode, FaCheckCircle, FaExclamationTriangle, FaHdd, FaHistory, FaEye, FaDownload } from 'react-icons/fa';
-
+import { countDevicesByType } from "../utils/deviceUtils";
 function Dashboard({ stats, jobs, devices, onViewDevice, setActiveTab, apiBaseUrl, setSelectedUploadId, setSelectedFolderName }) {
   // Local state for folder name filter
   const [selectedFolder, setSelectedFolder] = useState('');
@@ -19,22 +19,70 @@ function Dashboard({ stats, jobs, devices, onViewDevice, setActiveTab, apiBaseUr
   const recentDevices = [...devices].slice(0, 5);
 
   // Compute SVG chart data
-  const total = devices.length || 1;
-  const switches = devices.filter(d => d.device_type === 'Switch').length;
+  // const total = devices.length || 1;
+  // const switches = devices.filter(d => d.device_type === 'Switch').length;
 
-  const routers = devices.filter(d => d.device_type === 'Router').length;
-  const firewalls = devices.filter(d => d.device_type === 'Firewall').length;
-  const aps = devices.filter(d => d.device_type === 'AccessPoint').length;
-  const wlcs = devices.filter(d => d.device_type === 'WLC').length;
-  const unknowns = devices.filter(d => !['Switch', 'Router', 'Firewall', 'AccessPoint', 'WLC'].includes(d.device_type)).length;
+  // const routers = devices.filter(d => d.device_type === 'Router').length;
+  // const firewalls = devices.filter(d => d.device_type === 'Firewall').length;
+  // const aps = devices.filter(d => d.device_type === 'AccessPoint').length;
+  // const wlcs = devices.filter(d => d.device_type === 'WLC').length;
+  // const unknowns = devices.filter(d => !['Switch', 'Router', 'Firewall', 'AccessPoint', 'WLC'].includes(d.device_type)).length;
+
+
+
+  const counts = countDevicesByType(devices);
+
+  const total = devices.length || 1;
 
   const chartData = [
-    { label: 'Switches', count: switches, color: '#06b6d4', percentage: (switches / total) * 100 },
-    { label: 'Routers', count: routers, color: '#a855f7', percentage: (routers / total) * 100 },
-    { label: 'Firewalls', count: firewalls, color: '#f43f5e', percentage: (firewalls / total) * 100 },
-    { label: 'Access Points', count: aps, color: '#10b981', percentage: (aps / total) * 100 },
-    { label: 'WLC', count: wlcs, color: '#f59e0b', percentage: (wlcs / total) * 100 },
-    { label: 'Unknowns', count: unknowns, color: '#64748b', percentage: (unknowns / total) * 100 },
+    {
+      label: "L2 Switches",
+      count: counts["L2 Switch"],
+      color: "#06b6d4",
+      percentage: (counts["L2 Switch"] / total) * 100
+    },
+    {
+      label: "L3 Switches",
+      count: counts["L3 Switch"],
+      color: "#3b82f6",
+      percentage: (counts["L3 Switch"] / total) * 100
+    },
+    {
+      label: "Core Switches",
+      count: counts["Core Switch"],
+      color: "#6366f1",
+      percentage: (counts["Core Switch"] / total) * 100
+    },
+    {
+      label: "Routers",
+      count: counts["Router"],
+      color: "#a855f7",
+      percentage: (counts["Router"] / total) * 100
+    },
+    {
+      label: "Firewalls",
+      count: counts["Firewall"],
+      color: "#f43f5e",
+      percentage: (counts["Firewall"] / total) * 100
+    },
+    {
+      label: "Access Points",
+      count: counts["Access Point"],
+      color: "#10b981",
+      percentage: (counts["Access Point"] / total) * 100
+    },
+    {
+      label: "WLC",
+      count: counts["WLC"],
+      color: "#f59e0b",
+      percentage: (counts["WLC"] / total) * 100
+    },
+    {
+      label: "Unknown",
+      count: counts["Unknown"],
+      color: "#64748b",
+      percentage: (counts["Unknown"] / total) * 100
+    }
   ];
 
   return (
