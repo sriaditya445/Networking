@@ -1,18 +1,27 @@
-from app.parsers.parser_factory import (
-    ParserFactory
-)
+from app.parsers.cisco_parser import CiscoParser
+from app.services.device_detector import detect_device_type
+
 
 class ParserService:
 
     @staticmethod
-    def parse_device(
-        content,
-        filename
-    ):
+    def parse_device(content: str, filename: str):
 
-        parser = ParserFactory.get_parser(content)
+        detection = detect_device_type(content)
+
+        parsers = {
+            "Cisco": CiscoParser
+        }
+
+        parser_cls = parsers.get(
+            detection.vendor,
+            CiscoParser
+        )
+
+        parser = parser_cls()
 
         return parser.parse(
-            content,
-            filename
+            content=content,
+            filename=filename,
+            detection=detection
         )

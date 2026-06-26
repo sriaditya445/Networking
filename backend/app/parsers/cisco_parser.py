@@ -6,7 +6,7 @@ from app.parsers.common.hostname_extractor import extract_hostname
 from app.parsers.common.generic_config_parser import GenericConfigParser
 
 class CiscoParser(BaseParser):
-    def parse(self, content, filename):
+    def parse(self, content:str, filename:str, detection):
         hostname = extract_hostname(content,filename)
         config_json = GenericConfigParser.parse_config(content)
         
