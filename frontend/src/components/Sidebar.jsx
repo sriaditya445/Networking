@@ -105,23 +105,23 @@ function Sidebar({
     ]
   },
 
-  {
-    key: "system",
-    title: "System",
-    icon: FaCog,
-    items: [
-      {
-        id: "downloads",
-        label: "Downloads",
-        icon: FaDownload
-      },
-      {
-        id: "settings",
-        label: "Settings",
-        icon: FaCog
-      }
-    ]
-  }
+  // {
+  //   key: "system",
+  //   title: "System",
+  //   icon: FaCog,
+  //   items: [
+  //     {
+  //       id: "downloads",
+  //       label: "Downloads",
+  //       icon: FaDownload
+  //     },
+  //     {
+  //       id: "settings",
+  //       label: "Settings",
+  //       icon: FaCog
+  //     }
+  //   ]
+  // }
 ];
 
 
