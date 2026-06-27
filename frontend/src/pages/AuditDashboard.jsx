@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { FaPlay, FaEye, FaFilter, FaCheckCircle, FaTimesCircle, FaSpinner, FaHistory, FaBuilding, FaHdd, FaFileSignature } from 'react-icons/fa';
 
+import { useModal } from '../contexts/ModalContext';
+
 // Import stores
 import { useVendorStore } from '../store/vendorStore';
 import { useDeviceStore } from '../store/deviceStore';
 import { useAuditStore } from '../store/auditStore';
 
 // Import reusable components
-import PageHeader from './common/PageHeader';
-import ReusableTable from './common/ReusableTable';
-import StatusBadge from './common/StatusBadge';
+import PageHeader from '../components/common/PageHeader';
+import ReusableTable from '../components/common/ReusableTable';
+import StatusBadge from '../components/common/StatusBadge';
 
 export default function AuditDashboard({ devices: stagedDevices = [] }) {
+  const { showConfirm } = useModal();
   const { vendors } = useVendorStore();
   const { devices: manualDevices } = useDeviceStore();
   const [templates, setTemplates] = useState([]);
@@ -248,8 +251,13 @@ export default function AuditDashboard({ devices: stagedDevices = [] }) {
         <div className="flex gap-2">
           {auditResults.length > 0 && (
             <button
-              onClick={() => {
-                if (window.confirm("Clear all past audit command histories?")) {
+              onClick={async () => {
+                const confirmed = await showConfirm({
+                  title: "Clear Audit Logs",
+                  description: "Are you sure you want to clear all historic audit command execution records?",
+                  type: "danger"
+                });
+                if (confirmed) {
                   clearAuditHistory();
                 }
               }}

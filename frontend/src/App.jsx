@@ -1,26 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
+import { FaBell } from 'react-icons/fa';
+import { useToast } from './contexts/ToastContext';
+import { useModal } from './contexts/ModalContext';
 
 // Import newly created modular UI components
 import Sidebar from './components/Sidebar';
 import ConfigModal from './components/ConfigModal';
 import TypeDevicesModal from './components/TypeDevicesModal';
-import Dashboard from './components/Dashboard';
-import Inventory from './components/Inventory';
-import UploadCenter from './components/UploadCenter';
-import ParsedDevices from './components/ParsedDevices';
-import Analytics from './components/Analytics';
-import ProcessingQueue from './components/ProcessingQueue';
-import Configurations from './components/Configurations';
-import Downloads from './components/Downloads';
-import SettingsTab from './components/SettingsTab';
-import VendorManagement from './components/VendorManagement';
-import DeviceManagement from './components/DeviceManagement';
-import TemplateManagement from './components/TemplateManagement';
-import AuditDashboard from './components/AuditDashboard';
+
+// Pages
+import Dashboard from './pages/Dashboard';
+import Inventory from './pages/Inventory';
+import UploadCenter from './pages/UploadCenter';
+import ParsedDevices from './pages/ParsedDevices';
+import Analytics from './pages/Analytics';
+import ProcessingQueue from './pages/ProcessingQueue';
+import Configurations from './pages/Configurations';
+import Downloads from './pages/Downloads';
+import SettingsTab from './pages/SettingsTab';
+import VendorManagement from './pages/VendorManagement';
+import DeviceManagement from './pages/DeviceManagement';
+import TemplateManagement from './pages/TemplateManagement';
+import AuditDashboard from './pages/AuditDashboard';
+
 
 const API_BASE_URL = 'http://localhost:8000';
 
 function App() {
+  const { addToast } = useToast();
+  const { showConfirm } = useModal();
+
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: 'Compliance Audit Run', message: 'Core Switch CSCO-HQ-01 passed all policy checks.', time: '5 mins ago', read: false },
+    { id: 2, title: 'Job Parsing Complete', message: 'Batch configuration "juniper-branch-update" processed successfully.', time: '1 hour ago', read: true },
+    { id: 3, title: 'System Health Status', message: 'FastAPI backend connection re-established successfully.', time: '2 hours ago', read: true }
+  ]);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+
   // State variables
   const [jobs, setJobs] = useState([]);
   const [devices, setDevices] = useState([]);
@@ -151,7 +167,7 @@ function App() {
       await fetchData();
     } catch (err) {
       console.error("Upload error:", err);
-      alert(`Upload Failed: ${err.message}`);
+      addToast(`Upload Failed: ${err.message}`, "error");
     } finally {
       // Small timeout for smooth progress bar transition
       setTimeout(() => {
@@ -163,7 +179,12 @@ function App() {
 
   // Delete an upload job and associated files/devices
   const handleDeleteJob = async (jobId) => {
-    if (!window.confirm("Are you sure you want to delete this job and all its parsed devices?")) {
+    const confirmed = await showConfirm({
+      title: "Delete Upload Batch",
+      description: "Are you sure you want to delete this job and all its parsed devices? This cannot be undone.",
+      type: "danger"
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -172,14 +193,15 @@ function App() {
         method: 'DELETE'
       });
       if (response.ok) {
+        addToast("Upload batch deleted successfully.", "success");
         fetchData();
       } else {
         const errorData = await response.json();
-        alert(`Deletion failed: ${errorData.detail}`);
+        addToast(`Deletion failed: ${errorData.detail}`, "error");
       }
     } catch (err) {
       console.error("Delete error:", err);
-      alert(`Failed to delete job: ${err.message}`);
+      addToast(`Failed to delete job: ${err.message}`, "error");
     }
   };
 
@@ -420,6 +442,52 @@ function App() {
             <div className="text-[11px] text-slate-500 font-mono bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Real-time polling active</span>
+            </div>
+
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotificationsDropdown(!showNotificationsDropdown)}
+                className="relative p-2 text-slate-500 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all shadow-sm"
+              >
+                <FaBell className="text-sm" />
+                {notifications.some(n => !n.read) && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white animate-pulse" />
+                )}
+              </button>
+
+              {showNotificationsDropdown && (
+                <div className="absolute right-0 mt-3 w-80 bg-white border border-slate-150 rounded-2xl shadow-xl z-30 p-4 animate-scale-in">
+                  <div className="flex justify-between items-center border-b border-slate-100 pb-2.5 mb-2.5">
+                    <span className="font-bold text-xs text-slate-800">Alerts & Notifications</span>
+                    <button
+                      onClick={() => {
+                        setNotifications(notifications.map(n => ({ ...n, read: true })));
+                        addToast("All notifications marked as read.", "info");
+                      }}
+                      className="text-[9px] text-cyan-600 font-semibold hover:underline"
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+                  <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
+                    {notifications.map(n => (
+                      <div
+                        key={n.id}
+                        className={`p-2.5 rounded-xl border transition-all ${
+                          n.read ? 'bg-white border-slate-100' : 'bg-cyan-500/5 border-cyan-200/40'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start gap-1">
+                          <span className="font-bold text-[10px] text-slate-800 leading-tight">{n.title}</span>
+                          <span className="text-[8px] text-slate-400 font-mono shrink-0">{n.time}</span>
+                        </div>
+                        <p className="text-[9px] text-slate-500 mt-1 leading-relaxed">{n.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </header>

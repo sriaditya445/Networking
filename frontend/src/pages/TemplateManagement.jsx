@@ -4,16 +4,24 @@ import { FaPlus, FaFileAlt, FaCode, FaCloudUploadAlt, FaEye, FaEdit, FaTrash, Fa
 // Import Zustand stores
 import { useVendorStore } from '../store/vendorStore';
 
+// Import contexts
+import { useToast } from '../contexts/ToastContext';
+import { useModal } from '../contexts/ModalContext';
+
 // Import reusable components
-import PageHeader from './common/PageHeader';
-import ReusableTable from './common/ReusableTable';
-import ActionButtons from './common/ActionButtons';
+import PageHeader from '../components/common/PageHeader';
+import ReusableTable from '../components/common/ReusableTable';
+import ActionButtons from '../components/common/ActionButtons';
+import Button from '../components/common/Button';
 
 export default function TemplateManagement({ onSuccess }) {
   const { vendors } = useVendorStore();
   const [templates, setTemplates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const { addToast } = useToast();
+  const { showConfirm } = useModal();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -105,11 +113,11 @@ export default function TemplateManagement({ onSuccess }) {
           content: detailed.template_content || ''
         });
       } else {
-        alert("Failed to fetch template details.");
+        addToast("Failed to fetch template details.", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Error fetching template details.");
+      addToast("Error fetching template details.", "error");
     }
   };
 
@@ -136,30 +144,35 @@ export default function TemplateManagement({ onSuccess }) {
         }
         setIsModalOpen(true);
       } else {
-        alert("Failed to fetch template details for editing.");
+        addToast("Failed to fetch template details for editing.", "error");
       }
     } catch (err) {
       console.error(err);
-      alert("Error fetching template details.");
+      addToast("Error fetching template details.", "error");
     }
   };
 
   const handleDelete = async (id, name) => {
-    if (window.confirm(`Delete golden template "${name}"?`)) {
+    const confirmed = await showConfirm({
+      title: 'Delete Golden Template',
+      description: `Are you sure you want to delete the template "${name}"? Network devices relying on this mapping will not run compliance audits until a new template is assigned.`,
+      type: 'danger'
+    });
+    if (confirmed) {
       try {
         const response = await fetch(`http://localhost:8000/api/templates/${id}`, {
           method: 'DELETE'
         });
         if (response.ok) {
-          alert("Template deleted successfully!");
+          addToast("Template deleted successfully!", "success");
           await fetchTemplates();
         } else {
           const err = await response.json();
-          alert(`Failed to delete template: ${err.message || 'Unknown error'}`);
+          addToast(`Failed to delete template: ${err.message || 'Unknown error'}`, "error");
         }
       } catch (err) {
         console.error(err);
-        alert("Error deleting template.");
+        addToast("Error deleting template.", "error");
       }
     }
   };
@@ -195,7 +208,7 @@ export default function TemplateManagement({ onSuccess }) {
   const validateFile = (file) => {
     const extension = file.name.split('.').pop().toLowerCase();
     if (!['txt', 'cfg', 'conf', 'j2'].includes(extension)) {
-      alert("Only .txt, .cfg, .conf, and .j2 files are supported.");
+      addToast("Only .txt, .cfg, .conf, and .j2 files are supported.", "warning");
       return;
     }
 
@@ -217,7 +230,7 @@ export default function TemplateManagement({ onSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!vendorId) {
-      alert("Please select a vendor.");
+      addToast("Please select a vendor.", "warning");
       return;
     }
 
@@ -229,14 +242,14 @@ export default function TemplateManagement({ onSuccess }) {
 
     if (inputMethod === 'upload') {
       if (!uploadedFile) {
-        alert("Please upload a config file.");
+        addToast("Please upload a config file.", "warning");
         return;
       }
       content = uploadedFile.content;
       fileName = uploadedFile.name;
     } else {
       if (!pastedContent.trim()) {
-        alert("Please paste the template content.");
+        addToast("Please paste the template content.", "warning");
         return;
       }
       content = pastedContent;
@@ -264,7 +277,7 @@ export default function TemplateManagement({ onSuccess }) {
         });
 
         if (response.ok) {
-          alert("Template updated successfully!");
+          addToast("Template updated successfully!", "success");
           await fetchTemplates();
           setIsModalOpen(false);
           resetForm();
@@ -273,7 +286,7 @@ export default function TemplateManagement({ onSuccess }) {
           }
         } else {
           const err = await response.json();
-          alert(`Failed to update template: ${err.detail || 'Unknown error'}`);
+          addToast(`Failed to update template: ${err.detail || 'Unknown error'}`, "error");
         }
       } else {
         // POST /api/templates/upload
@@ -309,7 +322,7 @@ export default function TemplateManagement({ onSuccess }) {
         });
 
         if (response.ok) {
-          alert("Template uploaded successfully!");
+          addToast("Template uploaded successfully!", "success");
           await fetchTemplates();
           setIsModalOpen(false);
           resetForm();
@@ -318,12 +331,12 @@ export default function TemplateManagement({ onSuccess }) {
           }
         } else {
           const err = await response.json();
-          alert(`Failed to create template: ${err.detail || 'Unknown error'}`);
+          addToast(`Failed to create template: ${err.detail || 'Unknown error'}`, "error");
         }
       }
     } catch (error) {
       console.error("Failed to submit template:", error);
-      alert("Error saving template.");
+      addToast("Error saving template.", "error");
     }
   };
 
@@ -338,7 +351,7 @@ export default function TemplateManagement({ onSuccess }) {
     {
       key: 'name', label: 'Template Name', render: (val) => (
         <div className="flex items-center gap-2">
-          <FaFileAlt className="text-cyan-500 text-xs shrink-0" />
+          <FaFileAlt className="text-cyan-550 text-xs shrink-0" />
           <span className="font-bold text-slate-800">{val}</span>
         </div>
       )
@@ -358,7 +371,7 @@ export default function TemplateManagement({ onSuccess }) {
         </span>
       )
     },
-    { key: 'modelNumber', label: 'Model', render: (val) => <span className="font-mono text-xs font-semibold text-slate-600">{val || 'All Models'}</span> },
+    { key: 'modelNumber', label: 'Model', render: (val) => <span className="font-mono text-xs font-semibold text-slate-605">{val || 'All Models'}</span> },
     {
       key: 'templateType', label: 'Method', render: (val) => (
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${val === 'Upload' ? 'bg-indigo-50 text-indigo-600 border border-indigo-100' : 'bg-purple-50 text-purple-600 border border-purple-100'
@@ -369,7 +382,7 @@ export default function TemplateManagement({ onSuccess }) {
       )
     },
     { key: 'version', label: 'Version', render: (val) => <span className="font-mono text-xs font-bold text-slate-500">v{val}</span> },
-    { key: 'createdAt', label: 'Created Date', render: (val) => <span className="text-xs text-slate-400">{formatDate(val)}</span> },
+    { key: 'createdAt', label: 'Created Date', render: (val) => <span className="text-xs text-slate-400 font-mono">{formatDate(val)}</span> },
     {
       key: 'actions', label: 'Actions', className: 'text-right', render: (_, row) => (
         <ActionButtons
@@ -396,7 +409,7 @@ export default function TemplateManagement({ onSuccess }) {
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
+    <div className="space-y-6 animate-fade-in">
 
       {/* Page Header */}
       <PageHeader
@@ -413,10 +426,10 @@ export default function TemplateManagement({ onSuccess }) {
       </PageHeader>
 
       {/* Main Table Panel */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-4">
-        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-          <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-            <FaFileAlt className="text-cyan-500 text-xs" />
+      <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-4 hover:shadow-md transition-shadow">
+        <div className="flex justify-between items-center border-b border-slate-55 pb-3">
+          <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2">
+            <FaFileAlt className="text-cyan-505 text-xs" />
             <span>Golden Template Repository</span>
           </h3>
           <span className="text-[10px] bg-slate-100 text-slate-500 font-mono px-2 py-0.5 rounded font-bold">
@@ -435,35 +448,35 @@ export default function TemplateManagement({ onSuccess }) {
 
       {/* Viewing Template Content Modal overlay */}
       {viewingTemplate && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl border border-slate-150 overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="bg-slate-50 border-b border-slate-150 px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl border border-slate-100 overflow-hidden animate-zoom-in">
+            <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
               <div>
-                <h3 className="font-bold text-slate-800 text-base">{viewingTemplate.name}</h3>
+                <h3 className="font-bold text-slate-850 text-sm">{viewingTemplate.name}</h3>
                 <p className="text-[10px] text-slate-400 font-medium">
                   {viewingTemplate.vendorName} • {viewingTemplate.deviceType} • {viewingTemplate.modelNumber || 'All Models'} (v{viewingTemplate.version})
                 </p>
               </div>
               <button
                 onClick={() => setViewingTemplate(null)}
-                className="text-slate-400 hover:text-slate-600 transition-colors text-sm font-bold"
+                className="text-slate-400 hover:text-slate-600 transition-colors text-xs font-bold"
               >
                 ✕
               </button>
             </div>
             <div className="p-6">
-              <label className="text-xs font-bold text-slate-450 uppercase tracking-wider block mb-2">Template Body</label>
-              <pre className="bg-slate-900 text-cyan-400 p-4 rounded-xl font-mono text-xs overflow-auto max-h-[350px] leading-relaxed shadow-inner border border-slate-800">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Template Body</label>
+              <pre className="bg-slate-900 text-cyan-400 p-4 rounded-2xl font-mono text-[10px] overflow-auto max-h-[350px] leading-relaxed shadow-inner border border-slate-800">
                 {viewingTemplate.content}
               </pre>
             </div>
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end">
-              <button
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              <Button
                 onClick={() => setViewingTemplate(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold shadow-sm transition-all"
+                variant="primary"
               >
                 Close View
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -471,17 +484,17 @@ export default function TemplateManagement({ onSuccess }) {
 
       {/* Add / Edit Template Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl border border-slate-150 overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl border border-slate-100 overflow-hidden animate-zoom-in">
 
             {/* Header */}
-            <div className="bg-slate-50 border-b border-slate-150 px-6 py-4 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 text-base">
+            <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-sm">
                 {editingTemplate ? 'Modify Golden Template' : 'Add Golden Template'}
               </h3>
               <button
                 onClick={() => { resetForm(); setIsModalOpen(false); }}
-                className="text-slate-400 hover:text-slate-600 transition-colors text-sm"
+                className="text-slate-400 hover:text-slate-600 transition-colors text-xs font-bold"
               >
                 ✕
               </button>
@@ -493,11 +506,11 @@ export default function TemplateManagement({ onSuccess }) {
               {/* Relationship settings */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Vendor *</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Vendor *</label>
                   <select
                     value={vendorId}
                     onChange={(e) => setVendorId(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-805 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
                     required
                   >
                     <option value="">Select Vendor</option>
@@ -508,11 +521,11 @@ export default function TemplateManagement({ onSuccess }) {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Device Type *</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Device Type *</label>
                   <select
                     value={deviceType}
                     onChange={(e) => setDeviceType(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-805 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
                     required
                   >
                     <option value="Switch">Switch</option>
@@ -527,12 +540,12 @@ export default function TemplateManagement({ onSuccess }) {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Model *</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Model *</label>
                   <input
                     type="text"
                     value={modelNumber}
                     onChange={(e) => setModelNumber(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
                     placeholder="e.g. WS-C3650-24TD-S"
                     required
                   />
@@ -542,23 +555,23 @@ export default function TemplateManagement({ onSuccess }) {
               {/* Template settings */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="col-span-2 space-y-1">
-                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Template Name *</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Template Name *</label>
                   <input
                     type="text"
                     value={templateName}
                     onChange={(e) => setTemplateName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
                     placeholder="e.g. Cisco_C3650_Standard"
                     required
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Version *</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Version *</label>
                   <input
                     type="text"
                     value={version}
                     onChange={(e) => setVersion(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 transition-colors"
                     placeholder="e.g. 1.0.0"
                     required
                   />
@@ -567,7 +580,7 @@ export default function TemplateManagement({ onSuccess }) {
 
               {/* Input Method Selector */}
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Input Method *</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Input Method *</label>
                 <div className="flex gap-4 items-center">
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
                     <input
@@ -597,19 +610,19 @@ export default function TemplateManagement({ onSuccess }) {
               {/* Conditional Content Inputs */}
               {inputMethod === 'paste' ? (
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Jinja2 Template Body *</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Jinja2 Template Body *</label>
                   <textarea
                     rows={8}
                     value={pastedContent}
                     onChange={(e) => setPastedContent(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs font-mono text-slate-800 focus:outline-none focus:border-cyan-500 leading-relaxed shadow-inner"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs font-mono text-slate-805 focus:outline-none focus:border-cyan-500 leading-relaxed shadow-inner"
                     placeholder={`e.g.\nhostname {{ hostname }}\nip domain-name {{ domain_name }}\nntp server {{ ntp_server }}`}
                     required
                   />
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-slate-550 uppercase tracking-wider block">Select/Drag File *</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Select/Drag File *</label>
                   <div
                     className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${isDragActive ? 'border-cyan-500 bg-cyan-500/5' : 'border-slate-200 hover:border-cyan-400 bg-slate-50'
                       }`}
@@ -619,10 +632,10 @@ export default function TemplateManagement({ onSuccess }) {
                     onDragOver={handleDrag}
                     onDrop={handleDrop}
                   >
-                    <FaCloudUploadAlt className="text-slate-450 text-2xl" />
+                    <FaCloudUploadAlt className="text-slate-400 text-2xl" />
                     <div className="space-y-0.5">
                       <p className="text-xs font-bold text-slate-700">Click or drag template config here</p>
-                      <p className="text-[10px] text-slate-400">Supports .txt, .cfg, .conf, .j2 files</p>
+                      <p className="text-[9px] text-slate-400">Supports .txt, .cfg, .conf, .j2 files</p>
                     </div>
                     <input
                       type="file"
@@ -635,10 +648,10 @@ export default function TemplateManagement({ onSuccess }) {
 
                   {/* Uploaded file indicator */}
                   {uploadedFile && (
-                    <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-50 border border-slate-150 font-mono text-[11px]">
+                    <div className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 border border-slate-100 font-mono text-[10px]">
                       <div className="flex items-center gap-2">
                         <FaFileAlt className="text-cyan-500" />
-                        <span className="font-semibold text-slate-750 truncate max-w-[200px]">{uploadedFile.name}</span>
+                        <span className="font-semibold text-slate-700 truncate max-w-[200px]">{uploadedFile.name}</span>
                       </div>
                       <button
                         type="button"
@@ -654,19 +667,18 @@ export default function TemplateManagement({ onSuccess }) {
 
               {/* Submit Buttons */}
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
                   onClick={() => { resetForm(); setIsModalOpen(false); }}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-semibold transition-all"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   type="submit"
-                  className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-xl text-xs font-semibold transition-all shadow-md"
+                  variant="primary"
                 >
                   Save Template
-                </button>
+                </Button>
               </div>
 
             </form>

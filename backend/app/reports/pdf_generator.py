@@ -186,7 +186,7 @@ def generate_group_pdf_report(group_info: dict, devices: list, audit_results: li
     group_data = [
         [Paragraph("<b>Vendor:</b>", normal), Paragraph(group_info.get("vendor", "N/A"), normal),
          Paragraph("<b>Device Type:</b>", normal), Paragraph(group_info.get("device_type", "N/A"), normal)],
-        [Paragraph("<b>Model:</b>", normal), Paragraph(group_info.get("model", "N/A"), normal),
+        [Paragraph("<b>Model:</b>", normal), Paragraph(str(group_info.get("model") or "N/A"), normal),
          Paragraph("<b>Template Name:</b>", normal), Paragraph(group_info.get("template_name", "N/A") or "N/A", normal)],
         [Paragraph("<b>Audit Mode:</b>", normal), Paragraph(str(group_info.get("audit_mode", "full")).title(), normal),
          Paragraph("<b>Devices:</b>", normal), Paragraph(str(len(devices)), normal)]

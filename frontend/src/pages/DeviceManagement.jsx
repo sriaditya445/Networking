@@ -6,22 +6,29 @@ import { useVendorStore } from '../store/vendorStore';
 import { useDeviceStore } from '../store/deviceStore';
 import { useAuditStore } from '../store/auditStore';
 
+// Import contexts
+import { useToast } from '../contexts/ToastContext';
+import { useModal } from '../contexts/ModalContext';
+
 // Import reusable components
-import PageHeader from './common/PageHeader';
-import ReusableTable from './common/ReusableTable';
-import StatusBadge from './common/StatusBadge';
-import ActionButtons from './common/ActionButtons';
+import PageHeader from '../components/common/PageHeader';
+import ReusableTable from '../components/common/ReusableTable';
+import StatusBadge from '../components/common/StatusBadge';
+import ActionButtons from '../components/common/ActionButtons';
 
 // Import modals
-import AddDeviceModal from './modals/AddDeviceModal';
-import UploadTemplateModal from './modals/UploadTemplateModal';
-import AuditSelectionModal from './modals/AuditSelectionModal';
+import AddDeviceModal from '../modals/AddDeviceModal';
+import UploadTemplateModal from '../modals/UploadTemplateModal';
+import AuditSelectionModal from '../modals/AuditSelectionModal';
 
 export default function DeviceManagement() {
   const { vendors } = useVendorStore();
   const { devices, addDevice, updateDevice, deleteDevice } = useDeviceStore();
   const [templates, setTemplates] = useState([]);
   const { auditResults, selectedAuditType, setAuditType, runAudit } = useAuditStore();
+
+  const { addToast } = useToast();
+  const { showConfirm } = useModal();
 
   const fetchTemplates = async () => {
     try {
@@ -70,9 +77,11 @@ export default function DeviceManagement() {
   const handleSaveDevice = (deviceData) => {
     if (editingDevice) {
       updateDevice(editingDevice.id, deviceData);
+      addToast(`Device "${deviceData.deviceName}" updated successfully.`, "success");
       setEditingDevice(null);
     } else {
       addDevice(deviceData);
+      addToast(`Device "${deviceData.deviceName}" registered successfully.`, "success");
     }
   };
 
@@ -111,15 +120,15 @@ export default function DeviceManagement() {
         });
 
         if (response.ok) {
-          alert("Template uploaded successfully!");
+          addToast("Golden template uploaded successfully!", "success");
           await fetchTemplates();
         } else {
           const err = await response.json();
-          alert(`Failed to upload template: ${err.detail || 'Unknown error'}`);
+          addToast(`Failed to upload template: ${err.detail || 'Unknown error'}`, "error");
         }
       } catch (error) {
         console.error(error);
-        alert("Error uploading template.");
+        addToast("Error uploading template.", "error");
       }
 
       // Auto trigger audit configuration immediately for single-screen flow guidance
@@ -161,6 +170,7 @@ export default function DeviceManagement() {
       }
 
       runAudit(targetAuditDevice.id, targetAuditDevice.deviceName, auditType, detailedTemplate);
+      addToast(`Audit execution job triggered for "${targetAuditDevice.deviceName}".`, "info");
       setTargetAuditDevice(null);
     }
   };
@@ -206,7 +216,7 @@ export default function DeviceManagement() {
       if (template) {
         return (
           <div className="flex flex-col gap-0.5 max-w-[130px]">
-            <span className="text-xs font-bold text-slate-700 truncate" title={template.name}>{template.name}</span>
+            <span className="text-xs font-bold text-slate-750 truncate" title={template.name}>{template.name}</span>
             <span className="text-[9px] text-slate-400 font-mono">v{template.version} • {new Date(template.createdAt || Date.now()).toLocaleDateString()}</span>
           </div>
         );
@@ -253,9 +263,15 @@ export default function DeviceManagement() {
             {
               type: 'delete',
               title: 'Delete Device',
-              onClick: () => {
-                if (window.confirm(`Are you sure you want to delete device "${row.deviceName}"?`)) {
+              onClick: async () => {
+                const confirmed = await showConfirm({
+                  title: 'Delete Network Device',
+                  description: `Are you sure you want to remove the device "${row.deviceName}"? Historical audits will remain, but this staging slot will be freed.`,
+                  type: 'danger'
+                });
+                if (confirmed) {
                   deleteDevice(row.id);
+                  addToast(`Device "${row.deviceName}" deleted.`, "success");
                 }
               }
             }
@@ -266,7 +282,7 @@ export default function DeviceManagement() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       {/* Page Header */}
       <PageHeader 
         title="Device Management" 
@@ -289,17 +305,17 @@ export default function DeviceManagement() {
         
         {/* Device List Column (8 Cols) */}
         <div className="xl:col-span-8 space-y-4">
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
             
             {/* Filter controls */}
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3 flex-wrap gap-2">
+            <div className="flex justify-between items-center border-b border-slate-50 pb-3 flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <FaFilter className="text-slate-400 text-xs" />
                 <span className="text-xs font-bold text-slate-500">Filter by Vendor:</span>
                 <select
                   value={selectedVendorFilter}
                   onChange={(e) => setSelectedVendorFilter(e.target.value)}
-                  className="bg-slate-50 border border-slate-200 rounded-lg py-1 px-3 text-xs text-slate-800 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
+                  className="bg-slate-50 border border-slate-200 rounded-lg py-1 px-3 text-xs text-slate-805 focus:outline-none focus:border-cyan-500 cursor-pointer font-medium"
                 >
                   <option value="">All Vendors</option>
                   {vendors.map(v => (
@@ -327,18 +343,24 @@ export default function DeviceManagement() {
 
         {/* Audit Queue History Column (4 Cols) */}
         <div className="xl:col-span-4 space-y-4">
-          <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4">
+          <div className="bg-white border border-slate-100 rounded-3xl p-5 shadow-sm space-y-4 hover:shadow-md transition-shadow">
             
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                <FaHistory className="text-slate-450 text-xs" />
+            <div className="flex justify-between items-center border-b border-slate-50 pb-3">
+              <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2">
+                <FaHistory className="text-slate-400 text-xs" />
                 <span>Audit Execution Logs</span>
               </h3>
               {auditResults.length > 0 && (
                 <button 
-                  onClick={() => {
-                    if (window.confirm("Clear all audit run logs?")) {
+                  onClick={async () => {
+                    const confirmed = await showConfirm({
+                      title: 'Clear Execution History',
+                      description: 'Are you sure you want to clear all historic audit log entries? This action cannot be undone.',
+                      type: 'danger'
+                    });
+                    if (confirmed) {
                       useAuditStore.getState().clearAuditHistory();
+                      addToast("Audit logs cleared successfully.", "success");
                     }
                   }}
                   className="text-[10px] text-rose-500 font-semibold hover:underline"
@@ -349,17 +371,17 @@ export default function DeviceManagement() {
             </div>
 
             {auditResults.length === 0 ? (
-              <div className="text-center py-8 text-slate-450 text-xs italic">
+              <div className="text-center py-8 text-slate-400 text-xs italic">
                 No active or historic audits triggered.
               </div>
             ) : (
               <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
                 {auditResults.map((audit) => (
-                  <div key={audit.id} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl">
+                  <div key={audit.id} className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-2xl">
                     <div className="min-w-0 flex-1 pr-2">
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-xs text-slate-700 truncate">{audit.deviceName}</span>
-                        <span className="text-[9px] bg-slate-200/60 text-slate-500 font-bold px-1.5 py-0.5 rounded font-mono uppercase shrink-0">
+                        <span className="text-[8px] bg-slate-200/60 text-slate-500 font-bold px-1.5 py-0.5 rounded font-mono uppercase shrink-0">
                           {audit.auditType.split(' ')[0]}
                         </span>
                       </div>
@@ -368,17 +390,17 @@ export default function DeviceManagement() {
 
                     <div className="shrink-0 flex items-center gap-2">
                       {audit.status === 'Processing' ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-cyan-600 bg-cyan-50 border border-cyan-100 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-cyan-650 bg-cyan-50 border border-cyan-100 px-2 py-0.5 rounded-full">
                           <FaSpinner className="animate-spin text-[9px]" />
                           <span>Auditing...</span>
                         </span>
                       ) : audit.status === 'Success' ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-650 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
                           <FaCheckCircle className="text-[9px]" />
                           <span>Success</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-650 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full">
                           <FaTimesCircle className="text-[9px]" />
                           <span>Failed</span>
                         </span>

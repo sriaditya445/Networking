@@ -826,7 +826,7 @@ export default function ProcessingQueue({
                 <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
                   <span>{jobInfo?.folder_name || 'Loading Folder...'}</span>
                 </h2>
-                <div className="flex items-center gap-2 mt-1">
+                {/* <div className="flex items-center gap-2 mt-1">
                   <span className="text-[11px] font-mono text-slate-400">
                     ID: {selectedUploadId}
                   </span>
@@ -837,7 +837,7 @@ export default function ProcessingQueue({
                   >
                     {copiedId ? <FaCheck className="text-emerald-500 text-[10px]" /> : <FaCopy className="text-[10px]" />}
                   </button>
-                </div>
+                </div> */}
               </div>
               <div className="md:ml-2">
                 {renderJobStatusBadge(jobInfo?.status)}

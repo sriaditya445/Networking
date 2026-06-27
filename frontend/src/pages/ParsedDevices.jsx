@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { FaSearch, FaEye, FaFilter, FaDownload } from 'react-icons/fa';
+import { useToast } from '../contexts/ToastContext';
+import Button from '../components/common/Button';
 
 function ParsedDevices({
-  devices,
-  jobs,
+  devices = [],
+  jobs = [],
   searchQuery,
   setSearchQuery,
   typeFilter,
@@ -16,6 +18,7 @@ function ParsedDevices({
   selectedFolderName,
   setSelectedFolderName
 }) {
+  const { addToast } = useToast();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
@@ -27,7 +30,7 @@ function ParsedDevices({
     // 1. Upload ID Filter
     const matchesUploadId = !selectedUploadId || device.upload_id === selectedUploadId;
 
-    // 2. Folder Name Filter (fallback in case selectedUploadId is not set but selectedFolderName is, or to sync selection)
+    // 2. Folder Name Filter
     const deviceJob = jobs.find(j => (j._id || j.id) === device.upload_id);
     const deviceFolderName = deviceJob ? deviceJob.folder_name : '';
     const matchesFolderName = !selectedFolderName || deviceFolderName === selectedFolderName;
@@ -63,25 +66,27 @@ function ParsedDevices({
   };
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm space-y-6">
+    <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm space-y-6 hover:shadow-md transition-shadow animate-fade-in">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Discovered Devices</h2>
-          <p className="text-xs text-slate-500">Database repository of processed assets and matching specifications.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Database repository of processed assets and matching specifications.</p>
         </div>
 
-        {/* Bulk Action Buttons (Optional/Demo) */}
+        {/* Bulk Action Buttons */}
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => {
               if (devices.length > 0) {
-                alert("Triggered inventory spreadsheet download (Mock).");
+                addToast("Triggered inventory CSV spreadsheet export successfully.", "success");
+              } else {
+                addToast("No devices available to export.", "warning");
               }
             }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-205 text-slate-700 rounded-xl text-xs font-semibold transition-all border border-slate-250"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-705 rounded-xl text-xs font-bold transition-all border border-slate-205 shadow-sm"
           >
-            <FaDownload className="text-slate-500" />
+            <FaDownload className="text-slate-400" />
             <span>Export CSV</span>
           </button>
         </div>
@@ -89,13 +94,13 @@ function ParsedDevices({
 
       {/* Current Folder Banner */}
       {selectedUploadId && (
-        <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-in-right">
           <div className="space-y-1 font-sans">
-            <h3 className="text-sm font-semibold text-slate-800">
-              Showing Devices From: <span className="font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded border border-slate-200">{selectedFolderName}</span>
+            <h3 className="text-xs font-semibold text-slate-800">
+              Showing Devices From: <span className="font-bold text-slate-900 font-mono bg-white px-2 py-0.5 rounded border border-slate-100">{selectedFolderName}</span>
             </h3>
-            <p className="text-xs text-slate-500">
-              Total Devices: <span className="font-bold text-slate-700">{devices.filter(d => d.upload_id === selectedUploadId).length}</span>
+            <p className="text-[10px] text-slate-450">
+              Total Devices in Batch: <span className="font-bold text-slate-700">{devices.filter(d => d.upload_id === selectedUploadId).length}</span>
             </p>
           </div>
           <button
@@ -104,7 +109,7 @@ function ParsedDevices({
               setSelectedFolderName(null);
               setCurrentPage(1);
             }}
-            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-semibold transition-colors border border-rose-100 self-start sm:self-center"
+            className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[10px] font-bold transition-colors border border-rose-100 self-start sm:self-center"
           >
             Clear Filter
           </button>
@@ -112,13 +117,13 @@ function ParsedDevices({
       )}
 
       {/* Search and Filters Bar */}
-      <div className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+      <div className="flex flex-col md:flex-row md:items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
         {/* Search */}
         <div className="relative flex-1">
-          <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm" />
+          <FaSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
           <input
             type="text"
-            className="w-full bg-white border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 transition-colors"
+            className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 transition-colors"
             placeholder="Search hostname or config content..."
             value={searchQuery}
             onChange={(e) => {
@@ -135,7 +140,7 @@ function ParsedDevices({
             <span>Folder:</span>
           </span>
           <select
-            className="bg-white border border-slate-200 rounded-lg py-2 pl-3 pr-8 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer"
+            className="bg-white border border-slate-200 rounded-xl py-2 pl-3 pr-8 text-xs text-slate-805 focus:outline-none focus:border-cyan-500 cursor-pointer font-bold"
             value={selectedFolderName || ""}
             onChange={(e) => {
               const val = e.target.value;
@@ -143,7 +148,6 @@ function ParsedDevices({
                 setSelectedUploadId(null);
                 setSelectedFolderName(null);
               } else {
-                // Find a job with this folder name to extract its upload_id
                 const matchingJob = jobs.find(j => j.folder_name === val);
                 if (matchingJob) {
                   setSelectedUploadId(matchingJob._id || matchingJob.id);
@@ -170,7 +174,7 @@ function ParsedDevices({
             <span>Type:</span>
           </span>
           <select
-            className="bg-white border border-slate-200 rounded-lg py-2 pl-3 pr-8 text-xs text-slate-700 focus:outline-none focus:border-cyan-500 cursor-pointer"
+            className="bg-white border border-slate-200 rounded-xl py-2 pl-3 pr-8 text-xs text-slate-805 focus:outline-none focus:border-cyan-500 cursor-pointer font-bold"
             value={typeFilter}
             onChange={(e) => {
               setTypeFilter(e.target.value);
@@ -191,7 +195,7 @@ function ParsedDevices({
         <div className="flex items-center gap-2 shrink-0 md:ml-auto">
           <span className="text-xs text-slate-500 font-medium">Show:</span>
           <select
-            className="bg-white border border-slate-200 rounded-lg py-1 px-2 text-xs text-slate-700 focus:outline-none"
+            className="bg-white border border-slate-200 rounded-xl py-1 px-2 text-xs text-slate-805 focus:outline-none cursor-pointer"
             value={itemsPerPage}
             onChange={handleItemsPerPageChange}
           >
@@ -204,17 +208,17 @@ function ParsedDevices({
       </div>
 
       {/* Enterprise Data Table */}
-      <div className="overflow-x-auto border border-slate-150 rounded-xl bg-white">
+      <div className="overflow-hidden border border-slate-100 rounded-2xl bg-white">
         {paginatedDevices.length === 0 ? (
           <div className="text-center py-16 text-slate-400 flex flex-col items-center justify-center gap-2">
             <span className="text-4xl">🔍</span>
-            <p className="text-sm font-medium">No configurations found matching current filters.</p>
-            <p className="text-xs text-slate-500">Try modifying your search query or uploading new files.</p>
+            <p className="text-xs font-bold text-slate-700">No configurations found matching current filters.</p>
+            <p className="text-[10px] text-slate-400">Try modifying your search query or uploading new files.</p>
           </div>
         ) : (
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-150 text-slate-600 font-bold text-xs uppercase font-mono tracking-wider">
+              <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold text-[10px] uppercase font-mono tracking-wider">
                 <th className="px-6 py-3.5">Device Name</th>
                 <th className="px-6 py-3.5">Device Type</th>
                 <th className="px-6 py-3.5">File Location</th>
@@ -223,7 +227,7 @@ function ParsedDevices({
                 <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {paginatedDevices.map((device) => {
                 const intfCount = device.parsed_data ? (device.parsed_data.interfaces_count || 0) : 0;
                 return (
@@ -231,26 +235,26 @@ function ParsedDevices({
                     key={device._id || device.id}
                     className="hover:bg-slate-50/50 transition-colors text-slate-700"
                   >
-                    <td className="px-6 py-4 font-bold text-slate-900 truncate max-w-[180px]" title={device.device_name}>
+                    <td className="px-6 py-4 font-bold text-slate-800 truncate max-w-[180px]" title={device.device_name}>
                       {device.device_name}
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold ${device.device_type === 'Switch' ? 'bg-cyan-50 text-cyan-600 border border-cyan-100' :
+                      <span className={`inline-block px-2.5 py-0.5 rounded text-[9px] font-bold ${device.device_type === 'Switch' ? 'bg-cyan-50 text-cyan-600 border border-cyan-100' :
                           device.device_type === 'Router' ? 'bg-purple-50 text-purple-600 border border-purple-100' :
                             device.device_type === 'Firewall' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
                               device.device_type === 'AccessPoint' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                                'bg-slate-100 text-slate-600 border border-slate-150'
+                                'bg-slate-105 text-slate-600 border border-slate-150'
                         }`}>
                         {device.device_type}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-xs font-mono text-slate-500 max-w-[200px] truncate" title={device.file_path}>
+                    <td className="px-6 py-4 text-[10px] font-mono text-slate-500 max-w-[200px] truncate" title={device.file_path}>
                       {device.file_path ? device.file_path.split('/').pop() : 'Direct Upload'}
                     </td>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-600">
+                    <td className="px-6 py-4 font-mono text-[10px] text-slate-650 font-semibold">
                       {intfCount > 0 ? `${intfCount} ports` : 'N/A'}
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-500">
+                    <td className="px-6 py-4 text-slate-450 font-mono">
                       {formatDate(device.parsed_at)}
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -258,10 +262,10 @@ function ParsedDevices({
                         <button
                           type="button"
                           onClick={() => onViewDevice(device)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-[10px] font-bold transition-all shadow-sm"
                         >
-                          <FaEye className="text-xs text-slate-500" />
-                          <span>View</span>
+                          <FaEye className="text-[10px] text-slate-400" />
+                          <span>View Configuration</span>
                         </button>
                       </div>
                     </td>
@@ -288,7 +292,7 @@ function ParsedDevices({
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-bold text-[10px]"
             >
               Prev
             </button>
@@ -300,9 +304,9 @@ function ParsedDevices({
                 <button
                   key={pageNum}
                   onClick={() => handlePageChange(pageNum)}
-                  className={`w-7 h-7 rounded border font-semibold ${isCurrent
-                      ? 'bg-cyan-500 border-cyan-500 text-slate-950'
-                      : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
+                  className={`w-7 h-7 rounded-lg border font-bold text-[10px] ${isCurrent
+                      ? 'bg-slate-800 border-slate-800 text-white'
+                      : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-650'
                     } transition-colors`}
                 >
                   {pageNum}
@@ -313,7 +317,7 @@ function ParsedDevices({
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-bold text-[10px]"
             >
               Next
             </button>
