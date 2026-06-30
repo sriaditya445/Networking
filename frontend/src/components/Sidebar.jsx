@@ -31,98 +31,133 @@ function Sidebar({
   setIsCollapsed
 }) {
 
- const menuSections = [
-  {
-    key: "dashboard",
-    title: "Dashboard",
-    items: [
-      {
-        id: "dashboard",
-        label: "Dashboard",
-        icon: FaChartPie
-      }
-    ]
-  },
+  const menuSections = [
+    {
+      key: "dashboard",
+      title: "Dashboard",
+      items: [
+        {
+          id: "dashboard",
+          label: "Dashboard",
+          icon: FaChartPie
+        }
+      ]
+    },
 
-  {
-    key: "audit",
-    title: "Audit",
-    icon: FaShieldAlt,
-    items: [
-      {
-        id: "inventory",
-        label: "Inventory",
-        icon: FaServer
-      },
-      {
-        id: "upload",
-        label: "Upload Center",
-        icon: FaUpload
-      },
-      // {
-      //   id: "devices",
-      //   label: "Discovered Devices",
-      //   icon: FaHdd
-      // },
-      {
-        id: "queue",
-        label: "Processing Queue",
-        icon: FaTasks
-      },
-      // {
-      //   id: "audit_dashboard",
-      //   label: "Audit Dashboard",
-      //   icon: FaShieldAlt
-      // },
-      // {
-      //   id: "analytics",
-      //   label: "Reports & Insights",
-      //   icon: FaChartLine
-      // }
-    ]
-  },
+    {
+      key: "audit",
+      title: "Audit",
+      icon: FaShieldAlt,
+      items: [
+        {
+          id: "inventory",
+          label: "Assets",
+          icon: FaServer
+        },
+        {
+          id: "upload_parent",
+          label: "Config Ingestion",
+          icon: FaUpload,
 
-  {
-    key: "administration",
-    title: "Administration",
-    icon: FaBuilding,
-    items: [
-      {
-        id: "vendor_management",
-        label: "Vendor Management",
-        icon: FaBuilding
-      },
-      {
-        id: "device_management",
-        label: "Device Management",
-        icon: FaNetworkWired
-      },
-      {
-        id: "template_management",
-        label: "Template Management",
-        icon: FaFileCode
-      }
-    ]
-  },
+          children: [
+            {
+              id: "upload",
+              label: "Upload Center"
+            },
+            {
+              id: "upload_folder",
+              label: "Configuration Folder"
+            },
+            {
+              id: "upload_zip",
+              label: "ZIP Archive"
+            },
+            {
+              id: "upload_topology",
+              label: "Network Topology"
+            },
+            {
+              id: "upload_excel",
+              label: "Excel Mapping"
+            },
+            {
+              id: "upload_api",
+              label: "API Import"
+            },
+            {
+              id: "upload_git",
+              label: "Git Repository"
+            },
+            {
+              id: "upload_sftp",
+              label: "SFTP Import"
+            }
+          ]
+        },
+        // {
+        //   id: "devices",
+        //   label: "Discovered Devices",
+        //   icon: FaHdd
+        // },
+        {
+          id: "queue",
+          label: "Audit Workspace",
+          icon: FaTasks
+        },
+        // {
+        //   id: "audit_dashboard",
+        //   label: "Audit Dashboard",
+        //   icon: FaShieldAlt
+        // },
+        // {
+        //   id: "analytics",
+        //   label: "Reports & Insights",
+        //   icon: FaChartLine
+        // }
+      ]
+    },
 
-  // {
-  //   key: "system",
-  //   title: "System",
-  //   icon: FaCog,
-  //   items: [
-  //     {
-  //       id: "downloads",
-  //       label: "Downloads",
-  //       icon: FaDownload
-  //     },
-  //     {
-  //       id: "settings",
-  //       label: "Settings",
-  //       icon: FaCog
-  //     }
-  //   ]
-  // }
-];
+    {
+      key: "administration",
+      title: "Administration",
+      icon: FaBuilding,
+      items: [
+        {
+          id: "vendor_management",
+          label: "Vendor Management",
+          icon: FaBuilding
+        },
+        {
+          id: "device_management",
+          label: "Device Management",
+          icon: FaNetworkWired
+        },
+        {
+          id: "template_management",
+          label: "Template Management",
+          icon: FaFileCode
+        }
+      ]
+    },
+
+    // {
+    //   key: "system",
+    //   title: "System",
+    //   icon: FaCog,
+    //   items: [
+    //     {
+    //       id: "downloads",
+    //       label: "Downloads",
+    //       icon: FaDownload
+    //     },
+    //     {
+    //       id: "settings",
+    //       label: "Settings",
+    //       icon: FaCog
+    //     }
+    //   ]
+    // }
+  ];
 
 
 
@@ -131,6 +166,15 @@ function Sidebar({
     administration: true,
     system: true
   });
+  const [openMenus, setOpenMenus] = useState({
+    upload_parent: false,
+  });
+
+  React.useEffect(() => {
+    if (activeTab && activeTab.startsWith('upload')) {
+      setOpenMenus(prev => ({ ...prev, upload_parent: true }));
+    }
+  }, [activeTab]);
 
   const toggleSection = (section) => {
     setOpenSections(prev => ({
@@ -293,15 +337,15 @@ function Sidebar({
         "
       >
 
-       {menuSections.map((section) => (
+        {menuSections.map((section) => (
 
-  <div key={section.key}>
+          <div key={section.key}>
 
-    {section.key !== "dashboard" && !isCollapsed && (
+            {section.key !== "dashboard" && !isCollapsed && (
 
-      <button
-        onClick={() => toggleSection(section.key)}
-        className="
+              <button
+                onClick={() => toggleSection(section.key)}
+                className="
           w-full
           flex items-center justify-between
           px-3 py-2
@@ -311,110 +355,134 @@ function Sidebar({
           text-slate-500
           hover:text-slate-300
         "
-      >
+              >
 
-        <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2">
 
-          <section.icon className="text-xs" />
+                  <section.icon className="text-xs" />
 
-          <span>{section.title}</span>
+                  <span>{section.title}</span>
 
-        </div>
+                </div>
 
-        {openSections[section.key]
-          ? <FaChevronDown />
-          : <FaChevronRight />
-        }
-
-      </button>
-
-    )}
-
-    {(section.key === "dashboard" ||
-      isCollapsed ||
-      openSections[section.key]) && (
-
-      <div className="space-y-1">
-
-        {section.items.map((item) => {
-
-          const Icon = item.icon;
-
-          const isActive = activeTab === item.id;
-
-          return (
-
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              title={isCollapsed ? item.label : ""}
-              className={`
-                w-full
-                flex items-center
-                ${isCollapsed ? 'justify-center' : 'gap-3.5 px-4'}
-                py-3
-                rounded-xl
-                text-sm
-                font-medium
-                transition-all duration-200
-                group
-
-                ${isActive
-                  ? `
-                    bg-gradient-to-r
-                    from-cyan-500/10
-                    to-purple-500/5
-                    border border-cyan-500/20
-                    text-cyan-400
-                  `
-                  : `
-                    text-slate-400
-                    hover:text-slate-200
-                    hover:bg-slate-800/50
-                  `
+                {openSections[section.key]
+                  ? <FaChevronDown />
+                  : <FaChevronRight />
                 }
-              `}
-            >
 
-              <Icon
-                className={`
-                  text-base
+              </button>
 
-                  ${isActive
-                    ? 'text-cyan-400'
-                    : 'text-slate-400'
-                  }
-                `}
-              />
+            )}
 
-              {!isCollapsed && (
-                <span>{item.label}</span>
+            {(section.key === "dashboard" ||
+              isCollapsed ||
+              openSections[section.key]) && (
+
+                <div className="space-y-1">
+                  {section.items.map((item) => {
+                    const Icon = item.icon;
+                    const isParentActive = activeTab === item.id || (item.children && item.children.some(c => c.id === activeTab));
+                    const isMenuOpen = openMenus[item.id];
+
+                    return (
+                      <div key={item.id} className="space-y-1">
+                        <button
+                          onClick={() => {
+                            if (item.children) {
+                              setOpenMenus(prev => ({
+                                ...prev,
+                                [item.id]: !prev[item.id]
+                              }));
+                              return;
+                            }
+                            setActiveTab(item.id);
+                          }}
+                          title={isCollapsed ? item.label : ""}
+                          className={`
+                            w-full
+                            flex items-center
+                            ${isCollapsed ? 'justify-center' : 'gap-3.5 px-4'}
+                            py-3
+                            rounded-xl
+                            text-sm
+                            font-medium
+                            transition-all duration-200
+                            group
+
+                            ${isParentActive
+                              ? `
+                                bg-gradient-to-r
+                                from-cyan-500/10
+                                to-purple-500/5
+                                border border-cyan-500/20
+                                text-cyan-400
+                              `
+                              : `
+                                text-slate-400
+                                hover:text-slate-200
+                                hover:bg-slate-800/50
+                              `
+                            }
+                          `}
+                        >
+                          <Icon
+                            className={`
+                              text-base
+                              ${isParentActive ? 'text-cyan-400' : 'text-slate-400'}
+                            `}
+                          />
+
+                          {!isCollapsed && (
+                            <span className="flex-1 text-left">{item.label}</span>
+                          )}
+
+                          {!isCollapsed && item.children && (
+                            <FaChevronDown
+                              className={`
+                                text-[10px] text-slate-500 group-hover:text-slate-300 transition-transform duration-200
+                                ${isMenuOpen ? 'rotate-180' : ''}
+                              `}
+                            />
+                          )}
+
+                          {!isCollapsed && isParentActive && !item.children && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                          )}
+                        </button>
+
+                        {/* Dropdown Children */}
+                        {!isCollapsed && item.children && isMenuOpen && (
+                          <div className="pl-9 pr-2 py-1 space-y-1 bg-slate-950/20 rounded-xl">
+                            {item.children.map((child) => {
+                              const isChildActive = activeTab === child.id;
+                              return (
+                                <button
+                                  key={child.id}
+                                  onClick={() => setActiveTab(child.id)}
+                                  className={`
+                                    w-full text-left py-2 px-3 rounded-lg text-xs font-semibold transition-all block
+                                    ${isChildActive
+                                      ? 'text-cyan-400 bg-slate-800/60 font-bold shadow-sm'
+                                      : 'text-slate-450 hover:text-slate-250 hover:bg-slate-800/30'
+                                    }
+                                  `}
+                                >
+                                  {child.label}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
               )}
 
-              {!isCollapsed && isActive && (
-                <span
-                  className="
-                    ml-auto
-                    w-1.5 h-1.5
-                    rounded-full
-                    bg-cyan-400
-                  "
-                />
-              )}
+          </div>
 
-            </button>
-
-          );
-
-        })}
-
-      </div>
-
-    )}
-
-  </div>
-
-))}
+        ))}
 
       </nav>
 
@@ -492,6 +560,7 @@ function Sidebar({
           )}
 
         </button>
+
 
       </div>
 
