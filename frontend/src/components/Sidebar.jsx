@@ -187,55 +187,37 @@ function Sidebar({
 
 
   return (
-
     <aside
       className={`
         fixed inset-y-0 left-0
         ${isCollapsed ? 'w-20' : 'w-64'}
-        bg-gradient-to-b from-slate-900 to-slate-950
+        bg-[#090d22]
         text-slate-100
         flex flex-col
         z-30
         shadow-xl
-        border-r border-slate-800
+        border-r border-slate-900
         transition-all duration-300
       `}
     >
-
       {/* BRAND SECTION */}
-      <div className="p-6 border-b border-slate-800/60 flex flex-col gap-1.5">
-
+      <div className="p-6 border-b border-slate-900 flex flex-col gap-1.5">
         {/* COLLAPSE BUTTON */}
         <div className={`flex ${isCollapsed ? 'justify-center' : 'justify-end'} mb-4`}>
-
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="
-              p-2 rounded-lg
-              hover:bg-slate-800
-              text-slate-300
-              transition
-            "
+            className="p-2 rounded-lg hover:bg-slate-800/60 text-slate-400 hover:text-slate-200 transition"
           >
-
             {isCollapsed ? (
               <FaBars className="text-lg" />
             ) : (
               <FaTimes className="text-lg" />
             )}
-
           </button>
-
         </div>
 
         {/* LOGO */}
-        <div
-          className={`
-            flex items-center
-            ${isCollapsed ? 'justify-center' : 'gap-3'}
-          `}
-        >
-
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
           {/* LOGO ICON */}
           <div
             className="
@@ -252,288 +234,189 @@ function Sidebar({
 
           {/* LOGO TEXT */}
           {!isCollapsed && (
-
             <div>
-
-              <h1
-                className="
-                  font-bold text-lg leading-none
-                  bg-gradient-to-r from-white via-slate-200 to-slate-400
-                  bg-clip-text text-transparent
-                "
-              >
+              <h1 className="font-extrabold text-base leading-none text-white tracking-tight">
                 Netkode
               </h1>
-
-              <span
-                className="
-                  text-[10px]
-                  text-cyan-400
-                  font-semibold
-                  tracking-wider
-                  uppercase
-                "
-              >
-                Your Network. Verified
+              <span className="text-[9px] text-[#00d8f6] font-extrabold tracking-wider uppercase block mt-0.5">
+                YOUR NETWORK. VERIFIED
               </span>
-
             </div>
-
           )}
-
         </div>
 
         {/* STATUS */}
         {!isCollapsed && (
-
           <div
             className="
               mt-3
               flex items-center gap-2
               px-2.5 py-1.5
               rounded-lg
-              bg-slate-800/40
-              border border-slate-700/30
-              text-[11px]
-              font-medium
+              bg-[#131b3e]/40
+              border border-slate-800/40
+              text-[10px]
+              font-semibold
             "
           >
-
             <span
               className={`
-                w-2 h-2 rounded-full animate-pulse
-
+                w-1.5 h-1.5 rounded-full animate-pulse
                 ${backendOnline
                   ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
                   : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]'
                 }
               `}
             />
-
-            <span
-              className={
-                backendOnline
-                  ? 'text-emerald-400'
-                  : 'text-rose-400'
-              }
-            >
+            <span className={backendOnline ? 'text-emerald-400' : 'text-rose-400'}>
               {backendOnline ? 'System Online' : 'System Offline'}
             </span>
-
           </div>
-
         )}
-
       </div>
 
       {/* NAVIGATION */}
-      <nav
-        className="
-          flex-1
-          px-4 py-6
-          overflow-y-auto
-          space-y-1.5
-          scrollbar-thin
-        "
-      >
-
+      <nav className="flex-1 px-4 py-6 overflow-y-auto space-y-1.5 scrollbar-thin">
         {menuSections.map((section) => (
-
           <div key={section.key}>
-
+            {/* Flat header for groups matching the mockup */}
             {section.key !== "dashboard" && !isCollapsed && (
-
-              <button
-                onClick={() => toggleSection(section.key)}
-                className="
-          w-full
-          flex items-center justify-between
-          px-3 py-2
-          text-xs
-          uppercase
-          font-bold
-          text-slate-500
-          hover:text-slate-300
-        "
-              >
-
-                <div className="flex items-center gap-2">
-
-                  <section.icon className="text-xs" />
-
-                  <span>{section.title}</span>
-
-                </div>
-
-                {openSections[section.key]
-                  ? <FaChevronDown />
-                  : <FaChevronRight />
-                }
-
-              </button>
-
+              <div className="px-3 py-2 mt-4 text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                {section.title}
+              </div>
             )}
 
-            {(section.key === "dashboard" ||
-              isCollapsed ||
-              openSections[section.key]) && (
+            {(section.key === "dashboard" || isCollapsed || openSections[section.key]) && (
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isParentActive = activeTab === item.id || (item.children && item.children.some(c => c.id === activeTab));
+                  const isMenuOpen = openMenus[item.id];
 
-                <div className="space-y-1">
-                  {section.items.map((item) => {
-                    const Icon = item.icon;
-                    const isParentActive = activeTab === item.id || (item.children && item.children.some(c => c.id === activeTab));
-                    const isMenuOpen = openMenus[item.id];
-
-                    return (
-                      <div key={item.id} className="space-y-1">
-                        <button
-                          onClick={() => {
-                            if (item.children) {
-                              setOpenMenus(prev => ({
-                                ...prev,
-                                [item.id]: !prev[item.id]
-                              }));
-                              return;
-                            }
-                            setActiveTab(item.id);
-                          }}
-                          title={isCollapsed ? item.label : ""}
+                  return (
+                    <div key={item.id} className="space-y-1">
+                      <button
+                        onClick={() => {
+                          if (item.children) {
+                            setOpenMenus(prev => ({
+                              ...prev,
+                              [item.id]: !prev[item.id]
+                            }));
+                            return;
+                          }
+                          setActiveTab(item.id);
+                        }}
+                        title={isCollapsed ? item.label : ""}
+                        className={`
+                          w-full
+                          flex items-center
+                          ${isCollapsed ? 'justify-center' : 'gap-3.5 px-4'}
+                          py-2.5
+                          rounded-xl
+                          text-xs
+                          font-bold
+                          transition-all duration-250
+                          group
+                          ${isParentActive
+                            ? `
+                              bg-[#131e3d]
+                              border border-blue-500/15
+                              text-white
+                            `
+                            : `
+                              text-slate-400
+                              hover:text-slate-200
+                              hover:bg-slate-800/25
+                            `
+                          }
+                        `}
+                      >
+                        <Icon
                           className={`
-                            w-full
-                            flex items-center
-                            ${isCollapsed ? 'justify-center' : 'gap-3.5 px-4'}
-                            py-3
-                            rounded-xl
                             text-sm
-                            font-medium
-                            transition-all duration-200
-                            group
-
-                            ${isParentActive
-                              ? `
-                                bg-gradient-to-r
-                                from-cyan-500/10
-                                to-purple-500/5
-                                border border-cyan-500/20
-                                text-cyan-400
-                              `
-                              : `
-                                text-slate-400
-                                hover:text-slate-200
-                                hover:bg-slate-800/50
-                              `
-                            }
+                            ${isParentActive ? 'text-[#00d8f6]' : 'text-slate-400'}
                           `}
-                        >
-                          <Icon
+                        />
+
+                        {!isCollapsed && (
+                          <span className="flex-1 text-left">{item.label}</span>
+                        )}
+
+                        {!isCollapsed && item.children && (
+                          <FaChevronDown
                             className={`
-                              text-base
-                              ${isParentActive ? 'text-cyan-400' : 'text-slate-400'}
+                              text-[10px] text-slate-500 group-hover:text-slate-300 transition-transform duration-200
+                              ${isMenuOpen ? 'rotate-180' : ''}
                             `}
                           />
-
-                          {!isCollapsed && (
-                            <span className="flex-1 text-left">{item.label}</span>
-                          )}
-
-                          {!isCollapsed && item.children && (
-                            <FaChevronDown
-                              className={`
-                                text-[10px] text-slate-500 group-hover:text-slate-300 transition-transform duration-200
-                                ${isMenuOpen ? 'rotate-180' : ''}
-                              `}
-                            />
-                          )}
-
-                          {!isCollapsed && isParentActive && !item.children && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
-                          )}
-                        </button>
-
-                        {/* Dropdown Children */}
-                        {!isCollapsed && item.children && isMenuOpen && (
-                          <div className="pl-9 pr-2 py-1 space-y-1 bg-slate-950/20 rounded-xl">
-                            {item.children.map((child) => {
-                              const isChildActive = activeTab === child.id;
-                              return (
-                                <button
-                                  key={child.id}
-                                  onClick={() => setActiveTab(child.id)}
-                                  className={`
-                                    w-full text-left py-2 px-3 rounded-lg text-xs font-semibold transition-all block
-                                    ${isChildActive
-                                      ? 'text-cyan-400 bg-slate-800/60 font-bold shadow-sm'
-                                      : 'text-slate-450 hover:text-slate-250 hover:bg-slate-800/30'
-                                    }
-                                  `}
-                                >
-                                  {child.label}
-                                </button>
-                              );
-                            })}
-                          </div>
                         )}
-                      </div>
-                    );
-                  })}
-                </div>
 
-              )}
+                        {!isCollapsed && isParentActive && !item.children && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#00d8f6]" />
+                        )}
+                      </button>
 
+                      {/* Dropdown Children */}
+                      {!isCollapsed && item.children && isMenuOpen && (
+                        <div className="pl-9 pr-2 py-1 space-y-1 bg-slate-950/20 rounded-xl">
+                          {item.children.map((child) => {
+                            const isChildActive = activeTab === child.id;
+                            return (
+                              <button
+                                key={child.id}
+                                onClick={() => setActiveTab(child.id)}
+                                className={`
+                                  w-full text-left py-2 px-3 rounded-lg text-[11px] font-bold transition-all block
+                                  ${isChildActive
+                                    ? 'text-[#00d8f6] bg-[#131e3d]/45 font-bold shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-200 hover:bg-slate-850/30'
+                                  }
+                                `}
+                              >
+                                {child.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-
         ))}
-
       </nav>
 
       {/* PROFILE SECTION */}
-      <div
-        className="
-          p-4
-          border-t border-slate-800/60
-          bg-slate-950/40
-          flex flex-col gap-2.5
-        "
-      >
-
+      <div className="p-4 border-t border-slate-900 bg-slate-950/20 flex flex-col gap-2.5">
         {/* USER */}
-        <div
-          className={`
-            flex items-center
-            ${isCollapsed ? 'justify-center' : 'gap-3 px-2 py-1'}
-          `}
-        >
-
-          <div className="text-2xl text-slate-400">
-            <FaUserCircle />
-          </div>
-
-          {!isCollapsed && (
-
-            <div className="flex-1 min-w-0">
-
-              <p className="text-xs font-semibold text-slate-200 truncate">
-                Tamarapalli Aditya
-              </p>
-
-              <p className="text-[10px] text-slate-500 truncate">
-                Network Administrator
-              </p>
-
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-2 py-1'}`}>
+          {isCollapsed ? (
+            <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+              TA
             </div>
-
+          ) : (
+            <>
+              <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                TA
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-slate-200 truncate">
+                  Tamarapalli Aditya
+                </p>
+                <p className="text-[10px] text-slate-400 truncate">
+                  Network Administrator
+                </p>
+              </div>
+            </>
           )}
-
         </div>
 
         {/* LOGOUT BUTTON */}
         <button
           onClick={() => {
-            if (
-              window.confirm(
-                "Are you sure you want to log out of the Network Dashboard?"
-              )
-            ) {
+            if (window.confirm("Are you sure you want to log out of the Network Dashboard?")) {
               alert("Logged out (Demo mode - session reset).");
             }
           }}
@@ -541,31 +424,20 @@ function Sidebar({
             w-full
             flex items-center justify-center gap-2
             py-2 px-4
-            border border-rose-500/20
-            hover:border-rose-500/40
-            bg-rose-500/5
+            border border-rose-500/40
             hover:bg-rose-500/10
             rounded-xl
             text-xs
-            font-semibold
+            font-bold
             text-rose-400
             transition-colors
           "
         >
-
-          <FaSignOutAlt className="text-xs" />
-
-          {!isCollapsed && (
-            <span>Log out</span>
-          )}
-
+          <FaSignOutAlt className="text-xs animate-pulse" />
+          {!isCollapsed && <span>Log out</span>}
         </button>
-
-
       </div>
-
     </aside>
-
   );
 }
 

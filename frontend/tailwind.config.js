@@ -19,7 +19,7 @@ export default {
         }
       },
       fontFamily: {
-        sans: ['Outfit', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'Outfit', 'sans-serif'],
       }
     },
   },

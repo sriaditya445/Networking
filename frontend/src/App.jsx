@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaBell, FaSync } from 'react-icons/fa';
+import { FaBell, FaSync, FaSearch } from 'react-icons/fa';
 
 // Import newly created modular UI components
 import Sidebar from './components/Sidebar';
@@ -426,7 +426,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
+    <div className="min-h-screen bg-[#f3f5f9] text-slate-900 flex font-sans">
       {/* Fixed Left Sidebar navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -439,29 +439,41 @@ function App() {
       {/* Main Content Area */}
       <div
         className={`
-    flex-1
-    ${isCollapsed ? 'pl-20' : 'pl-64'}
-    flex flex-col
-    min-h-screen
-    transition-all duration-300
-  `}
+          flex-1
+          ${isCollapsed ? 'pl-20' : 'pl-64'}
+          flex flex-col
+          min-h-screen
+          transition-all duration-300
+        `}
       >
         {/* Top Header Navbar */}
-        <header className="bg-white border-b border-slate-200/80 px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-20">
+        <header className="bg-white border-b border-slate-200/80 px-8 py-3.5 flex items-center justify-between shadow-sm sticky top-0 z-20">
           <div>
             <h1 className="font-extrabold text-slate-800 text-lg leading-tight tracking-tight">
               Enterprise Network Operations Center
             </h1>
-            <p className="text-[11px] text-slate-400">Real-time overview of your network audit environment</p>
+            <p className="text-[11px] text-slate-400 font-medium">Real-time overview of your network audit environment</p>
+          </div>
+
+          {/* Search bar in the center */}
+          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-[#f3f5f9] border border-slate-200/80 rounded-xl w-80 text-slate-400 focus-within:border-blue-500/50 focus-within:bg-white focus-within:shadow-sm transition-all">
+            <FaSearch className="text-xs text-slate-400 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search devices, groups, templates..."
+              className="bg-transparent border-none text-[11px] text-slate-700 outline-none w-full placeholder-slate-400 font-semibold"
+              disabled
+            />
+            <span className="text-[9px] font-bold text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-sm shrink-0">⌘K</span>
           </div>
 
           <div className="flex items-center gap-5">
-            <div className="text-[11px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+            <div className="text-[11px] text-emerald-600 font-bold bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Real-time polling active</span>
             </div>
 
-            <div className="relative p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-250/80 cursor-pointer text-slate-650 transition-colors shadow-sm">
+            <div className="relative p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 cursor-pointer text-slate-600 transition-colors shadow-sm">
               <FaBell className="text-sm" />
               <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white rounded-full flex items-center justify-center text-[9px] font-bold">
                 5
@@ -470,12 +482,23 @@ function App() {
 
             <button
               onClick={fetchData}
-              className="text-[11px] text-slate-650 hover:text-slate-900 font-mono bg-slate-50 hover:bg-slate-100 border border-slate-200/80 px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+              className="text-[11px] text-slate-600 hover:text-slate-900 font-mono bg-slate-50 hover:bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
               title="Refresh dashboard data"
             >
               <span>Last updated: {lastUpdated}</span>
               <FaSync className="text-[9px] text-slate-400 hover:rotate-180 transition-transform duration-500" />
             </button>
+
+            {/* Profile Avatar Badge on Header */}
+            <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+              <div className="w-8 h-8 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
+                TA
+              </div>
+              <div className="hidden xl:block text-left">
+                <p className="text-[11px] font-extrabold text-slate-700 leading-none">Tamarapalli Aditya</p>
+                <p className="text-[9px] text-slate-400 font-bold mt-1">Admin</p>
+              </div>
+            </div>
           </div>
         </header>
 

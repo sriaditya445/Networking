@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from app.api.upload_routes import router as upload_router
 from app.api.device_routes import router as device_router
@@ -49,3 +51,19 @@ app.include_router(audit_router)
 app.include_router(template_router)
 app.include_router(vendor_router)
 
+# Serve React static assets
+app.mount(
+    "/assets",
+    StaticFiles(directory="app/static/assets"),
+    name="assets"
+)
+
+# React Home Page
+@app.get("/")
+async def serve_react():
+    return FileResponse("app/static/index.html")
+
+# React Router Support
+@app.get("/{full_path:path}")
+async def serve_react_router(full_path: str):
+    return FileResponse("app/static/index.html")
