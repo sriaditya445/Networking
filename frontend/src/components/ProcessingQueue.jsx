@@ -22,7 +22,10 @@ import {
   FaChevronLeft,
   FaChevronRight,
   FaCloudDownloadAlt,
-  FaCloudUploadAlt
+  FaCloudUploadAlt,
+
+  FaFileExcel,
+
 } from 'react-icons/fa';
 
 // Vendor Logos Component
@@ -489,12 +492,12 @@ export default function ProcessingQueue({
         a.download = `${device.device_name}_audit_report.pdf`;
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
           a.remove();
           URL.revokeObjectURL(url);
         }, 1000);
-        
+
         setDeviceDlMap(prev => ({ ...prev, [devId]: 'done' }));
       } else {
         alert("Failed to download PDF report.");
@@ -523,7 +526,7 @@ export default function ProcessingQueue({
         a.download = `${group.vendor}_${group.device_type}_${group.model || 'GENERIC'}_group_report.pdf`;
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
           a.remove();
           URL.revokeObjectURL(url);
@@ -554,7 +557,7 @@ export default function ProcessingQueue({
         a.download = `${device.device_name}_audit_report.xlsx`;
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
           a.remove();
           URL.revokeObjectURL(url);
@@ -582,7 +585,7 @@ export default function ProcessingQueue({
         a.download = `${group.vendor}_${group.device_type}_${group.model || 'GENERIC'}_group_report.xlsx`;
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
           a.remove();
           URL.revokeObjectURL(url);
@@ -609,7 +612,7 @@ export default function ProcessingQueue({
         a.download = `${jobInfo?.folder_name || 'upload'}_complete_audit_report.pdf`;
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
           a.remove();
           URL.revokeObjectURL(url);
@@ -636,7 +639,7 @@ export default function ProcessingQueue({
         a.download = `${jobInfo?.folder_name || 'upload'}_complete_audit_report.xlsx`;
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
           a.remove();
           URL.revokeObjectURL(url);
@@ -663,7 +666,7 @@ export default function ProcessingQueue({
         a.download = `${jobInfo?.folder_name || 'upload'}_configurations.zip`;
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
           a.remove();
           URL.revokeObjectURL(url);
@@ -826,7 +829,7 @@ export default function ProcessingQueue({
                 <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
                   <span>{jobInfo?.folder_name || 'Loading Folder...'}</span>
                 </h2>
-                <div className="flex items-center gap-2 mt-1">
+                {/* <div className="flex items-center gap-2 mt-1">
                   <span className="text-[11px] font-mono text-slate-400">
                     ID: {selectedUploadId}
                   </span>
@@ -837,7 +840,7 @@ export default function ProcessingQueue({
                   >
                     {copiedId ? <FaCheck className="text-emerald-500 text-[10px]" /> : <FaCopy className="text-[10px]" />}
                   </button>
-                </div>
+                </div> */}
               </div>
               <div className="md:ml-2">
                 {renderJobStatusBadge(jobInfo?.status)}
@@ -854,34 +857,61 @@ export default function ProcessingQueue({
                   title="View Audit Reports"
                 >
                   <FaFileAlt />
-                  <span>View Reports</span>
+                  <span>Download Reports</span>
                   <FaChevronDown className={`text-[10px] transition-transform ${showTopReportsDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
                 {showTopReportsDropdown && (
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-slate-150 rounded-2xl shadow-xl z-35 p-4 space-y-4 text-left font-semibold text-slate-700">
-                    {/* Complete Upload Report Section */}
-                    <div className="space-y-2 border-b border-slate-100 pb-3">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Complete Upload Report</span>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleDownloadUploadPDFReport}
-                          className="flex-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-center text-[10px] font-bold transition flex justify-center items-center gap-1.5"
-                          title="Download PDF"
-                        >
-                          <FaFilePdf /> PDF
-                        </button>
-                        <button
-                          onClick={handleDownloadUploadExcelReport}
-                          className="flex-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center text-[10px] font-bold transition flex justify-center items-center gap-1.5"
-                          title="Download Excel"
-                        >
-                          <FaFileAlt /> Excel
-                        </button>
-                      </div>
-                    </div>
+                  <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden z-50">
 
-                    
+                    <button
+                      onClick={() => {
+                        handleDownloadUploadPDFReport();
+                        setShowTopReportsDropdown(false);
+                      }}
+                      className="group w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 hover:bg-slate-50"
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-red-50 flex items-center justify-center transition group-hover:bg-red-100">
+                        <FaFilePdf className="text-red-500 text-sm" />
+                      </div>
+
+                      <div className="flex-1 text-left">
+                        <p className="text-[13px] font-semibold text-slate-700">
+                          PDF Report
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Download audit report
+                        </p>
+                      </div>
+
+                      <FaChevronRight className="text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 group-hover:text-blue-500 transition-all" />
+                    </button>
+
+                    <div className="border-t border-slate-100"></div>
+
+                    <button
+                      onClick={() => {
+                        handleDownloadUploadExcelReport();
+                        setShowTopReportsDropdown(false);
+                      }}
+                      className="group w-full flex items-center gap-3 px-4 py-3 transition-all duration-200 hover:bg-slate-50"
+                    >
+                      <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center transition group-hover:bg-emerald-100">
+                        <FaFileExcel className="text-emerald-600 text-sm" />
+                      </div>
+
+                      <div className="flex-1 text-left">
+                        <p className="text-[13px] font-semibold text-slate-700">
+                          Excel Report
+                        </p>
+                        <p className="text-[11px] text-slate-400">
+                          Download spreadsheet
+                        </p>
+                      </div>
+
+                      <FaChevronRight className="text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 group-hover:text-emerald-500 transition-all" />
+                    </button>
+
                   </div>
                 )}
               </div>
@@ -1208,7 +1238,7 @@ export default function ProcessingQueue({
                 <span>Audit processing is completed. Compliance reports are ready.</span>
               </div>
 
-              
+
             </div>
           )}
         </div>

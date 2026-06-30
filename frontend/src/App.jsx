@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { FaBell, FaSync } from 'react-icons/fa';
 
 // Import newly created modular UI components
 import Sidebar from './components/Sidebar';
@@ -23,6 +24,7 @@ const API_BASE_URL = 'http://localhost:8000';
 function App() {
   // State variables
   const [jobs, setJobs] = useState([]);
+  const [lastUpdated, setLastUpdated] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
   const [devices, setDevices] = useState([]);
   const [stats, setStats] = useState({
     total_uploads: 0,
@@ -54,6 +56,9 @@ function App() {
   const [selectedUploadId, setSelectedUploadId] = useState(null);
   const [selectedFolderName, setSelectedFolderName] = useState(null);
   const [onTemplateUploadSuccess, setOnTemplateUploadSuccess] = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [auditResults, setAuditResults] = useState([]);
+  const [reports, setReports] = useState([]);
 
 
   // Fetch all necessary data from FastAPI backend
@@ -87,6 +92,29 @@ function App() {
         const statsData = await statsRes.json();
         setStats(statsData);
       }
+
+      // 5. Fetch Templates
+      const templatesRes = await fetch(`${API_BASE_URL}/api/templates`);
+      if (templatesRes.ok) {
+        const templatesData = await templatesRes.json();
+        setTemplates(templatesData);
+      }
+
+      // 6. Fetch Audit Results
+      const auditRes = await fetch(`${API_BASE_URL}/api/audit/results`);
+      if (auditRes.ok) {
+        const auditData = await auditRes.json();
+        setAuditResults(auditData);
+      }
+
+      // 7. Fetch Reports
+      const reportsRes = await fetch(`${API_BASE_URL}/api/audit/reports`);
+      if (reportsRes.ok) {
+        const reportsData = await reportsRes.json();
+        setReports(reportsData);
+      }
+
+      setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }));
     } catch (error) {
       console.error("Error fetching data:", error);
       setBackendOnline(false);
@@ -281,6 +309,10 @@ function App() {
             apiBaseUrl={API_BASE_URL}
             setSelectedUploadId={setSelectedUploadId}
             setSelectedFolderName={setSelectedFolderName}
+            lastUpdated={lastUpdated}
+            templates={templates}
+            auditResults={auditResults}
+            reports={reports}
           />
         );
       case 'inventory':
@@ -292,6 +324,13 @@ function App() {
           />
         );
       case 'upload':
+      case 'upload_folder':
+      case 'upload_zip':
+      case 'upload_topology':
+      case 'upload_excel':
+      case 'upload_api':
+      case 'upload_git':
+      case 'upload_sftp':
         return (
           <UploadCenter
             folderName={folderName}
@@ -408,19 +447,35 @@ function App() {
   `}
       >
         {/* Top Header Navbar */}
-        <header className="bg-white border-b border-slate-200/80 px-8 py-5 flex items-center justify-between shadow-sm sticky top-0 z-20">
+        <header className="bg-white border-b border-slate-200/80 px-8 py-4 flex items-center justify-between shadow-sm sticky top-0 z-20">
           <div>
             <h1 className="font-extrabold text-slate-800 text-lg leading-tight tracking-tight">
-              Enterprise Network Dashboard
+              Enterprise Network Operations Center
             </h1>
-            <p className="text-[11px] text-slate-400">NetConfig Configuration Analysis Staging System</p>
+            <p className="text-[11px] text-slate-400">Real-time overview of your network audit environment</p>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="text-[11px] text-slate-500 font-mono bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+          <div className="flex items-center gap-5">
+            <div className="text-[11px] text-emerald-600 font-medium bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span>Real-time polling active</span>
             </div>
+
+            <div className="relative p-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-250/80 cursor-pointer text-slate-650 transition-colors shadow-sm">
+              <FaBell className="text-sm" />
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-rose-500 text-white rounded-full flex items-center justify-center text-[9px] font-bold">
+                5
+              </span>
+            </div>
+
+            <button
+              onClick={fetchData}
+              className="text-[11px] text-slate-650 hover:text-slate-900 font-mono bg-slate-50 hover:bg-slate-100 border border-slate-200/80 px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
+              title="Refresh dashboard data"
+            >
+              <span>Last updated: {lastUpdated}</span>
+              <FaSync className="text-[9px] text-slate-400 hover:rotate-180 transition-transform duration-500" />
+            </button>
           </div>
         </header>
 
